@@ -847,31 +847,71 @@
   }
 
   /*
-    Mobile hand-bridge media matches the final opening-ring contain stack:
-    full-viewport parent, object-fit: contain, same quiet room-tone ground.
-    Outer #handBridge still owns the angled Turn mask-out into the bench;
-    the media parent itself is continuous source-preserving composition,
-    not a vignette or card.
+    Mobile hand-bridge matches opening-ring atmosphere composition:
+    full-viewport static ring-poster atmosphere, exact 1:1 sharp parent at
+    the same vertical rest, vertical linear alpha blend only. Outer
+    #handBridge still owns the angled Turn mask-out into the bench.
   */
+  .hand-bridge {
+    /* Fallback under the poster atmosphere; matches mobile .world-ring. */
+    background: #b7aea2;
+  }
+
+  .hand-bridge::before {
+    content: "";
+    position: absolute;
+    inset: -12%;
+    width: 124%;
+    height: 124%;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("assets/ring-poster.jpg");
+    background-size: cover;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+    /* Same treatment as mobile .world-ring::before — no perimeter darken. */
+    filter: blur(34px) saturate(1.06);
+    transform: scale(1.1);
+    transform-origin: center center;
+  }
+
   .hand-bridge .layer-media {
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    inset: auto;
+    top: 25svh;
+    left: 0;
+    width: 100vw;
+    height: 100vw; /* exact 1:1 source ratio — parity with opening ring */
     margin: 0;
+    z-index: 1;
     overflow: hidden;
-    -webkit-mask-image: none;
-    mask-image: none;
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    /* Match mobile .world-ring ground so reverse travel stays continuous. */
-    background: #b7aea2;
+    background: transparent;
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      #000 14%,
+      #000 86%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      #000 14%,
+      #000 86%,
+      transparent 100%
+    );
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
   }
 
   .hand-bridge .layer-media img,
   .hand-bridge .layer-media video {
-    object-fit: contain;
-    object-position: 50% 48%;
+    object-fit: cover;
+    object-position: 50% 50%;
   }
 }
 

@@ -276,50 +276,130 @@
 
     @media (max-width: 700px) {
       /*
-        Opening media oracle — source-preserving passage, not a vignette:
-        Stack parents stay full-viewport (the passage). Child media uses
-        object-fit: contain so 2:1 studio and square ring frames remain whole.
-        Solid world grounds (no gradient) make the letterbox field belong to
-        the room, not a card. Art direction is object-position only — no
-        radial/elliptical perimeter mask, echo, blur, feather, or copy wash.
-        JS owns stack transform.
+        Opening media oracle — continuous photographic atmosphere, not a
+        hard contain band and not a vignette:
+        Full-viewport static poster atmosphere (image only) carries each
+        source's own room tone edge-to-edge. Sharp media parents match exact
+        source ratios (studio 2:1, ring 1:1), sit edge-to-edge horizontally,
+        and dissolve only on top/bottom via a vertical linear alpha mask into
+        that same-source atmosphere. No radial/ellipse, no dark halo, no
+        copy wash, no card chrome. JS owns stack transform.
       */
       .world-studio {
-        /* Deep neutral sampled from the studio footage's dark passages. */
+        /* Deep neutral fallback under the studio poster atmosphere. */
         background: #151210;
       }
 
       .world-ring {
-        /* Quiet room tone from the ring footage's surrounding field. */
+        /* Quiet room-tone fallback under the ring poster atmosphere. */
         background: #b7aea2;
       }
 
-      .world-studio .media-stack,
-      .world-ring .media-stack {
-        inset: 0;
-        width: 100%;
-        height: 100%;
+      /* Atmosphere: static poster field only — never a second decoder. */
+      .world-studio::before,
+      .world-ring::before {
+        content: "";
+        position: absolute;
+        inset: -12%;
+        width: 124%;
+        height: 124%;
+        z-index: 0;
+        pointer-events: none;
+        background-size: cover;
+        background-position: 50% 50%;
+        background-repeat: no-repeat;
+        /* Extend source light/room tone; do not darken the perimeter. */
+        filter: blur(34px) saturate(1.06);
+        transform: scale(1.1);
+        transform-origin: center center;
+      }
+
+      .world-studio::before {
+        background-image: url("assets/studio-poster.jpg");
+      }
+
+      .world-ring::before {
+        background-image: url("assets/ring-poster.jpg");
+      }
+
+      /* Studio sharp plane: 2:1 edge-to-edge; vertical rest ~31svh. */
+      .world-studio .media-stack {
+        inset: auto;
+        top: 31svh;
+        left: 0;
+        width: 100vw;
+        height: 50vw; /* exact 2:1 source ratio */
         margin: 0;
+        z-index: 1;
         overflow: hidden;
-        -webkit-mask-image: none;
-        mask-image: none;
         border: 0;
         border-radius: 0;
         box-shadow: none;
+        -webkit-mask-image: linear-gradient(
+          180deg,
+          transparent 0%,
+          #000 16%,
+          #000 84%,
+          transparent 100%
+        );
+        mask-image: linear-gradient(
+          180deg,
+          transparent 0%,
+          #000 16%,
+          #000 84%,
+          transparent 100%
+        );
+        -webkit-mask-size: 100% 100%;
+        mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
       }
 
       .world-studio .media-stack img,
       .world-studio .media-stack video {
-        object-fit: contain;
-        /* 2:1 plane sits mid-upper so header and setup keep clean ground. */
-        object-position: 50% 42%;
+        /* Parent matches 2:1 source — cover fills with zero crop. */
+        object-fit: cover;
+        object-position: 50% 50%;
+      }
+
+      /* Ring sharp plane: 1:1 edge-to-edge; vertical rest ~25svh. */
+      .world-ring .media-stack {
+        inset: auto;
+        top: 25svh;
+        left: 0;
+        width: 100vw;
+        height: 100vw; /* exact 1:1 source ratio */
+        margin: 0;
+        z-index: 1;
+        overflow: hidden;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        -webkit-mask-image: linear-gradient(
+          180deg,
+          transparent 0%,
+          #000 14%,
+          #000 86%,
+          transparent 100%
+        );
+        mask-image: linear-gradient(
+          180deg,
+          transparent 0%,
+          #000 14%,
+          #000 86%,
+          transparent 100%
+        );
+        -webkit-mask-size: 100% 100%;
+        mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
       }
 
       .world-ring .media-stack img,
       .world-ring .media-stack video {
-        object-fit: contain;
-        /* Square plane centered; headline/final rest in lower ground. */
-        object-position: 50% 48%;
+        /* Parent matches 1:1 source — cover fills with zero crop. */
+        object-fit: cover;
+        object-position: 50% 50%;
       }
 
       .mark {
