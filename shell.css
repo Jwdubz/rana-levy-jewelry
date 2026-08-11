@@ -2013,6 +2013,10 @@ html.is-quiet::view-transition-new(root) {
 
   .page-consultation .consult-passage p {
     font-size: clamp(1.02rem, 4.1vw, 1.1rem);
+    /* Residual: translucent --cream-soft (0.78) failed ≥4.5:1 over pale
+       pencil/paper glyph regions even with local shadow. Opaque cream already
+       passes on h1/lede/links over the same support — smallest causal fix. */
+    color: var(--cream);
   }
 }
 

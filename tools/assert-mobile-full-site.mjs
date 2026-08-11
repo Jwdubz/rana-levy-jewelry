@@ -377,6 +377,23 @@ for (const block of consultBlocks) {
       fail("mobile consultation passage must not solve contrast with an opaque utility panel");
     }
   }
+
+  // Residual opening-copy contrast: ordinary paragraphs must use opaque cream
+  // over the sharp sketch (not inherited translucent --cream-soft / 0.78 alpha).
+  const consultParaBlocks = shellMobile.match(
+    /\.page-consultation[\s\S]*?consult-passage\s+p\s*\{[\s\S]*?\}/g
+  ) || [];
+  const consultParaJoined = consultParaBlocks.join("\n");
+  if (!/color\s*:\s*var\(--cream\)/i.test(consultParaJoined)) {
+    fail(
+      "mobile consultation ordinary paragraphs must use opaque cream (var(--cream)), not translucent cream-soft"
+    );
+  }
+  if (/color\s*:\s*var\(--cream-soft\)/i.test(consultParaJoined)) {
+    fail(
+      "mobile consultation ordinary paragraphs must not reintroduce translucent --cream-soft over the opening sketch"
+    );
+  }
 }
 
 // --- Gallery mobile: no piece-mask islands ---
