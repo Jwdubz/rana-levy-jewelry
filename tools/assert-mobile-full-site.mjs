@@ -205,6 +205,63 @@ if (!navLinkMobile) fail("missing mobile .shell-primary-nav a");
 assertIncludes(navLinkMobile, "min-height: 44px", "mobile nav 44px targets");
 assertIncludes(navLinkMobile, "white-space: nowrap", "mobile nav labels nowrap");
 
+// --- Mobile shell chrome must not stay a transparent fixed overlay ---
+// Observed defect: fixed transparent .shell-chrome + scrolling body copy collision
+// at 320×568 on long non-home routes (consultation.html especially).
+const chromeBase = extractBlock(shellCss, ".shell-chrome", 0);
+if (!chromeBase) fail("missing base .shell-chrome");
+if (!/position\s*:\s*fixed/i.test(chromeBase)) {
+  fail("desktop/base .shell-chrome must remain position: fixed");
+}
+const chromeMobile = extractBlock(shellCss, ".shell-chrome", shellMobileIdx);
+if (!chromeMobile) fail("missing mobile .shell-chrome override");
+if (/position\s*:\s*fixed/i.test(chromeMobile)) {
+  fail(
+    "mobile .shell-chrome must not remain position:fixed (transparent fixed overlay collides with body copy while scrolling)"
+  );
+}
+if (!/position\s*:\s*(relative|static|sticky)/i.test(chromeMobile)) {
+  fail(
+    "mobile .shell-chrome must join document flow (relative/static/sticky) so chrome scrolls with the opening composition"
+  );
+}
+// Forbidden cosmetic hides of the collision (binding visual rule).
+for (const forbidden of [
+  "backdrop-filter",
+  "filter: blur",
+  "filter:blur",
+  "-webkit-backdrop-filter",
+]) {
+  if (chromeMobile.toLowerCase().includes(forbidden.toLowerCase())) {
+    fail(`mobile .shell-chrome must not use ${forbidden} to hide overlap`);
+  }
+}
+// No opaque utility-bar paint on the chrome as a substitute for scroll-away.
+if (/background(?:-color)?\s*:\s*(?!transparent|none|inherit|initial|unset)[^;]+/i.test(chromeMobile)) {
+  const bg = chromeMobile.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+  const val = (bg && bg[1] ? bg[1] : "").trim().toLowerCase();
+  if (val && !/^(transparent|none|inherit|initial|unset)$/.test(val) && !/rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test(val)) {
+    fail(
+      "mobile .shell-chrome must not gain an opaque utility-bar background; chrome should scroll away instead"
+    );
+  }
+}
+// Mobile top pad is only the calm breath after in-flow chrome — not fixed-overlay clearance.
+const rootMobile = extractBlock(shellCss, ":root", shellMobileIdx);
+if (!rootMobile) fail("missing mobile :root tokens");
+if (!/--shell-pad-top\s*:\s*1\.1rem/i.test(rootMobile)) {
+  fail(
+    "mobile --shell-pad-top must be the in-flow breath (1.1rem), not fixed-chrome clearance that double-spaces or enables overlay collision"
+  );
+}
+// Guard the old fixed-clearance formula from returning under another name.
+if (
+  /--shell-pad-top\s*:\s*calc\s*\(\s*3\.2svh[\s\S]*2\.75rem/i.test(rootMobile) ||
+  /--shell-pad-top\s*:\s*calc\s*\([\s\S]*mark-w[\s\S]*2\.75rem/i.test(rootMobile)
+) {
+  fail("mobile --shell-pad-top must not reintroduce fixed two-band chrome clearance calc");
+}
+
 // --- Filter instrument: search full row + two columns ---
 const instrumentMobile = extractBlock(shellCss, ".tray-instrument__row", shellMobileIdx);
 if (!instrumentMobile) fail("missing mobile .tray-instrument__row");
@@ -342,5 +399,5 @@ if (fs.existsSync(path.join(root, "package.json"))) {
 }
 
 console.log(
-  "PASS: mobile full-site from oracle (opening preserved; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; no mobile radial portrait/work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
+  "PASS: mobile full-site from oracle (opening preserved; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); no mobile radial portrait/work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
 );

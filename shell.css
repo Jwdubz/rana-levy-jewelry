@@ -1369,16 +1369,10 @@ html.is-quiet::view-transition-new(root) {
   :root {
     --mark-w: min(38vw, 9.5rem);
     --shell-pad-x: clamp(0.85rem, 4.2vw, 1.25rem);
-    /* Two-band chrome clearance:
-       top pad + mark/Index row + gap + primary row + calm breath before h1. */
-    --shell-pad-top: calc(
-      3.2svh
-      + max(calc(var(--mark-w) * 478 / 1485), 2.6rem)
-      + 0.35rem
-      + 2.75rem
-      + 1.1rem
-      + var(--safe-top)
-    );
+    /* Chrome is in document flow on mobile — only a calm breath before h1.
+       Do not reserve fixed-overlay clearance here (that caused double space
+       when chrome scrolled, and collision when it stayed fixed/transparent). */
+    --shell-pad-top: 1.1rem;
   }
 
   /*
@@ -1452,8 +1446,14 @@ html.is-quiet::view-transition-new(root) {
     );
   }
 
-  /* Mobile shell chrome: band 1 = mark + Index; band 2 = four destinations, no wrap. */
+  /* Mobile shell chrome: band 1 = mark + Index; band 2 = four destinations, no wrap.
+     Belongs to the opening composition and scrolls away — never a transparent
+     fixed overlay that body copy can collide with on long routes. */
   .shell-chrome {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
