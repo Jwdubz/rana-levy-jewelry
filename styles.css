@@ -845,8 +845,40 @@
     object-position: 100% 16%;
   }
 
+  /*
+    Mobile hand-bridge duplicate must inherit the final opening-ring composition:
+    centered square parent + soft radial perimeter dissolve. Outer #handBridge
+    keeps the angled mask-out that reveals the bench; only the media parent
+    matches the ring geometry so retirement is spatially continuous.
+  */
+  .hand-bridge .layer-media {
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    width: min(118vw, 150svh);
+    height: min(118vw, 150svh);
+    margin-top: calc(min(118vw, 150svh) * -0.5);
+    margin-left: calc(min(118vw, 150svh) * -0.5);
+    overflow: visible;
+    -webkit-mask-image: radial-gradient(
+      closest-side,
+      #000 52%,
+      rgba(0, 0, 0, 0.94) 68%,
+      rgba(0, 0, 0, 0.42) 86%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      closest-side,
+      #000 52%,
+      rgba(0, 0, 0, 0.94) 68%,
+      rgba(0, 0, 0, 0.42) 86%,
+      transparent 100%
+    );
+  }
+
   .hand-bridge .layer-media img,
   .hand-bridge .layer-media video {
+    object-fit: cover;
     object-position: 50% 50%;
   }
 }
