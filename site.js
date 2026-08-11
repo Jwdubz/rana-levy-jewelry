@@ -1050,8 +1050,9 @@
     let leftPx;
 
     if (mobile) {
-      widthPx = 0.44 * vw;
-      top = 4;
+      // Compact top-left identity after the rest header yields.
+      widthPx = Math.min(0.28 * vw, 120);
+      top = 3.4;
       leftPx = 0.05 * vw;
     } else {
       widthPx = Math.min(0.17 * vw, 240);

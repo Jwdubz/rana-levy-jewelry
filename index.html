@@ -101,8 +101,15 @@
       will-change: transform;
     }
 
+    /* Echo field is mobile-only atmosphere; desktop never paints it. */
+    .media-echo {
+      display: none;
+    }
+
     .media-stack img,
-    .media-stack video {
+    .media-stack video,
+    .media-echo img,
+    .media-echo video {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -124,12 +131,14 @@
       object-position: 50% 48%;
     }
 
-    .media-stack video {
+    .media-stack video,
+    .media-echo video {
       opacity: 0;
       transition: opacity 0.45s ease;
     }
 
-    .media-stack video.is-live {
+    .media-stack video.is-live,
+    .media-echo video.is-live {
       opacity: 1;
     }
 
@@ -275,42 +284,129 @@
     }
 
     @media (max-width: 700px) {
+      /*
+        Opening media oracle:
+        2:1 studio and 1:1 ring keep a full-viewport atmospheric echo (cover),
+        while the sharp plane uses contain-class geometry and a generous feather
+        so the whole subject remains intelligible without letterbox bars.
+      */
+      .media-echo {
+        display: block;
+        position: absolute;
+        inset: -10%;
+        width: 120%;
+        height: 120%;
+        z-index: 0;
+        overflow: hidden;
+        pointer-events: none;
+        transform-origin: center center;
+      }
+
+      .media-echo img,
+      .media-echo video {
+        object-fit: cover;
+        object-position: 50% 50%;
+        filter: blur(30px) brightness(0.44) saturate(1.08);
+        transform: scale(1.14);
+        transform-origin: center center;
+      }
+
+      .world-studio .media-stack,
+      .world-ring .media-stack {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
       .world-studio .media-stack img,
       .world-studio .media-stack video {
-        object-position: 35% 50%;
+        object-fit: contain;
+        object-position: 50% 46%;
+        /* Soft dissolve into the echo — no readable rectangle or empty bar. */
+        -webkit-mask-image: radial-gradient(
+          ellipse 78% 64% at 50% 48%,
+          #000 34%,
+          rgba(0, 0, 0, 0.96) 48%,
+          rgba(0, 0, 0, 0.72) 62%,
+          rgba(0, 0, 0, 0.28) 78%,
+          transparent 100%
+        );
+        mask-image: radial-gradient(
+          ellipse 78% 64% at 50% 48%,
+          #000 34%,
+          rgba(0, 0, 0, 0.96) 48%,
+          rgba(0, 0, 0, 0.72) 62%,
+          rgba(0, 0, 0, 0.28) 78%,
+          transparent 100%
+        );
       }
 
       .world-ring .media-stack img,
       .world-ring .media-stack video {
+        /* Square source may claim more portrait width; same spatial logic. */
+        inset: auto;
+        top: 50%;
+        left: 50%;
+        width: min(118vw, 150svh);
+        height: min(118vw, 150svh);
+        max-width: none;
+        max-height: none;
+        object-fit: contain;
         object-position: 50% 50%;
+        transform: translate3d(-50%, -50%, 0);
+        -webkit-mask-image: radial-gradient(
+          closest-side,
+          #000 58%,
+          rgba(0, 0, 0, 0.94) 72%,
+          rgba(0, 0, 0, 0.42) 88%,
+          transparent 100%
+        );
+        mask-image: radial-gradient(
+          closest-side,
+          #000 58%,
+          rgba(0, 0, 0, 0.94) 72%,
+          rgba(0, 0, 0, 0.42) 88%,
+          transparent 100%
+        );
       }
 
       .mark {
-        /* Below the fixed primary stack (≈3.4svh + three 40px rows) with breath. */
-        top: 21svh;
-        width: 74vw;
+        /* Band-one identity: compact top rest, not a mid-frame billboard. */
+        top: calc(env(safe-area-inset-top, 0px) + 1.6svh);
+        width: min(46vw, 11rem);
       }
 
       .setup {
         left: 8vw;
-        bottom: 12svh;
+        bottom: 11svh;
         transform: translate3d(0, 0, 0);
-        font-size: 1.18rem;
+        font-size: 1.12rem;
+        line-height: 1.25;
         text-align: left;
         white-space: normal;
         max-width: 84vw;
+        text-shadow:
+          0 1px 2px rgba(2, 0, 5, 0.55),
+          0 2px 22px rgba(2, 0, 5, 0.5),
+          0 0 36px rgba(2, 0, 5, 0.28);
       }
 
       .headline {
         left: 8vw;
-        top: 62%;
+        top: auto;
+        bottom: 18svh;
         right: auto;
         transform: translate3d(0, 6svh, 0);
-        font-size: clamp(3.35rem, 13.6vw, 4rem);
-        line-height: 0.88;
+        font-size: clamp(2.55rem, 11.2vw, 3.35rem);
+        line-height: 0.92;
         text-align: left;
         white-space: normal;
         max-width: 86vw;
+        text-shadow:
+          0 1px 2px rgba(2, 0, 5, 0.5),
+          0 2px 26px rgba(2, 0, 5, 0.48),
+          0 0 40px rgba(2, 0, 5, 0.28);
       }
 
       .headline .line {
@@ -323,9 +419,32 @@
 
       .final {
         left: 8vw;
-        bottom: 11svh;
-        font-size: clamp(2.65rem, 12vw, 3.4rem);
+        bottom: 12svh;
+        font-size: clamp(2.15rem, 9.6vw, 2.9rem);
+        line-height: 1.02;
         max-width: 84vw;
+        text-shadow:
+          0 1px 2px rgba(2, 0, 5, 0.55),
+          0 2px 26px rgba(2, 0, 5, 0.5),
+          0 0 40px rgba(2, 0, 5, 0.3);
+      }
+
+      /* Local contrast under copy only — no global opaque panel. */
+      .scene::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: min(42svh, 360px);
+        z-index: 7;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse 110% 90% at 28% 100%,
+          rgba(2, 0, 5, 0.42) 0%,
+          rgba(2, 0, 5, 0.18) 42%,
+          transparent 74%
+        );
       }
     }
 
@@ -339,7 +458,8 @@
       display: none;
     }
 
-    .is-quiet .media-stack video {
+    .is-quiet .media-stack video,
+    .is-quiet .media-echo video {
       opacity: 0 !important;
     }
   </style>
@@ -353,19 +473,48 @@
     <a href="#work">The work</a>
   </nav>
 
-  <header class="site-header">
+  <header class="site-header" id="siteHeader">
     <a
       class="persistent-mark"
       id="persistentMark"
       href="#opening"
       aria-label="Rana Levy — Fine Jewelry and Lapidary, back to opening"
     ></a>
-    <nav class="site-primary-nav" aria-label="Primary">
+    <nav class="site-primary-nav" id="sitePrimaryNav" aria-label="Primary">
       <a href="ready.html">Ready Now</a>
       <a href="made.html">Made To Order</a>
       <a href="consultation.html">Consultation</a>
       <a href="faq.html">FAQ</a>
     </nav>
+    <div class="site-chrome-compact" id="siteChromeCompact">
+      <button
+        type="button"
+        class="site-index-toggle"
+        id="siteIndexToggle"
+        aria-expanded="false"
+        aria-controls="siteIndexPanel"
+        tabindex="-1"
+      >
+        Index
+      </button>
+    </div>
+    <div
+      class="site-index-panel"
+      id="siteIndexPanel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="siteIndexHeading"
+      hidden
+    >
+      <p class="site-index-heading" id="siteIndexHeading">Index</p>
+      <nav class="site-index-nav" aria-label="Primary destinations">
+        <a href="ready.html">Ready Now</a>
+        <a href="made.html">Made To Order</a>
+        <a href="consultation.html">Consultation</a>
+        <a href="faq.html">FAQ</a>
+      </nav>
+      <button type="button" class="site-index-close" id="siteIndexClose">Close</button>
+    </div>
   </header>
 
   <main class="site-main" id="siteMain">
@@ -373,6 +522,20 @@
     <section class="passage movement movement-opening" id="opening" aria-label="Opening">
       <div class="scene" id="scene">
         <div class="world world-studio" id="worldStudio">
+          <div class="media-echo" id="studioEcho" aria-hidden="true">
+            <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async">
+            <video
+              id="studioEchoVideo"
+              data-src="assets/studio-banner.mp4"
+              poster="assets/studio-poster.jpg"
+              muted
+              loop
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
+          </div>
           <div class="media-stack" id="studioStack">
             <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async" fetchpriority="high">
             <video
@@ -390,6 +553,20 @@
         </div>
 
         <div class="world world-ring" id="worldRing">
+          <div class="media-echo" id="ringEcho" aria-hidden="true">
+            <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
+            <video
+              id="ringEchoVideo"
+              data-src="assets/ring-alexandrite.mp4"
+              poster="assets/ring-poster.jpg"
+              muted
+              loop
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
+          </div>
           <div class="media-stack" id="ringStack">
             <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
             <video
@@ -680,13 +857,40 @@
       const worldRing = document.getElementById("worldRing");
       const studioStack = document.getElementById("studioStack");
       const ringStack = document.getElementById("ringStack");
+      const studioEcho = document.getElementById("studioEcho");
+      const ringEcho = document.getElementById("ringEcho");
       const studioVideo = document.getElementById("studioVideo");
       const ringVideo = document.getElementById("ringVideo");
+      const studioEchoVideo = document.getElementById("studioEchoVideo");
+      const ringEchoVideo = document.getElementById("ringEchoVideo");
       const causticLight = document.getElementById("causticLight");
       const lightWash = document.getElementById("lightWash");
+      const siteHeader = document.getElementById("siteHeader");
+      const sitePrimaryNav = document.getElementById("sitePrimaryNav");
+      const siteChromeCompact = document.getElementById("siteChromeCompact");
+      const siteIndexToggle = document.getElementById("siteIndexToggle");
+      const siteIndexPanel = document.getElementById("siteIndexPanel");
+      const siteIndexClose = document.getElementById("siteIndexClose");
 
-      const studioMedia = studioStack.querySelectorAll("img, video");
-      const ringMedia = ringStack.querySelectorAll("img, video");
+      const studioMedia = studioStack
+        ? studioStack.querySelectorAll("img, video")
+        : [];
+      const ringMedia = ringStack ? ringStack.querySelectorAll("img, video") : [];
+      const studioEchoMedia = studioEcho
+        ? studioEcho.querySelectorAll("img, video")
+        : [];
+      const ringEchoMedia = ringEcho
+        ? ringEcho.querySelectorAll("img, video")
+        : [];
+      const openingVideos = [
+        studioVideo,
+        ringVideo,
+        studioEchoVideo,
+        ringEchoVideo
+      ].filter(Boolean);
+      const indexPanelLinks = siteIndexPanel
+        ? Array.prototype.slice.call(siteIndexPanel.querySelectorAll("a, button"))
+        : [];
 
       const state = {
         targetProgress: 0,
@@ -699,7 +903,10 @@
         pointerActive: false,
         lastTime: performance.now(),
         isMobile: window.matchMedia("(max-width: 700px)").matches,
-        finePointer: window.matchMedia("(pointer: fine)").matches
+        finePointer: window.matchMedia("(pointer: fine)").matches,
+        indexOpen: false,
+        indexLastFocus: null,
+        headerYield: 0
       };
 
       function clamp(v, a, b) {
@@ -785,17 +992,24 @@
         let studioY;
         let ringX;
         let ringY;
+        let studioEchoPos;
+        let ringEchoPos;
 
         if (mobile) {
-          studioX = lerp(35, 42, progress);
-          studioY = 50;
+          // Sharp planes are contain-class; keep the full subject centered.
+          studioX = 50;
+          studioY = lerp(46, 48, progress);
           ringX = 50;
           ringY = 50;
+          studioEchoPos = "50% 50%";
+          ringEchoPos = "50% 50%";
         } else {
           studioX = lerp(50, 52, progress);
           studioY = lerp(52, 49, progress);
           ringX = 50;
           ringY = 48;
+          studioEchoPos = null;
+          ringEchoPos = null;
         }
 
         // Pointer crop drift is additive via transform; object-position holds art direction.
@@ -806,6 +1020,16 @@
         }
         for (let i = 0; i < ringMedia.length; i++) {
           ringMedia[i].style.objectPosition = ringPos;
+        }
+        if (studioEchoPos) {
+          for (let i = 0; i < studioEchoMedia.length; i++) {
+            studioEchoMedia[i].style.objectPosition = studioEchoPos;
+          }
+        }
+        if (ringEchoPos) {
+          for (let i = 0; i < ringEchoMedia.length; i++) {
+            ringEchoMedia[i].style.objectPosition = ringEchoPos;
+          }
         }
       }
 
@@ -820,14 +1044,13 @@
         let translateX;
 
         if (mobile) {
-          const startW = 0.74 * vw;
-          const endW = 0.44 * vw;
+          // Band-one rest mark → compact top-left; yields with the header clock.
+          const startW = Math.min(0.46 * vw, 176);
+          const endW = Math.min(0.28 * vw, 120);
           widthPx = lerp(startW, endW, t);
-          // Start under the fixed primary destinations; settle to persistent top-left.
-          top = lerp(21, 4, t);
+          top = lerp(1.6, 3.4, t);
           const startLeft = (vw - startW) / 2;
           const endLeft = 0.05 * vw;
-          // Keep mark centered relative to its interpolated width while gliding left.
           const startCenter = startLeft + startW / 2;
           const endCenter = endLeft + endW / 2;
           const center = lerp(startCenter, endCenter, t);
@@ -854,10 +1077,20 @@
       }
 
       function applyCopy(progress) {
-        const setupT = windowProgress(progress, MOTION.setupOutStart, MOTION.setupOutEnd);
+        const mobile = state.isMobile;
+        // Mobile authoring: sequential beats with no perceptible coexistence.
+        const setupOutStart = mobile ? 0.12 : MOTION.setupOutStart;
+        const setupOutEnd = mobile ? 0.26 : MOTION.setupOutEnd;
+        const headInStart = mobile ? 0.28 : MOTION.headlineInStart;
+        const headInEnd = mobile ? 0.48 : MOTION.headlineInEnd;
+        const headOutStart = mobile ? 0.62 : MOTION.headlineOutStart;
+        const headOutEnd = mobile ? 0.74 : MOTION.headlineOutEnd;
+        const finalInStart = mobile ? 0.76 : MOTION.finalTextStart;
+        const finalInEnd = mobile ? 0.9 : MOTION.finalTextEnd;
+
+        const setupT = windowProgress(progress, setupOutStart, setupOutEnd);
         const setupY = lerp(0, -5, setupT);
         const setupOpacity = 1 - setupT;
-        const mobile = state.isMobile;
 
         if (mobile) {
           setupLine.style.transform = "translate3d(0, " + setupY + "svh, 0)";
@@ -865,9 +1098,10 @@
           setupLine.style.transform = "translate3d(-50%, " + setupY + "svh, 0)";
         }
         setupLine.style.opacity = String(setupOpacity);
+        setupLine.style.visibility = setupOpacity < 0.02 ? "hidden" : "visible";
 
-        const headIn = windowProgress(progress, MOTION.headlineInStart, MOTION.headlineInEnd);
-        const headOut = windowProgress(progress, MOTION.headlineOutStart, MOTION.headlineOutEnd);
+        const headIn = windowProgress(progress, headInStart, headInEnd);
+        const headOut = windowProgress(progress, headOutStart, headOutEnd);
         let headY;
         let headOpacity;
         if (headOut > 0) {
@@ -881,18 +1115,21 @@
         if (mobile) {
           headline.style.transform = "translate3d(0, " + headY + "svh, 0)";
         } else {
-          headline.style.transform = "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
+          headline.style.transform =
+            "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
         }
         headline.style.opacity = String(headOpacity);
+        headline.style.visibility = headOpacity < 0.02 ? "hidden" : "visible";
 
-        const prismT = windowProgress(progress, MOTION.headlineInStart, MOTION.headlineOutEnd);
+        const prismT = windowProgress(progress, headInStart, headOutEnd);
         const prismX = lerp(18, 82, prismT);
         heads.style.backgroundPosition = prismX + "% 50%";
 
-        const finalT = windowProgress(progress, MOTION.finalTextStart, MOTION.finalTextEnd);
+        const finalT = windowProgress(progress, finalInStart, finalInEnd);
         const finalY = lerp(5, 0, finalT);
         finalLine.style.transform = "translate3d(0, " + finalY + "svh, 0)";
         finalLine.style.opacity = String(finalT);
+        finalLine.style.visibility = finalT < 0.02 ? "hidden" : "visible";
       }
 
       function applyHandoff(progress) {
@@ -945,13 +1182,20 @@
       }
 
       function applyMediaTransforms(progress, px, py) {
-        // Studio: 1.08 at 0 → 1.015 at 0.62
+        const mobile = state.isMobile;
+        // Studio: 1.08 at 0 → 1.015 at 0.62 (mobile starts calmer over contain geometry)
         const studioScaleT = windowProgress(progress, 0, 0.62);
-        const studioScale = lerp(MOTION.mediaScaleStart, 1.015, studioScaleT);
+        const studioStart = mobile ? 1.035 : MOTION.mediaScaleStart;
+        const studioScale = lerp(studioStart, 1.015, studioScaleT);
 
         // Ring: 1.045 at 0.31 → 1.015 at 0.86
-        const ringScaleT = windowProgress(progress, MOTION.handoffStart, MOTION.finalTextEnd);
-        const ringScale = lerp(1.045, 1.015, ringScaleT);
+        const ringScaleT = windowProgress(
+          progress,
+          MOTION.handoffStart,
+          MOTION.finalTextEnd
+        );
+        const ringStart = mobile ? 1.03 : 1.045;
+        const ringScale = lerp(ringStart, 1.015, ringScaleT);
 
         const allowPointer =
           !quietModeActive() && state.finePointer && state.pointerActive;
@@ -964,7 +1208,7 @@
         const ringTx = nx * -1.8;
         const ringTy = ny * -1.2;
 
-        studioStack.style.transform =
+        const studioTf =
           "translate3d(" +
           studioTx +
           "vw, " +
@@ -972,7 +1216,7 @@
           "vw, 0) scale(" +
           studioScale +
           ")";
-        ringStack.style.transform =
+        const ringTf =
           "translate3d(" +
           ringTx +
           "vw, " +
@@ -980,6 +1224,12 @@
           "vw, 0) scale(" +
           ringScale +
           ")";
+
+        if (studioStack) studioStack.style.transform = studioTf;
+        if (ringStack) ringStack.style.transform = ringTf;
+        // Echo shares the same breath so live handoff never jumps against atmosphere.
+        if (studioEcho) studioEcho.style.transform = studioTf;
+        if (ringEcho) ringEcho.style.transform = ringTf;
       }
 
       function applyPointerWash(px, py) {
@@ -999,6 +1249,98 @@
         }
       }
 
+      function setIndexOpen(open) {
+        if (!siteIndexPanel || !siteIndexToggle) return;
+        const next = !!open;
+        if (next === state.indexOpen) return;
+        state.indexOpen = next;
+        if (next) {
+          state.indexLastFocus = document.activeElement;
+          siteIndexPanel.hidden = false;
+          siteIndexToggle.setAttribute("aria-expanded", "true");
+          if (siteHeader) siteHeader.classList.add("is-index-open");
+          // Focus first destination for keyboard users.
+          const focusable = siteIndexPanel.querySelector(
+            "a, button:not([disabled])"
+          );
+          if (focusable && typeof focusable.focus === "function") {
+            try {
+              focusable.focus();
+            } catch (e) {}
+          }
+        } else {
+          siteIndexPanel.hidden = true;
+          siteIndexToggle.setAttribute("aria-expanded", "false");
+          if (siteHeader) siteHeader.classList.remove("is-index-open");
+          const restore = state.indexLastFocus || siteIndexToggle;
+          state.indexLastFocus = null;
+          if (restore && typeof restore.focus === "function") {
+            try {
+              restore.focus();
+            } catch (e) {}
+          }
+        }
+      }
+
+      function applyHeaderChrome(progress) {
+        if (!siteHeader) return;
+        const mobile = state.isMobile;
+        if (!mobile) {
+          state.headerYield = 0;
+          siteHeader.classList.remove("is-passage-active");
+          siteHeader.style.removeProperty("--header-yield");
+          if (sitePrimaryNav) {
+            sitePrimaryNav.style.opacity = "";
+            sitePrimaryNav.style.visibility = "";
+            sitePrimaryNav.style.pointerEvents = "";
+          }
+          if (siteChromeCompact) {
+            siteChromeCompact.style.opacity = "";
+            siteChromeCompact.style.visibility = "";
+            siteChromeCompact.style.pointerEvents = "";
+          }
+          if (siteIndexToggle) siteIndexToggle.removeAttribute("tabindex");
+          if (markEl && progress < MOTION.markEnd) {
+            markEl.style.opacity = "0.94";
+          }
+          if (state.indexOpen) setIndexOpen(false);
+          return;
+        }
+
+        // Yield full destinations as physical scroll leaves the opening rest.
+        const yieldT = windowProgress(progress, 0.03, 0.16);
+        state.headerYield = yieldT;
+        siteHeader.style.setProperty("--header-yield", String(yieldT));
+        siteHeader.classList.toggle("is-passage-active", yieldT > 0.55);
+
+        if (sitePrimaryNav) {
+          const restOpacity = 1 - yieldT;
+          sitePrimaryNav.style.opacity = String(restOpacity);
+          sitePrimaryNav.style.visibility = restOpacity < 0.04 ? "hidden" : "visible";
+          sitePrimaryNav.style.pointerEvents = restOpacity < 0.5 ? "none" : "auto";
+        }
+        if (siteChromeCompact) {
+          const compactOn = yieldT > 0.55;
+          siteChromeCompact.style.opacity = String(yieldT);
+          siteChromeCompact.style.visibility = compactOn ? "visible" : "hidden";
+          siteChromeCompact.style.pointerEvents = compactOn ? "auto" : "none";
+          if (siteIndexToggle) {
+            if (compactOn) siteIndexToggle.removeAttribute("tabindex");
+            else siteIndexToggle.setAttribute("tabindex", "-1");
+          }
+        }
+
+        // Opening mark remains authored until the persistent mark swap.
+        if (markEl && progress < MOTION.markEnd) {
+          markEl.style.opacity = String(0.94);
+        }
+
+        // If the visitor reverse-scrolls to rest, close Index.
+        if (yieldT < 0.35 && state.indexOpen) {
+          setIndexOpen(false);
+        }
+      }
+
       function render(progress, px, py) {
         applyMark(progress);
         applyCopy(progress);
@@ -1006,6 +1348,7 @@
         applyObjectPositions(progress);
         applyMediaTransforms(progress, px, py);
         applyPointerWash(px, py);
+        applyHeaderChrome(progress);
       }
 
       function onPointerMove(event) {
@@ -1080,7 +1423,7 @@
         // Explicit quiet mode: never assign media sources; posters remain composed.
         if (mediaQuietActive()) {
           document.documentElement.classList.add("is-media-quiet");
-          [studioVideo, ringVideo].forEach(function (el) {
+          openingVideos.forEach(function (el) {
             if (!el) return;
             el.removeAttribute("autoplay");
             el.autoplay = false;
@@ -1162,12 +1505,39 @@
         }
 
         // Opening scene media only — later duplicates hydrate from site.js.
+        // Echo videos share the same bytes so atmosphere matches the sharp plane live.
         ensureVideoSource(studioVideo, "auto");
         ensureVideoSource(ringVideo, "auto");
-
         // Studio begins near 0.3s once metadata is ready; ring may loop from start.
         tryPlay(studioVideo, 0.3);
         tryPlay(ringVideo, 0);
+
+        if (state.isMobile) {
+          ensureVideoSource(studioEchoVideo, "auto");
+          ensureVideoSource(ringEchoVideo, "auto");
+          tryPlay(studioEchoVideo, 0.3);
+          tryPlay(ringEchoVideo, 0);
+
+          function bindEchoSync(primary, echo) {
+            if (!primary || !echo) return;
+            const sync = function () {
+              if (mediaQuietActive()) return;
+              try {
+                if (
+                  isFinite(primary.currentTime) &&
+                  Math.abs((echo.currentTime || 0) - primary.currentTime) > 0.12
+                ) {
+                  echo.currentTime = primary.currentTime;
+                }
+              } catch (e) {}
+            };
+            primary.addEventListener("playing", sync);
+            primary.addEventListener("timeupdate", sync);
+            primary.addEventListener("seeked", sync);
+          }
+          bindEchoSync(studioVideo, studioEchoVideo);
+          bindEchoSync(ringVideo, ringEchoVideo);
+        }
       }
 
       // Pause opening videos when far offscreen; restore when near.
@@ -1176,7 +1546,10 @@
         const rect = passage.getBoundingClientRect();
         const vh = window.innerHeight;
         const near = rect.bottom > -vh * 0.35 && rect.top < vh * 1.35;
-        [studioVideo, ringVideo].forEach(function (video) {
+        const activeVideos = state.isMobile
+          ? openingVideos
+          : [studioVideo, ringVideo].filter(Boolean);
+        activeVideos.forEach(function (video) {
           if (!video) return;
           if (near) {
             if (!video.getAttribute("src") && video.getAttribute("data-src")) {
@@ -1186,18 +1559,25 @@
               const p = video.play();
               if (p && typeof p.catch === "function") p.catch(function () {});
             }
-            studioStack && (studioStack.style.willChange = "transform");
-            ringStack && (ringStack.style.willChange = "transform");
           } else {
             if (!video.paused) {
               try {
                 video.pause();
               } catch (e) {}
             }
-            if (studioStack) studioStack.style.willChange = "auto";
-            if (ringStack) ringStack.style.willChange = "auto";
           }
         });
+        if (near) {
+          if (studioStack) studioStack.style.willChange = "transform";
+          if (ringStack) ringStack.style.willChange = "transform";
+          if (studioEcho) studioEcho.style.willChange = "transform";
+          if (ringEcho) ringEcho.style.willChange = "transform";
+        } else {
+          if (studioStack) studioStack.style.willChange = "auto";
+          if (ringStack) ringStack.style.willChange = "auto";
+          if (studioEcho) studioEcho.style.willChange = "auto";
+          if (ringEcho) ringEcho.style.willChange = "auto";
+        }
       }
 
       // Initial zero-delta frame before first rAF.
@@ -1207,6 +1587,45 @@
 
       loadMark();
       armVideos();
+
+      if (siteIndexToggle) {
+        siteIndexToggle.addEventListener("click", function () {
+          setIndexOpen(!state.indexOpen);
+        });
+      }
+      if (siteIndexClose) {
+        siteIndexClose.addEventListener("click", function () {
+          setIndexOpen(false);
+        });
+      }
+      if (siteIndexPanel) {
+        siteIndexPanel.addEventListener("click", function (event) {
+          if (event.target === siteIndexPanel) setIndexOpen(false);
+        });
+      }
+      document.addEventListener("keydown", function (event) {
+        if (!state.indexOpen) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setIndexOpen(false);
+          return;
+        }
+        if (event.key !== "Tab" || !siteIndexPanel) return;
+        // Focus trap inside the Index dialog.
+        const nodes = indexPanelLinks.filter(function (el) {
+          return el && !el.disabled && el.offsetParent !== null;
+        });
+        if (!nodes.length) return;
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
 
       window.addEventListener("pointermove", onPointerMove, { passive: true });
       window.addEventListener("pointerleave", onPointerLeave, { passive: true });

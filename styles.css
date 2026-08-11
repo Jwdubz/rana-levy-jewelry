@@ -596,6 +596,12 @@
 
 /* ——— Mobile art direction ——— */
 
+/* Compact Index chrome — mobile only; inert on desktop. */
+.site-chrome-compact,
+.site-index-panel {
+  display: none;
+}
+
 @media (max-width: 700px) {
   /* Mobile Hand: 340svh total = 100svh sticky + 120svh choreography +
      2 × 60svh unscaled holds (sticky travel 240svh). */
@@ -607,26 +613,168 @@
     height: 450svh;
   }
 
+  /*
+    Opening rest header: two authored bands that fit 320px without wrap.
+    Band 1 = wordmark (opening .mark / persistent mark).
+    Band 2 = four full destination labels in one row with 44px touch targets.
+    No pill, no ambient panel.
+  */
   .site-primary-nav {
-    top: 3.4svh;
-    right: 4vw;
-    left: auto;
-    max-width: 10.5rem;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.05rem;
+    /* Band two sits under band-one mark: top + mark height (~width/3.1) + breath. */
+    top: calc(
+      env(safe-area-inset-top, 0px) + 1.6svh + (min(46vw, 11rem) * 0.34) + 0.45rem
+    );
+    right: 0;
+    left: 0;
+    max-width: none;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 max(0.35rem, env(safe-area-inset-right, 0px)) 0
+      max(0.35rem, env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+    transition: opacity 0.2s linear;
   }
 
   .site-primary-nav a {
-    font-size: 0.95rem;
-    padding: 0.38rem 0.05rem;
-    min-height: 40px;
+    flex: 1 1 0;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(0.68rem, 2.45vw, 0.86rem);
+    letter-spacing: 0.005em;
+    padding: 0.2rem 0.12rem;
+    min-height: 44px;
+    min-width: 0;
+    white-space: nowrap;
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.55),
+      0 2px 18px rgba(2, 0, 5, 0.42);
+  }
+
+  /* Compact access after the rest header yields to imagery. */
+  .site-chrome-compact {
+    display: block;
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 3.1svh);
+    right: max(3.5vw, env(safe-area-inset-right, 0px));
+    z-index: 62;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .site-index-toggle,
+  .site-index-close {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--cream);
+    font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman",
+      serif;
+    font-size: 0.92rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.55rem 0.35rem;
+    margin: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.55),
+      0 2px 18px rgba(2, 0, 5, 0.42);
+  }
+
+  .site-index-toggle:focus-visible,
+  .site-index-close:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 4px;
+  }
+
+  .site-index-panel {
+    display: block;
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 8.5svh);
+    right: max(3.5vw, env(safe-area-inset-right, 0px));
+    left: auto;
+    z-index: 70;
+    width: min(16.5rem, calc(100vw - 1.5rem));
+    padding: 0.85rem 0.95rem 0.75rem;
+    pointer-events: auto;
+    /* No ambient panel chrome — destinations only, readable over imagery. */
+    background: transparent;
+  }
+
+  .site-index-panel[hidden] {
+    display: none !important;
+  }
+
+  .site-index-heading {
+    margin: 0 0 0.45rem;
+    color: var(--cream);
+    font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman",
+      serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.72;
+    text-shadow: 0 1px 14px rgba(2, 0, 5, 0.55);
+  }
+
+  .site-index-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  .site-index-nav a {
+    color: var(--cream);
+    font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman",
+      serif;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    text-decoration: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.1rem;
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.6),
+      0 2px 20px rgba(2, 0, 5, 0.45);
+  }
+
+  .site-index-nav a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    text-decoration-color: var(--link-line);
+  }
+
+  .site-index-nav a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 4px;
+  }
+
+  .site-index-close {
+    margin-top: 0.25rem;
+    font-size: 0.86rem;
+    letter-spacing: 0.06em;
+    opacity: 0.78;
+  }
+
+  .site-header.is-index-open .site-index-toggle {
+    opacity: 0.55;
   }
 
   .persistent-mark {
-    top: 4svh;
+    top: calc(env(safe-area-inset-top, 0px) + 3.4svh);
     left: 5vw;
-    width: 44vw;
+    width: min(28vw, 7.5rem);
   }
 
   .thought {
