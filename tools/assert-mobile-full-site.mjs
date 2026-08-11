@@ -557,6 +557,30 @@ if (!/function\s+quietModeActive\s*\(/.test(siteJs) && !/function quietModeActiv
 }
 if (!/is-quiet/.test(siteJs)) fail("site.js must still toggle is-quiet");
 
+// --- Home hand beat: lap-only window + exact terminal copy ---
+// BENCH_WINDOWS.hand must loop only the Rana-at-lap shot (5.75–6.70s).
+const handWindowDecl = siteJs.match(
+  /const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*(\[[^\]]+\])/
+);
+if (!handWindowDecl || handWindowDecl[1].replace(/\s+/g, "") !== "[5.75,0.95]") {
+  fail("BENCH_WINDOWS.hand must be exactly [5.75, 0.95] (Rana-at-lap interior)");
+}
+if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.0\s*,\s*1\.8\s*\]/.test(siteJs)) {
+  fail("retired BENCH_WINDOWS.hand [5.0, 1.8] must be absent from hand declaration");
+}
+const workThoughtExact =
+  "See what's ready now or work with Rana to bring your Custom Design to Life.";
+if (!index.includes(workThoughtExact)) {
+  fail("#workThoughtRest must use the exact owner-supplied terminal sentence");
+}
+if (
+  index.includes(
+    "See what's ready now, or choose a design Rana can make for you."
+  )
+) {
+  fail("retired #workThoughtRest sentence must be absent");
+}
+
 // Shell current-route + Index still present.
 if (!/function\s+markPrimaryNavCurrent\s*\(/.test(shellJs)) {
   fail("shell.js must mark primary nav current route");
