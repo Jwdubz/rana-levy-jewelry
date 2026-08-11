@@ -350,6 +350,17 @@ for (const block of consultBlocks) {
   if (/transparent\s+48%/i.test(scrimJoined) && /transparent\s+82%/i.test(scrimJoined)) {
     fail("mobile consultation scrim must not recreate the fully-transparent mid-viewport stack");
   }
+  // Residual local-halo: opaque cream alone left ~4.17:1 over 430 pale pencil.
+  // Proven vertical mid-stops (0.55/0.62/0.80) clear ≥4.5:1; lock the floor.
+  if (!/rgba\(\s*10\s*,\s*2\s*,\s*14\s*,\s*0\.55\s*\)\s*34%/i.test(scrimJoined)) {
+    fail("mobile consultation vertical scrim 34% stop must keep mid-stack darkness floor 0.55");
+  }
+  if (!/rgba\(\s*10\s*,\s*2\s*,\s*14\s*,\s*0\.62\s*\)\s*56%/i.test(scrimJoined)) {
+    fail("mobile consultation vertical scrim 56% stop must keep mid-stack darkness floor 0.62");
+  }
+  if (!/rgba\(\s*10\s*,\s*2\s*,\s*14\s*,\s*0\.8(?:0)?\s*\)\s*78%/i.test(scrimJoined)) {
+    fail("mobile consultation vertical scrim 78% stop must keep mid-stack darkness floor 0.80");
+  }
   if (
     /\.page-consultation[\s\S]{0,800}\.shell-ground--sketch\s+\.shell-ground__image[\s\S]{0,500}filter\s*:\s*[^;]*blur/i.test(
       shellMobile
