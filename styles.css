@@ -847,10 +847,11 @@
   }
 
   /*
-    Mobile hand-bridge media matches the final opening-ring full-bleed stack:
-    edge-to-edge viewport fill, no radial/elliptical perimeter mask. Outer
-    #handBridge still owns the angled Turn mask-out into the bench; the media
-    parent itself is continuous full-viewport composition, not a vignette.
+    Mobile hand-bridge media matches the final opening-ring contain stack:
+    full-viewport parent, object-fit: contain, same quiet room-tone ground.
+    Outer #handBridge still owns the angled Turn mask-out into the bench;
+    the media parent itself is continuous source-preserving composition,
+    not a vignette or card.
   */
   .hand-bridge .layer-media {
     inset: 0;
@@ -860,12 +861,17 @@
     overflow: hidden;
     -webkit-mask-image: none;
     mask-image: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* Match mobile .world-ring ground so reverse travel stays continuous. */
+    background: #b7aea2;
   }
 
   .hand-bridge .layer-media img,
   .hand-bridge .layer-media video {
-    object-fit: cover;
-    object-position: 50% 50%;
+    object-fit: contain;
+    object-position: 50% 48%;
   }
 }
 

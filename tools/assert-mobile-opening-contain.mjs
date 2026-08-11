@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Source assertion: mobile opening + hand-bridge media must be full-bleed
- * passage geometry — not a vignette. No media-echo, no radial/elliptical
- * perimeter masks on opening/hand-bridge stacks, no .scene::after copy wash,
- * and desktop .layer-media / .media-stack overscan remains unchanged.
+ * Source assertion: mobile opening + hand-bridge media must preserve source
+ * geometry — full-viewport stack parents, object-fit: contain children, solid
+ * neutral grounds (no vignette/echo/radial wash), hand-bridge parity with the
+ * opening ring, and unchanged desktop .layer-media / .media-stack overscan.
  *
- * Usage: node tools/assert-mobile-opening-full-bleed.mjs
+ * Usage: node tools/assert-mobile-opening-contain.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -64,6 +64,47 @@ function assertFullViewport(block, label) {
   if (block.includes("min(118vw, 150svh)") || block.includes("59vw")) {
     fail(`${label} still uses retired vignette parent dimensions`);
   }
+  // Cinematic field, not a card silhouette.
+  const radii = block.match(/border-radius\s*:\s*([^;]+);/gi) || [];
+  for (const decl of radii) {
+    const value = decl.replace(/^border-radius\s*:\s*/i, "").replace(/;$/, "").trim();
+    if (!/^0(px)?$/i.test(value)) {
+      fail(`${label} must not use a non-zero border-radius card silhouette (found ${value})`);
+    }
+  }
+  const shadows = block.match(/box-shadow\s*:\s*([^;]+);/gi) || [];
+  for (const decl of shadows) {
+    const value = decl.replace(/^box-shadow\s*:\s*/i, "").replace(/;$/, "").trim();
+    if (!/^none$/i.test(value)) {
+      fail(`${label} must not use a box-shadow perimeter effect (found ${value})`);
+    }
+  }
+}
+
+function assertContainMedia(block, label) {
+  if (!block) fail(`missing ${label}`);
+  if (!/\bobject-fit:\s*contain\s*;/.test(block)) {
+    fail(`${label} must use object-fit: contain`);
+  }
+  if (/\bobject-fit:\s*cover\s*;/.test(block)) {
+    fail(`${label} must not use object-fit: cover`);
+  }
+  if (!/\bobject-position\s*:/.test(block)) {
+    fail(`${label} must declare object-position art direction`);
+  }
+}
+
+function assertSolidGround(block, label) {
+  if (!block) fail(`missing ${label}`);
+  const bg = block.match(/background\s*:\s*([^;]+);/);
+  if (!bg) fail(`${label} must declare a solid background ground`);
+  const value = bg[1].trim();
+  if (/gradient/i.test(value)) {
+    fail(`${label} ground must be solid, not a gradient (found ${value})`);
+  }
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) && !/^rgb(a)?\(/i.test(value)) {
+    fail(`${label} ground must be a solid color token (found ${value})`);
+  }
 }
 
 const mobileQuery = "@media (max-width: 700px)";
@@ -103,6 +144,18 @@ if (
   fail("mobile opening CSS must not reintroduce a .scene radial copy wash");
 }
 
+// --- Opening worlds: solid neutral grounds (no gradient) ---
+const studioWorld = extractBlock(index, ".world-studio", indexMobileIdx);
+const ringWorld = extractBlock(index, ".world-ring", indexMobileIdx);
+assertSolidGround(studioWorld, "mobile .world-studio");
+assertSolidGround(ringWorld, "mobile .world-ring");
+// Studio ground should be deep (dark), ring ground quieter/lighter room tone.
+const studioBg = studioWorld.match(/background\s*:\s*([^;]+);/)[1].trim();
+const ringBg = ringWorld.match(/background\s*:\s*([^;]+);/)[1].trim();
+if (studioBg === ringBg) {
+  fail("studio and ring mobile grounds must differ (studio deep, ring room tone)");
+}
+
 // --- Opening stacks: full-viewport, no vignette mask ---
 // Prefer the combined selector; fall back to each world if split later.
 let openingStacks = extractBlock(
@@ -129,6 +182,38 @@ if (!openingStacks) {
   );
 }
 
+// --- Child media: contain, not cover ---
+const studioMedia = extractBlock(
+  index,
+  ".world-studio .media-stack img,\n      .world-studio .media-stack video",
+  indexMobileIdx
+);
+const studioMediaAlt = studioMedia
+  ? null
+  : extractBlock(
+      index,
+      ".world-studio .media-stack img, .world-studio .media-stack video",
+      indexMobileIdx
+    );
+assertContainMedia(
+  studioMedia || studioMediaAlt,
+  "mobile studio stack media"
+);
+
+const ringMedia = extractBlock(
+  index,
+  ".world-ring .media-stack img,\n      .world-ring .media-stack video",
+  indexMobileIdx
+);
+const ringMediaAlt = ringMedia
+  ? null
+  : extractBlock(
+      index,
+      ".world-ring .media-stack img, .world-ring .media-stack video",
+      indexMobileIdx
+    );
+assertContainMedia(ringMedia || ringMediaAlt, "mobile ring stack media");
+
 // Explicitly forbid radial mask grammar anywhere in the mobile opening query
 // on media-stack parents (not object-position rules).
 const forbiddenMaskTokens = [
@@ -143,13 +228,53 @@ for (const token of forbiddenMaskTokens) {
   }
 }
 
-// --- Hand bridge mobile parent mirrors full-bleed opening ring ---
+// --- Hand bridge mobile parent mirrors opening ring contain composition ---
 const handMediaMobile = extractBlock(
   styles,
   ".hand-bridge .layer-media",
   stylesMobileIdx
 );
 assertFullViewport(handMediaMobile, "mobile .hand-bridge .layer-media");
+assertSolidGround(handMediaMobile, "mobile .hand-bridge .layer-media");
+const handBg = handMediaMobile.match(/background\s*:\s*([^;]+);/)[1].trim();
+if (handBg !== ringBg) {
+  fail(
+    `hand-bridge mobile ground (${handBg}) must match opening ring ground (${ringBg})`
+  );
+}
+
+const handMediaChildren = extractBlock(
+  styles,
+  ".hand-bridge .layer-media img,\n  .hand-bridge .layer-media video",
+  stylesMobileIdx
+);
+const handMediaChildrenAlt = handMediaChildren
+  ? null
+  : extractBlock(
+      styles,
+      ".hand-bridge .layer-media img, .hand-bridge .layer-media video",
+      stylesMobileIdx
+    );
+assertContainMedia(
+  handMediaChildren || handMediaChildrenAlt,
+  "mobile .hand-bridge .layer-media children"
+);
+
+// Parity: hand-bridge object-position must match ring object-position.
+const ringPosMatch = (ringMedia || ringMediaAlt).match(
+  /object-position\s*:\s*([^;]+);/
+);
+const handPosMatch = (handMediaChildren || handMediaChildrenAlt).match(
+  /object-position\s*:\s*([^;]+);/
+);
+if (!ringPosMatch || !handPosMatch) {
+  fail("ring and hand-bridge must both declare object-position");
+}
+if (ringPosMatch[1].trim() !== handPosMatch[1].trim()) {
+  fail(
+    `hand-bridge object-position (${handPosMatch[1].trim()}) must match ring (${ringPosMatch[1].trim()})`
+  );
+}
 
 const stylesMobileSlice = styles.slice(stylesMobileIdx);
 const stylesNextMedia = stylesMobileSlice.indexOf("@media", 1);
@@ -158,7 +283,6 @@ const stylesMobileOnly =
     ? stylesMobileSlice.slice(0, stylesNextMedia)
     : stylesMobileSlice;
 for (const token of forbiddenMaskTokens) {
-  // Only fail if the token appears in the hand-bridge media block region.
   if (handMediaMobile && handMediaMobile.includes(token)) {
     fail(`hand-bridge mobile parent still carries vignette mask grammar: ${token}`);
   }
@@ -190,6 +314,15 @@ if (
 ) {
   fail("desktop .media-stack lost 112% overscan geometry");
 }
+// Desktop child media must remain cover (contain is mobile-only).
+const desktopStackMedia = extractBlock(index, ".media-stack img,\n    .media-stack video", 0);
+const desktopStackMediaAlt = desktopStackMedia
+  ? null
+  : extractBlock(index, ".media-stack img, .media-stack video", 0);
+const desktopMediaBlock = desktopStackMedia || desktopStackMediaAlt;
+if (!desktopMediaBlock || !/\bobject-fit:\s*cover\s*;/.test(desktopMediaBlock)) {
+  fail("desktop .media-stack children must keep object-fit: cover");
+}
 
 const desktopLayer = extractBlock(styles, ".layer-media", 0);
 if (!desktopLayer) fail("missing desktop base .layer-media block");
@@ -209,7 +342,7 @@ const desktopHandMediaIdx = styles.indexOf(".hand-bridge .layer-media");
 if (desktopHandMediaIdx >= 0 && desktopHandMediaIdx < stylesMobileIdx) {
   const preMobile = styles.slice(0, stylesMobileIdx);
   const parentGeometryInDesktop =
-    /\.hand-bridge\s+\.layer-media\s*\{[^}]*\b(width|height|inset|mask-image)\b/s.test(
+    /\.hand-bridge\s+\.layer-media\s*\{[^}]*\b(width|height|inset|mask-image|background)\b/s.test(
       preMobile
     );
   if (parentGeometryInDesktop) {
@@ -218,5 +351,5 @@ if (desktopHandMediaIdx >= 0 && desktopHandMediaIdx < stylesMobileIdx) {
 }
 
 console.log(
-  "PASS: mobile opening/hand-bridge is full-bleed (no vignette, no echo, no scene copy wash); desktop overscan unchanged"
+  "PASS: mobile opening/hand-bridge preserves source (contain, solid grounds, no vignette/echo/copy wash); desktop overscan unchanged"
 );

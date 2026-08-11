@@ -276,11 +276,24 @@
 
     @media (max-width: 700px) {
       /*
-        Opening media oracle — full-bleed passage, not a vignette:
-        Active footage fills the viewport edge-to-edge. Art direction is crop
-        and object-position only; no radial/elliptical perimeter mask, no
-        atmospheric echo field, no copy wash panel. JS owns stack transform.
+        Opening media oracle — source-preserving passage, not a vignette:
+        Stack parents stay full-viewport (the passage). Child media uses
+        object-fit: contain so 2:1 studio and square ring frames remain whole.
+        Solid world grounds (no gradient) make the letterbox field belong to
+        the room, not a card. Art direction is object-position only — no
+        radial/elliptical perimeter mask, echo, blur, feather, or copy wash.
+        JS owns stack transform.
       */
+      .world-studio {
+        /* Deep neutral sampled from the studio footage's dark passages. */
+        background: #151210;
+      }
+
+      .world-ring {
+        /* Quiet room tone from the ring footage's surrounding field. */
+        background: #b7aea2;
+      }
+
       .world-studio .media-stack,
       .world-ring .media-stack {
         inset: 0;
@@ -290,18 +303,23 @@
         overflow: hidden;
         -webkit-mask-image: none;
         mask-image: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
       }
 
       .world-studio .media-stack img,
       .world-studio .media-stack video {
-        object-fit: cover;
-        object-position: 50% 46%;
+        object-fit: contain;
+        /* 2:1 plane sits mid-upper so header and setup keep clean ground. */
+        object-position: 50% 42%;
       }
 
       .world-ring .media-stack img,
       .world-ring .media-stack video {
-        object-fit: cover;
-        object-position: 50% 50%;
+        object-fit: contain;
+        /* Square plane centered; headline/final rest in lower ground. */
+        object-position: 50% 48%;
       }
 
       .mark {
@@ -866,11 +884,12 @@
         let ringY;
 
         if (mobile) {
-          // Full-bleed cover crop; keep jewelry/studio subjects intentional.
+          // Contain placement: keep whole 2:1 / square frames; shift fields
+          // so header and active copy rest on solid ground, not the subject.
           studioX = 50;
-          studioY = lerp(46, 48, progress);
+          studioY = lerp(42, 44, progress);
           ringX = 50;
-          ringY = 50;
+          ringY = 48;
         } else {
           studioX = lerp(50, 52, progress);
           studioY = lerp(52, 49, progress);
