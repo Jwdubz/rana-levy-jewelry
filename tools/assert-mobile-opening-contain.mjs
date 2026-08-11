@@ -12,8 +12,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+// Normalize CRLF/CR → LF so multi-line selector probes match Windows checkouts.
+const styles = fs
+  .readFileSync(path.join(root, "styles.css"), "utf8")
+  .replace(/\r\n?/g, "\n");
+const index = fs
+  .readFileSync(path.join(root, "index.html"), "utf8")
+  .replace(/\r\n?/g, "\n");
 
 function fail(msg) {
   console.error("FAIL:", msg);
