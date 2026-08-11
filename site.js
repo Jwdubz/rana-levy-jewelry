@@ -243,10 +243,14 @@
     const target = typeof targetTime === "number" && isFinite(targetTime) ? Math.max(0, targetTime) : 0;
     return new Promise(function (resolve) {
       let settled = false;
+      // Declare before any done() path: early near-target resolve used to hit
+      // const-TDZ on clearTimeout(timer), reject the arm, and set _deferFailed —
+      // the reverse re-entry hard-stick (paused poster, currentTime frozen in-window).
+      let timer = null;
       function done(ok) {
         if (settled) return;
         settled = true;
-        clearTimeout(timer);
+        if (timer != null) clearTimeout(timer);
         video.removeEventListener("seeked", onSeeked);
         video.removeEventListener("error", onErr);
         resolve(!!ok);
@@ -258,14 +262,15 @@
           return false;
         }
       }
-      // Already there and not mid-seek.
-      if (!video.seeking && nearTarget() && video.readyState >= 1) {
+      // Already there while advancing and not mid-seek. Paused re-entry must
+      // re-apply currentTime so the engine re-latches before play.
+      if (!video.paused && !video.seeking && nearTarget() && video.readyState >= 1) {
         done(true);
         return;
       }
-      const timer = setTimeout(function () {
-        // Stuck seeking / non-seekable responses must not claim success.
-        done(!video.seeking && nearTarget());
+      timer = setTimeout(function () {
+        // Sticky seeking flags must not hard-fail when the window already landed.
+        done(nearTarget());
       }, 4000);
       function onSeeked() {
         done(nearTarget());
@@ -290,7 +295,11 @@
 
   function playAndMarkLive(video, generation) {
     if (!video) return Promise.resolve(false);
-    if (mediaQuietActive() || video._deferGen !== generation) {
+    // Stale arm must not pause or strip is-live owned by a newer generation.
+    if (video._deferGen !== generation) {
+      return Promise.resolve(false);
+    }
+    if (mediaQuietActive()) {
       try {
         video.pause();
       } catch (e) {}
@@ -312,7 +321,10 @@
     if (playResult && typeof playResult.then === "function") {
       return playResult
         .then(function () {
-          if (mediaQuietActive() || video._deferGen !== generation || video.seeking) {
+          if (video._deferGen !== generation) {
+            return false;
+          }
+          if (mediaQuietActive() || video.seeking || video.paused) {
             try {
               video.pause();
             } catch (e) {}
@@ -323,7 +335,9 @@
           return true;
         })
         .catch(function () {
-          video.classList.remove("is-live");
+          if (video._deferGen === generation) {
+            video.classList.remove("is-live");
+          }
           return false;
         });
     }
@@ -888,6 +902,7 @@
         } catch (e) {}
       }
       video.classList.remove("is-live");
+      if (armedFlag) state[armedFlag] = false;
       return;
     }
     if (active) {
@@ -919,16 +934,24 @@
       // Hydrate via shared Blob registry, seek to window, then play → is-live.
       armDeferredPlayback(video, startAt);
     } else {
-      // Leaving the beat: cancel in-flight arm. Keep any resolved Blob in the
-      // shared registry; clear hard-fail so a later approach may retry once.
-      if (video._deferArming || video._deferFailed) {
+      // Leaving the beat: always establish a coherent inactive state so reverse
+      // re-entry can re-arm. Keep resolved Blob URLs in the shared registry.
+      // Prior bug: successful live leave only paused and left is-live / generation
+      // / armedFlag intact, so reverse re-entry could not cleanly arm→seek→play.
+      if (
+        (armedFlag && state[armedFlag]) ||
+        video._deferArming ||
+        video._deferFailed ||
+        !video.paused ||
+        video.classList.contains("is-live")
+      ) {
         invalidateDeferredArm(video);
-      }
-      if (!video.paused) {
         try {
           video.pause();
         } catch (e) {}
+        video.classList.remove("is-live");
       }
+      if (armedFlag) state[armedFlag] = false;
     }
   }
 

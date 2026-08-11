@@ -581,6 +581,93 @@ if (
   fail("retired #workThoughtRest sentence must be absent");
 }
 
+// --- Hand bench video leave / reverse re-entry lifecycle ---
+// Source invariants that protect reverse re-entry of the lap beat: leave must
+// put the video in a coherent inactive state; re-entry must be able to arm,
+// seek inside the lap window, play, and regain is-live without a hard-fail stick.
+const setVideoActiveFn = siteJs.match(
+  /function\s+setVideoActive\s*\(\s*video\s*,\s*active\s*,\s*armedFlag\s*\)\s*\{[\s\S]*?\n  \}/
+);
+if (!setVideoActiveFn) {
+  fail("setVideoActive(video, active, armedFlag) must remain in site.js");
+}
+const setVideoActiveBody = setVideoActiveFn[0];
+// Inactive leave path must invalidate arm generation, pause, and drop is-live.
+if (!/invalidateDeferredArm\s*\(\s*video\s*\)/.test(setVideoActiveBody)) {
+  fail("setVideoActive leave path must invalidateDeferredArm so re-entry can re-arm");
+}
+if (!/classList\.remove\(\s*["']is-live["']\s*\)/.test(setVideoActiveBody)) {
+  fail("setVideoActive must remove is-live on leave / quiet (coherent inactive state)");
+}
+if (!/state\[armedFlag\]\s*=\s*false/.test(setVideoActiveBody)) {
+  fail("setVideoActive must clear armedFlag on leave so reverse re-entry is a fresh arm");
+}
+// Retired leave shape: only invalidate when already arming/failed (skips successful live leave).
+if (
+  /if\s*\(\s*video\._deferArming\s*\|\|\s*video\._deferFailed\s*\)\s*\{\s*invalidateDeferredArm\s*\(\s*video\s*\)\s*;\s*\}/.test(
+    setVideoActiveBody
+  )
+) {
+  fail(
+    "setVideoActive must not gate leave invalidation on only _deferArming||_deferFailed (successful live leave must tear down too)"
+  );
+}
+// Activity still arms hand video only inside the open beat window.
+if (
+  !/setVideoActive\s*\(\s*handVideo\s*,\s*handActive\s*&&\s*handP\s*>\s*0\s*&&\s*handP\s*<\s*0\.95\s*,\s*["']handVideoArmed["']\s*\)/.test(
+    siteJs
+  )
+) {
+  fail("hand activity must call setVideoActive(handVideo, handActive && handP > 0 && handP < 0.95, 'handVideoArmed')");
+}
+// armDeferredPlayback remains the sole hydrate→seek→play path (no scroll-seeking).
+if (!/function\s+armDeferredPlayback\s*\(\s*video\s*,\s*startAt\s*\)/.test(siteJs)) {
+  fail("armDeferredPlayback must remain for deferred hydrate→seek→play");
+}
+if (!/function\s+playAndMarkLive\s*\(\s*video\s*,\s*generation\s*\)/.test(siteJs)) {
+  fail("playAndMarkLive must remain generation-gated for is-live ownership");
+}
+// Stale generation must not tear down a newer arm's live state.
+const playAndMarkLiveFn = siteJs.match(
+  /function\s+playAndMarkLive\s*\(\s*video\s*,\s*generation\s*\)\s*\{[\s\S]*?\n  \}/
+);
+if (!playAndMarkLiveFn) {
+  fail("playAndMarkLive body must be extractable");
+}
+if (
+  /if\s*\(\s*mediaQuietActive\s*\(\s*\)\s*\|\|\s*video\._deferGen\s*!==\s*generation\s*\)\s*\{[\s\S]{0,120}classList\.remove\(\s*["']is-live["']\s*\)/.test(
+    playAndMarkLiveFn[0]
+  )
+) {
+  fail(
+    "playAndMarkLive must not pause/remove is-live on stale generation (stale arms must be side-effect free)"
+  );
+}
+// Paused reverse re-entry must re-apply the window seek (not short-circuit while paused).
+if (
+  !/!video\.paused\s*&&\s*!video\.seeking\s*&&\s*nearTarget\s*\(\s*\)/.test(siteJs)
+) {
+  fail("seekVideoTo must only short-circuit when already advancing near target (paused re-entry re-seeks)");
+}
+// seekVideoTo must not const-TDZ on timer when early near-target done() runs
+// (that rejection set _deferFailed and stuck reverse re-entry on the poster).
+const seekVideoToFn = siteJs.match(
+  /function\s+seekVideoTo\s*\(\s*video\s*,\s*targetTime\s*\)\s*\{[\s\S]*?\n  \}/
+);
+if (!seekVideoToFn) {
+  fail("seekVideoTo must remain extractable");
+}
+if (!/let\s+timer\s*=\s*null\s*;/.test(seekVideoToFn[0])) {
+  fail("seekVideoTo must declare let timer = null before any done() path (no const-TDZ on early resolve)");
+}
+if (/const\s+timer\s*=\s*setTimeout/.test(seekVideoToFn[0])) {
+  fail("seekVideoTo must not const-declare timer after done() can run (TDZ rejects arm → _deferFailed stick)");
+}
+// Quiet mode remains poster-only / source-sparing for deferred bench media.
+if (!/mediaQuietActive\s*\(\s*\)/.test(setVideoActiveBody)) {
+  fail("setVideoActive must still gate on mediaQuietActive for quiet poster-only mode");
+}
+
 // Shell current-route + Index still present.
 if (!/function\s+markPrimaryNavCurrent\s*\(/.test(shellJs)) {
   fail("shell.js must mark primary nav current route");
