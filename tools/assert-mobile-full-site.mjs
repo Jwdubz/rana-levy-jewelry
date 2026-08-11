@@ -557,13 +557,26 @@ if (!/function\s+quietModeActive\s*\(/.test(siteJs) && !/function quietModeActiv
 }
 if (!/is-quiet/.test(siteJs)) fail("site.js must still toggle is-quiet");
 
-// --- Home hand beat: lap-only window + exact terminal copy ---
-// BENCH_WINDOWS.hand must loop only the Rana-at-lap shot (5.75–6.70s).
+// --- Home hand beat: derived Lap→Engraving cycle + exact terminal copy ---
+// handVideo uses the contiguous derived cycle; BENCH_WINDOWS.hand covers its full duration.
+if (
+  !/id="handVideo"[\s\S]*?data-src="assets\/studio-hand-work-cycle\.mp4"/.test(index)
+) {
+  fail('handVideo must use data-src="assets/studio-hand-work-cycle.mp4"');
+}
+if (
+  /id="handVideo"[\s\S]*?data-src="assets\/studio-banner\.mp4"/.test(index)
+) {
+  fail("handVideo must not still point at the full studio-banner montage");
+}
 const handWindowDecl = siteJs.match(
   /const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*(\[[^\]]+\])/
 );
-if (!handWindowDecl || handWindowDecl[1].replace(/\s+/g, "") !== "[5.75,0.95]") {
-  fail("BENCH_WINDOWS.hand must be exactly [5.75, 0.95] (Rana-at-lap interior)");
+if (!handWindowDecl || handWindowDecl[1].replace(/\s+/g, "") !== "[0,2.266667]") {
+  fail("BENCH_WINDOWS.hand must be exactly [0, 2.266667] (full derived cycle)");
+}
+if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.75\s*,\s*0\.95\s*\]/.test(siteJs)) {
+  fail("retired BENCH_WINDOWS.hand [5.75, 0.95] must be absent from hand declaration");
 }
 if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.0\s*,\s*1\.8\s*\]/.test(siteJs)) {
   fail("retired BENCH_WINDOWS.hand [5.0, 1.8] must be absent from hand declaration");

@@ -31,10 +31,10 @@
     portraitFocusMobile: [86, 22]
   };
 
-  // Hand bench loop: deliberately bounded to the Rana-at-lap shot only
-  // (safe interior 5.75–6.70s; excludes jewelry close-up and next gem cut).
+  // Hand bench loop: full derived Lap→Engraving cycle asset
+  // (assets/studio-hand-work-cycle.mp4; loops as Lap→Engraving→Lap).
   const BENCH_WINDOWS = {
-    hand: [5.75, 0.95]
+    hand: [0, 2.266667]
   };
 
   // Post-opening completed-state dwell: one 60svh physical plateau at each
