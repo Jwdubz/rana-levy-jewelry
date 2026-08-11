@@ -847,32 +847,14 @@
   }
 
   /*
-    Mobile hand-bridge matches opening-ring atmosphere composition:
-    full-viewport static ring-poster atmosphere, exact 1:1 sharp parent at
-    the same vertical rest, vertical linear alpha blend only. Outer
-    #handBridge still owns the angled Turn mask-out into the bench.
+    Mobile hand-bridge matches opening-ring zero-effects composition:
+    exact 1:1 unmasked square parent at the same vertical rest, flat native
+    dark negative space, no atmosphere blur or edge fade. Outer #handBridge
+    still owns the angled Turn mask-out into the bench.
   */
   .hand-bridge {
-    /* Fallback under the poster atmosphere; matches mobile .world-ring. */
-    background: #b7aea2;
-  }
-
-  .hand-bridge::before {
-    content: "";
-    position: absolute;
-    inset: -12%;
-    width: 124%;
-    height: 124%;
-    z-index: 0;
-    pointer-events: none;
-    background-image: url("assets/ring-poster.jpg");
-    background-size: cover;
-    background-position: 50% 50%;
-    background-repeat: no-repeat;
-    /* Same treatment as mobile .world-ring::before — no perimeter darken. */
-    filter: blur(34px) saturate(1.06);
-    transform: scale(1.1);
-    transform-origin: center center;
+    /* Match mobile .world-ring honest negative space. */
+    background: #020005;
   }
 
   .hand-bridge .layer-media {
@@ -887,31 +869,17 @@
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    outline: none;
     background: transparent;
-    -webkit-mask-image: linear-gradient(
-      180deg,
-      transparent 0%,
-      #000 14%,
-      #000 86%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      180deg,
-      transparent 0%,
-      #000 14%,
-      #000 86%,
-      transparent 100%
-    );
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   .hand-bridge .layer-media img,
   .hand-bridge .layer-media video {
     object-fit: cover;
     object-position: 50% 50%;
+    filter: none;
   }
 }
 

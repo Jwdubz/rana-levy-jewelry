@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 /**
- * Source assertion: mobile opening + hand-bridge media must form a continuous
- * photographic atmosphere — static poster atmosphere (images only), exact-ratio
- * edge-to-edge sharp parents, vertical linear alpha masks only (no radial/
- * ellipse/halo/copy wash), hand-bridge parity with the opening ring, one video
- * decoder per opening source, and unchanged desktop .layer-media / .media-stack
- * overscan.
+ * Source assertion: mobile opening + hand-bridge media carry zero artificial
+ * framing effects — no atmosphere pseudo-image, no blur/filter on media, no
+ * radial/linear media mask, no gradient filler, exact source-ratio parents,
+ * effective mobile media scale 1, hand-bridge parity with the opening ring,
+ * one video decoder per opening source, and unchanged desktop overscan.
  *
- * Usage: node tools/assert-mobile-opening-atmosphere.mjs
+ * Usage: node tools/assert-mobile-opening-zero-effects.mjs
+ *
+ * Residue: mobile-opening-zero-effects tripwire
+ * Disposition: focused test or tripwire
+ * Future consumer: any operator editing mobile opening / hand-bridge media CSS-JS
+ * Activation: execute — node tools/assert-mobile-opening-zero-effects.mjs
+ * Behavioral check: PASS when stdout includes "PASS:" and exit 0
+ * Retirement: when mobile opening is retired or a different composition contract
+ *   supersedes zero artificial framing by owner decree
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -81,37 +88,28 @@ function assertNoCardChrome(block, label) {
       fail(`${label} must not use a box-shadow perimeter effect (found ${value})`);
     }
   }
+  const outlines = block.match(/outline\s*:\s*([^;]+);/gi) || [];
+  for (const decl of outlines) {
+    const value = decl.replace(/^outline\s*:\s*/i, "").replace(/;$/, "").trim();
+    if (!/^none$/i.test(value)) {
+      fail(`${label} must not use a non-none outline frame (found ${value})`);
+    }
+  }
 }
 
-function assertVerticalLinearMask(block, label) {
+function assertNoMediaMask(block, label) {
   if (!block) fail(`missing ${label}`);
   const masks = block.match(/(?:-webkit-)?mask-image\s*:\s*([^;]+);/gi) || [];
-  if (masks.length === 0) {
-    fail(`${label} must declare a vertical linear alpha mask`);
-  }
-  let sawLinear = false;
   for (const decl of masks) {
     const value = decl.replace(/^(?:-webkit-)?mask-image\s*:\s*/i, "").replace(/;$/, "").trim();
-    if (/none/i.test(value)) {
-      fail(`${label} must not disable its alpha mask (found ${value})`);
+    if (!/^none$/i.test(value)) {
+      fail(`${label} must not apply a media mask (found mask-image: ${value})`);
     }
-    if (/radial-gradient|ellipse|closest-side|farthest-side|circle\s/i.test(value)) {
-      fail(`${label} must not use radial/ellipse mask geometry (found ${value})`);
-    }
-    if (!/linear-gradient/i.test(value)) {
-      fail(`${label} mask must be a linear-gradient (found ${value})`);
-    }
-    // Vertical only: 180deg, to bottom, or to top — not horizontal/angled.
-    if (
-      !/linear-gradient\(\s*(180deg|to\s+bottom|to\s+top)\b/i.test(value)
-    ) {
-      fail(
-        `${label} mask must be a vertical linear gradient (180deg/to bottom/to top); found ${value}`
-      );
-    }
-    sawLinear = true;
   }
-  if (!sawLinear) fail(`${label} must declare a vertical linear alpha mask`);
+  // Any gradient mask grammar is a framing effect, even if written differently.
+  if (/mask(?:-image)?\s*:[^;]*(linear-gradient|radial-gradient|ellipse)/i.test(block)) {
+    fail(`${label} must not use gradient/ellipse media masks`);
+  }
 }
 
 function assertExactRatioParent(block, label, { width, height, top }) {
@@ -130,58 +128,43 @@ function assertExactRatioParent(block, label, { width, height, top }) {
   }
   // Reject full-viewport contain-band parents and retired vignette sizes.
   if (/\binset:\s*0\s*;/.test(block)) {
-    fail(`${label} must not use full-viewport inset: 0 (sharp plane is ratio-boxed)`);
+    fail(`${label} must not use full-viewport inset: 0 (media plane is ratio-boxed)`);
   }
   if (block.includes("min(118vw, 150svh)") || block.includes("59vw") || block.includes("118vw")) {
     fail(`${label} still uses retired vignette parent dimensions`);
   }
   assertNoCardChrome(block, label);
-  assertVerticalLinearMask(block, label);
+  assertNoMediaMask(block, label);
 }
 
-function assertCoverZeroCropMedia(block, label) {
+function assertUnfilteredMedia(block, label) {
   if (!block) fail(`missing ${label}`);
-  if (!/\bobject-fit:\s*(cover|fill)\s*;/.test(block)) {
-    fail(`${label} must use object-fit: cover or fill at exact parent ratio`);
-  }
-  if (/\bobject-fit:\s*contain\s*;/.test(block)) {
-    fail(`${label} must not use object-fit: contain (hard band regression)`);
+  if (!/\bobject-fit:\s*(cover|fill|contain)\s*;/.test(block)) {
+    fail(`${label} must declare object-fit`);
   }
   if (!/\bobject-position\s*:/.test(block)) {
     fail(`${label} must declare object-position`);
   }
-}
-
-function assertAtmosphereImageOnly(block, label, expectedUrl, { requireBlur = true } = {}) {
-  if (!block) fail(`missing ${label}`);
-  if (!/background-image\s*:\s*url\(/.test(block)) {
-    fail(`${label} must paint atmosphere via background-image url(...)`);
-  }
-  if (expectedUrl && !block.includes(expectedUrl)) {
-    fail(`${label} must use ${expectedUrl}`);
-  }
-  // Atmosphere is static poster only — never a video element or decoder hook.
-  if (/<video|video\s*\{|getUserMedia|HTMLVideoElement/i.test(block)) {
-    fail(`${label} atmosphere must not introduce a video decoder`);
-  }
-  if (requireBlur && !/filter\s*:[^;]*blur\(/i.test(block)) {
-    fail(`${label} must apply a uniform blur treatment`);
-  }
-  // Reject the retired darkened-halo atmosphere (brightness crush).
-  if (/brightness\(\s*0?\.\d+\s*\)/i.test(block)) {
-    fail(`${label} must not darken the perimeter via brightness() < 1`);
-  }
-}
-
-function assertAtmosphereBlurPresent(blocks, label) {
-  const ok = (blocks || []).some(
-    (b) => b && /filter\s*:[^;]*blur\(/i.test(b)
-  );
-  if (!ok) fail(`${label} must apply a uniform blur treatment`);
-  for (const b of blocks || []) {
-    if (b && /brightness\(\s*0?\.\d+\s*\)/i.test(b)) {
-      fail(`${label} must not darken the perimeter via brightness() < 1`);
+  // filter: none is allowed; any real filter is a framing/atmosphere effect.
+  const filters = block.match(/filter\s*:\s*([^;]+);/gi) || [];
+  for (const decl of filters) {
+    const value = decl.replace(/^filter\s*:\s*/i, "").replace(/;$/, "").trim();
+    if (!/^none$/i.test(value)) {
+      fail(`${label} must remain unfiltered (found filter: ${value})`);
     }
+  }
+  if (/backdrop-filter\s*:/i.test(block)) {
+    fail(`${label} must not use backdrop-filter`);
+  }
+}
+
+function assertFlatDarkGround(block, label) {
+  if (!block) fail(`missing ${label}`);
+  if (!/background\s*:\s*#020005\s*;/i.test(block)) {
+    fail(`${label} must use flat native dark ground #020005`);
+  }
+  if (/linear-gradient|radial-gradient|url\(/i.test(block)) {
+    fail(`${label} ground must not use gradient or image-derived filler`);
   }
 }
 
@@ -208,6 +191,36 @@ if (/\bmedia-echo\b/.test(styles)) {
   fail("styles.css still contains media-echo residue");
 }
 
+// --- No atmosphere pseudo-image layers on mobile opening or hand-bridge ---
+const atmosphereSelectors = [
+  ".world-studio::before",
+  ".world-ring::before",
+  ".hand-bridge::before",
+];
+for (const sel of atmosphereSelectors) {
+  if (indexMobileOnly.includes(sel) || stylesMobileOnly.includes(sel)) {
+    fail(`mobile opening must not declare atmosphere pseudo-layer ${sel}`);
+  }
+  // extractBlock would also catch sole-subject rules.
+  const fromIndex = extractBlock(index, sel, indexMobileIdx);
+  const fromStyles = extractBlock(styles, sel, stylesMobileIdx);
+  if (fromIndex || fromStyles) {
+    fail(`mobile atmosphere rule still present for ${sel}`);
+  }
+}
+if (/studio-poster\.jpg|ring-poster\.jpg/.test(indexMobileOnly)) {
+  fail("mobile opening CSS must not paint poster atmosphere backgrounds");
+}
+if (/studio-poster\.jpg|ring-poster\.jpg/.test(stylesMobileOnly)) {
+  fail("mobile styles must not paint poster atmosphere backgrounds");
+}
+if (/filter\s*:[^;]*blur\(/i.test(indexMobileOnly)) {
+  fail("mobile opening CSS must not apply blur filters (atmosphere regression)");
+}
+if (/hand-bridge[\s\S]{0,400}filter\s*:[^;]*blur\(/i.test(stylesMobileOnly)) {
+  fail("mobile hand-bridge must not apply blur filters");
+}
+
 // --- No mobile radial copy wash on .scene::after ---
 const sceneAfterMobile = extractBlock(index, ".scene::after", indexMobileIdx);
 if (sceneAfterMobile) {
@@ -222,7 +235,7 @@ if (
   fail("mobile opening CSS must not reintroduce a .scene radial copy wash");
 }
 
-// Forbidden vignette / halo grammar anywhere in mobile opening CSS.
+// Forbidden vignette / halo / linear edge-fade grammar in mobile opening CSS.
 const forbiddenMaskTokens = [
   "closest-side",
   "ellipse 50% 50% at 50% 50%",
@@ -241,45 +254,28 @@ if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(indexMobileOnly)) {
 if (/mask-image\s*:\s*[^;]*ellipse/i.test(indexMobileOnly)) {
   fail("mobile opening CSS must not use elliptical masks");
 }
+// Linear media-edge fades on stacks are the rejected blur-substitute failure class.
+if (
+  /\.media-stack[\s\S]{0,500}mask-image\s*:\s*[^;]*linear-gradient/i.test(
+    indexMobileOnly
+  )
+) {
+  fail("mobile .media-stack must not use linear-gradient edge fades");
+}
 
-// --- Atmosphere layers: images only, no darkening ---
-const studioAtmosphere = extractBlock(index, ".world-studio::before", indexMobileIdx);
-const ringAtmosphere = extractBlock(index, ".world-ring::before", indexMobileIdx);
-// Combined selector may also declare shared atmosphere treatment.
-const sharedAtmosphere =
-  extractBlock(
-    index,
-    ".world-studio::before,\n      .world-ring::before",
-    indexMobileIdx
-  ) ||
-  extractBlock(
-    index,
-    ".world-studio::before, .world-ring::before",
-    indexMobileIdx
-  );
+// --- Flat native dark grounds (no image-derived filler) ---
+const studioWorld =
+  extractBlock(index, ".world-studio", indexMobileIdx) ||
+  extractBlock(index, ".world-studio,\n      .world-ring", indexMobileIdx) ||
+  extractBlock(index, ".world-studio, .world-ring", indexMobileIdx);
+const ringWorld =
+  extractBlock(index, ".world-ring", indexMobileIdx) ||
+  extractBlock(index, ".world-studio,\n      .world-ring", indexMobileIdx) ||
+  extractBlock(index, ".world-studio, .world-ring", indexMobileIdx);
+assertFlatDarkGround(studioWorld, "mobile .world-studio ground");
+assertFlatDarkGround(ringWorld, "mobile .world-ring ground");
 
-assertAtmosphereImageOnly(
-  studioAtmosphere,
-  "mobile .world-studio::before atmosphere",
-  "assets/studio-poster.jpg",
-  { requireBlur: false }
-);
-assertAtmosphereImageOnly(
-  ringAtmosphere,
-  "mobile .world-ring::before atmosphere",
-  "assets/ring-poster.jpg",
-  { requireBlur: false }
-);
-assertAtmosphereBlurPresent(
-  [studioAtmosphere, sharedAtmosphere],
-  "mobile studio atmosphere"
-);
-assertAtmosphereBlurPresent(
-  [ringAtmosphere, sharedAtmosphere],
-  "mobile ring atmosphere"
-);
-
-// Atmosphere must not be implemented as extra <video> nodes in opening worlds.
+// --- One live decoder per opening source ---
 const openingSection = index.slice(
   index.indexOf('id="opening"'),
   index.indexOf('id="hand"')
@@ -291,14 +287,10 @@ if (openingVideos.length !== 2) {
   );
 }
 if ((openingSection.match(/media-atmosphere|atmosphere-layer/g) || []).length) {
-  // If explicit DOM atmosphere layers exist, they must be images only.
-  const atmImgs = (openingSection.match(/class="[^"]*atmosphere[^"]*"/g) || []).length;
-  if (atmImgs && /atmosphere[^>]*>\s*<video/i.test(openingSection)) {
-    fail("atmosphere DOM layers must contain images only, never video");
-  }
+  fail("opening must not introduce atmosphere DOM layers");
 }
 
-// --- Sharp parents: exact source ratios, edge-to-edge, vertical linear masks ---
+// --- Exact source-ratio parents, unmasked, square, edge-to-edge ---
 const studioStack = extractBlock(index, ".world-studio .media-stack", indexMobileIdx);
 const ringStack = extractBlock(index, ".world-ring .media-stack", indexMobileIdx);
 assertExactRatioParent(studioStack, "mobile .world-studio .media-stack", {
@@ -312,7 +304,7 @@ assertExactRatioParent(ringStack, "mobile .world-ring .media-stack", {
   top: "25svh",
 });
 
-// Combined full-viewport stack rule must not reappear as the sharp plane.
+// Combined full-viewport stack rule must not reappear as the media plane.
 const combinedStacks =
   extractBlock(
     index,
@@ -324,11 +316,15 @@ const combinedStacks =
     ".world-studio .media-stack, .world-ring .media-stack",
     indexMobileIdx
   );
-if (combinedStacks && /\binset:\s*0\s*;/.test(combinedStacks) && /\bheight:\s*100%\s*;/.test(combinedStacks)) {
+if (
+  combinedStacks &&
+  /\binset:\s*0\s*;/.test(combinedStacks) &&
+  /\bheight:\s*100%\s*;/.test(combinedStacks)
+) {
   fail("mobile opening must not use a combined full-viewport contain-band stack parent");
 }
 
-// --- Child media: cover/fill at exact ratio (zero crop), not contain band ---
+// --- Child media: unfiltered, positioned, no contain-band regression required ---
 const studioMedia =
   extractBlock(
     index,
@@ -351,16 +347,33 @@ const ringMedia =
     ".world-ring .media-stack img, .world-ring .media-stack video",
     indexMobileIdx
   );
-assertCoverZeroCropMedia(studioMedia, "mobile studio stack media");
-assertCoverZeroCropMedia(ringMedia, "mobile ring stack media");
+assertUnfilteredMedia(studioMedia, "mobile studio stack media");
+assertUnfilteredMedia(ringMedia, "mobile ring stack media");
 
-// --- Hand bridge: atmosphere + sharp parent parity with opening ring ---
-const handAtmosphere = extractBlock(styles, ".hand-bridge::before", stylesMobileIdx);
-assertAtmosphereImageOnly(
-  handAtmosphere,
-  "mobile .hand-bridge::before atmosphere",
-  "assets/ring-poster.jpg"
+// --- Effective mobile media scale must be exactly 1 ---
+const mediaTransformsFn = index.match(
+  /function applyMediaTransforms\s*\([^)]*\)\s*\{[\s\S]*?\n      \}/
 );
+if (!mediaTransformsFn) {
+  fail("could not locate applyMediaTransforms in index.html");
+}
+const fnBody = mediaTransformsFn[0];
+// Mobile branch must assign scale 1 (not a crop-producing overscan zoom).
+if (
+  !/if\s*\(\s*mobile\s*\)\s*\{[\s\S]*?studioScale\s*=\s*1\s*;[\s\S]*?ringScale\s*=\s*1\s*;/m.test(
+    fnBody
+  )
+) {
+  fail("mobile applyMediaTransforms must set studioScale and ringScale to exactly 1");
+}
+// Reject residual mobile start-scale overscan constants.
+if (/mobile\s*\?\s*1\.0[3-9]/i.test(fnBody) || /mobile\s*\?\s*1\.[1-9]/i.test(fnBody)) {
+  fail("mobile applyMediaTransforms must not keep crop-producing start scales");
+}
+
+// --- Hand bridge: parity with opening ring (unmasked square 1:1) ---
+const handBridgeGround = extractBlock(styles, ".hand-bridge", stylesMobileIdx);
+assertFlatDarkGround(handBridgeGround, "mobile .hand-bridge ground");
 
 const handMediaMobile = extractBlock(
   styles,
@@ -373,19 +386,6 @@ assertExactRatioParent(handMediaMobile, "mobile .hand-bridge .layer-media", {
   top: "25svh",
 });
 
-// Mask values must match opening ring (parity under the Turn).
-const ringMask = (ringStack.match(/mask-image\s*:\s*([^;]+);/i) || [])[1];
-const handMask = (handMediaMobile.match(/mask-image\s*:\s*([^;]+);/i) || [])[1];
-if (!ringMask || !handMask) {
-  fail("ring and hand-bridge must both declare mask-image");
-}
-const norm = (s) => s.replace(/\s+/g, " ").trim();
-if (norm(ringMask) !== norm(handMask)) {
-  fail(
-    `hand-bridge mask-image must match opening ring mask-image\n  ring: ${norm(ringMask)}\n  hand: ${norm(handMask)}`
-  );
-}
-
 const handMediaChildren =
   extractBlock(
     styles,
@@ -397,7 +397,7 @@ const handMediaChildren =
     ".hand-bridge .layer-media img, .hand-bridge .layer-media video",
     stylesMobileIdx
   );
-assertCoverZeroCropMedia(
+assertUnfilteredMedia(
   handMediaChildren,
   "mobile .hand-bridge .layer-media children"
 );
@@ -413,19 +413,21 @@ if (ringPos.trim() !== handPos.trim()) {
   );
 }
 
-// Hand-bridge must not reintroduce radial vignette grammar.
+// Hand-bridge must not reintroduce radial/linear media mask grammar.
 for (const token of forbiddenMaskTokens) {
   if (handMediaMobile && handMediaMobile.includes(token)) {
     fail(`hand-bridge mobile parent still carries vignette mask grammar: ${token}`);
   }
 }
-if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(stylesMobileOnly)) {
-  // Allow non-hand radial elsewhere only if not on hand-bridge — still forbid
-  // hand-bridge radial specifically (already checked). Opening-adjacent hand
-  // composition must stay linear.
-  if (/hand-bridge[\s\S]*mask-image\s*:\s*[^;]*radial-gradient/i.test(stylesMobileOnly)) {
-    fail("hand-bridge mobile CSS must not use radial-gradient masks");
-  }
+if (/hand-bridge[\s\S]*mask-image\s*:\s*[^;]*radial-gradient/i.test(stylesMobileOnly)) {
+  fail("hand-bridge mobile CSS must not use radial-gradient masks");
+}
+if (
+  /\.hand-bridge\s+\.layer-media[\s\S]{0,500}mask-image\s*:\s*[^;]*linear-gradient/i.test(
+    stylesMobileOnly
+  )
+) {
+  fail("hand-bridge .layer-media must not use linear-gradient edge fades");
 }
 
 // --- Desktop overscan contracts unchanged ---
@@ -477,16 +479,19 @@ if (desktopHandMediaIdx >= 0 && desktopHandMediaIdx < stylesMobileIdx) {
   }
 }
 
-// Desktop must not pick up the mobile atmosphere pseudo-layers.
+// Desktop must not pick up mobile-only zero-effects ratio parents.
 const preIndexMobile = index.slice(0, indexMobileIdx);
-if (/\.world-studio::before|\.world-ring::before/.test(preIndexMobile)) {
-  fail("opening atmosphere ::before must remain mobile-only");
+if (
+  /\.world-studio\s+\.media-stack\s*\{[^}]*height:\s*50vw/s.test(preIndexMobile) ||
+  /\.world-ring\s+\.media-stack\s*\{[^}]*height:\s*100vw/s.test(preIndexMobile)
+) {
+  fail("exact-ratio mobile media parents must remain mobile-only");
 }
 const preStylesMobile = styles.slice(0, stylesMobileIdx);
-if (/\.hand-bridge::before/.test(preStylesMobile)) {
-  fail("hand-bridge atmosphere ::before must remain mobile-only");
+if (/\.hand-bridge\s+\.layer-media\s*\{[^}]*height:\s*100vw/s.test(preStylesMobile)) {
+  fail("hand-bridge exact-ratio parent must remain mobile-only");
 }
 
 console.log(
-  "PASS: mobile opening/hand-bridge photographic atmosphere (exact-ratio parents, vertical linear masks, image-only atmosphere, hand-bridge parity, one video/source); desktop overscan unchanged"
+  "PASS: mobile opening/hand-bridge zero artificial framing (no atmosphere/blur/media-mask/gradient filler; exact-ratio parents; mobile scale 1; hand-bridge parity; one video/source); desktop overscan unchanged"
 );

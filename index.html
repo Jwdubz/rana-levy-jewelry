@@ -276,53 +276,22 @@
 
     @media (max-width: 700px) {
       /*
-        Opening media oracle — continuous photographic atmosphere, not a
-        hard contain band and not a vignette:
-        Full-viewport static poster atmosphere (image only) carries each
-        source's own room tone edge-to-edge. Sharp media parents match exact
-        source ratios (studio 2:1, ring 1:1), sit edge-to-edge horizontally,
-        and dissolve only on top/bottom via a vertical linear alpha mask into
-        that same-source atmosphere. No radial/ellipse, no dark halo, no
-        copy wash, no card chrome. JS owns stack transform.
+        Opening media oracle — honest source geometry, zero artificial framing:
+        Media parents match exact source ratios (studio 2:1 → 100vw×50vw,
+        ring 1:1 → 100vw×100vw), sit edge-to-edge horizontally, and keep
+        square unmasked edges. Surrounding viewport is flat native dark
+        negative space (#020005) — no vignette, atmosphere blur layer,
+        linear edge fade, gradient filler, or card chrome. JS keeps mobile
+        media scale at exactly 1; motion stays in the source video and
+        passage timing.
       */
-      .world-studio {
-        /* Deep neutral fallback under the studio poster atmosphere. */
-        background: #151210;
-      }
-
+      .world-studio,
       .world-ring {
-        /* Quiet room-tone fallback under the ring poster atmosphere. */
-        background: #b7aea2;
+        /* Native site dark — honest negative space, not image-derived filler. */
+        background: #020005;
       }
 
-      /* Atmosphere: static poster field only — never a second decoder. */
-      .world-studio::before,
-      .world-ring::before {
-        content: "";
-        position: absolute;
-        inset: -12%;
-        width: 124%;
-        height: 124%;
-        z-index: 0;
-        pointer-events: none;
-        background-size: cover;
-        background-position: 50% 50%;
-        background-repeat: no-repeat;
-        /* Extend source light/room tone; do not darken the perimeter. */
-        filter: blur(34px) saturate(1.06);
-        transform: scale(1.1);
-        transform-origin: center center;
-      }
-
-      .world-studio::before {
-        background-image: url("assets/studio-poster.jpg");
-      }
-
-      .world-ring::before {
-        background-image: url("assets/ring-poster.jpg");
-      }
-
-      /* Studio sharp plane: 2:1 edge-to-edge; vertical rest ~31svh. */
+      /* Studio plane: 2:1 edge-to-edge; vertical rest ~31svh. */
       .world-studio .media-stack {
         inset: auto;
         top: 31svh;
@@ -335,34 +304,20 @@
         border: 0;
         border-radius: 0;
         box-shadow: none;
-        -webkit-mask-image: linear-gradient(
-          180deg,
-          transparent 0%,
-          #000 16%,
-          #000 84%,
-          transparent 100%
-        );
-        mask-image: linear-gradient(
-          180deg,
-          transparent 0%,
-          #000 16%,
-          #000 84%,
-          transparent 100%
-        );
-        -webkit-mask-size: 100% 100%;
-        mask-size: 100% 100%;
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
+        outline: none;
+        -webkit-mask-image: none;
+        mask-image: none;
       }
 
       .world-studio .media-stack img,
       .world-studio .media-stack video {
-        /* Parent matches 2:1 source — cover fills with zero crop. */
+        /* Parent matches 2:1 source — full frame, no crop at scale 1. */
         object-fit: cover;
         object-position: 50% 50%;
+        filter: none;
       }
 
-      /* Ring sharp plane: 1:1 edge-to-edge; vertical rest ~25svh. */
+      /* Ring plane: 1:1 edge-to-edge; vertical rest ~25svh. */
       .world-ring .media-stack {
         inset: auto;
         top: 25svh;
@@ -375,31 +330,17 @@
         border: 0;
         border-radius: 0;
         box-shadow: none;
-        -webkit-mask-image: linear-gradient(
-          180deg,
-          transparent 0%,
-          #000 14%,
-          #000 86%,
-          transparent 100%
-        );
-        mask-image: linear-gradient(
-          180deg,
-          transparent 0%,
-          #000 14%,
-          #000 86%,
-          transparent 100%
-        );
-        -webkit-mask-size: 100% 100%;
-        mask-size: 100% 100%;
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
+        outline: none;
+        -webkit-mask-image: none;
+        mask-image: none;
       }
 
       .world-ring .media-stack img,
       .world-ring .media-stack video {
-        /* Parent matches 1:1 source — cover fills with zero crop. */
+        /* Parent matches 1:1 source — full frame, no crop at scale 1. */
         object-fit: cover;
         object-position: 50% 50%;
+        filter: none;
       }
 
       .mark {
@@ -964,12 +905,11 @@
         let ringY;
 
         if (mobile) {
-          // Contain placement: keep whole 2:1 / square frames; shift fields
-          // so header and active copy rest on solid ground, not the subject.
+          // Exact-ratio parents + scale 1 show the whole frame; center art.
           studioX = 50;
-          studioY = lerp(42, 44, progress);
+          studioY = 50;
           ringX = 50;
-          ringY = 48;
+          ringY = 50;
         } else {
           studioX = lerp(50, 52, progress);
           studioY = lerp(52, 49, progress);
@@ -1138,19 +1078,28 @@
 
       function applyMediaTransforms(progress, px, py) {
         const mobile = state.isMobile;
-        // Studio: 1.08 at 0 → 1.015 at 0.62 (mobile starts calmer over parent geometry)
-        const studioScaleT = windowProgress(progress, 0, 0.62);
-        const studioStart = mobile ? 1.035 : MOTION.mediaScaleStart;
-        const studioScale = lerp(studioStart, 1.015, studioScaleT);
+        let studioScale;
+        let ringScale;
 
-        // Ring: 1.045 at 0.31 → 1.015 at 0.86
-        const ringScaleT = windowProgress(
-          progress,
-          MOTION.handoffStart,
-          MOTION.finalTextEnd
-        );
-        const ringStart = mobile ? 1.03 : 1.045;
-        const ringScale = lerp(ringStart, 1.015, ringScaleT);
+        if (mobile) {
+          // Exact-ratio mobile parents must show the complete frame — no
+          // crop-producing overscan/zoom. Motion lives in the source video
+          // and passage timing only.
+          studioScale = 1;
+          ringScale = 1;
+        } else {
+          // Studio: 1.08 at 0 → 1.015 at 0.62
+          const studioScaleT = windowProgress(progress, 0, 0.62);
+          studioScale = lerp(MOTION.mediaScaleStart, 1.015, studioScaleT);
+
+          // Ring: 1.045 at 0.31 → 1.015 at 0.86
+          const ringScaleT = windowProgress(
+            progress,
+            MOTION.handoffStart,
+            MOTION.finalTextEnd
+          );
+          ringScale = lerp(1.045, 1.015, ringScaleT);
+        }
 
         const allowPointer =
           !quietModeActive() && state.finePointer && state.pointerActive;
@@ -1158,10 +1107,11 @@
         const ny = allowPointer ? py : 0;
 
         // Cap media crop travel at 1.8vw via ring mapping amplitude.
-        const studioTx = nx * -0.9;
-        const studioTy = ny * -0.6;
-        const ringTx = nx * -1.8;
-        const ringTy = ny * -1.2;
+        // Mobile keeps translate at 0 so scale-1 frames stay whole.
+        const studioTx = mobile ? 0 : nx * -0.9;
+        const studioTy = mobile ? 0 : ny * -0.6;
+        const ringTx = mobile ? 0 : nx * -1.8;
+        const ringTy = mobile ? 0 : ny * -1.2;
 
         const studioTf =
           "translate3d(" +
