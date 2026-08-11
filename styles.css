@@ -640,14 +640,15 @@
   }
 
   .site-primary-nav a {
-    flex: 1 1 0;
+    /* Natural content width; row distributes leftover via space-between. */
+    flex: 0 0 auto;
     justify-content: center;
     align-items: center;
-    font-size: clamp(0.68rem, 2.45vw, 0.86rem);
+    font-size: clamp(0.78rem, 2.45vw, 0.86rem);
     letter-spacing: 0.005em;
     padding: 0.2rem 0.12rem;
     min-height: 44px;
-    min-width: 0;
+    min-width: 44px;
     white-space: nowrap;
     text-shadow:
       0 1px 2px rgba(2, 0, 5, 0.55),
