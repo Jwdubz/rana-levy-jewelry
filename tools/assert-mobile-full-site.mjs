@@ -407,6 +407,58 @@ for (const block of consultBlocks) {
   }
 }
 
+// --- Short-landscape Consultation chrome: document-bound, never fixed/sticky ---
+// Observed residual at 844×390 / 932×430: desktop fixed .shell-chrome overlaps
+// later copy (desktop shell applies above 700px). Proven causal fix is absolute
+// only in the 701–1100 × max-height 500 Consultation band — header stays in the
+// opening frame and scrolls away with the document.
+{
+  const shortLandscapeRe =
+    /@media\s*\(\s*min-width\s*:\s*701px\s*\)\s*and\s*\(\s*max-width\s*:\s*1100px\s*\)\s*and\s*\(\s*max-height\s*:\s*500px\s*\)\s*\{/g;
+  const m = shortLandscapeRe.exec(shellCss);
+  if (!m) {
+    fail(
+      "short-landscape Consultation chrome media missing: @media (min-width: 701px) and (max-width: 1100px) and (max-height: 500px)"
+    );
+  }
+  const brace = shellCss.indexOf("{", m.index);
+  let depth = 0;
+  let end = -1;
+  for (let j = brace; j < shellCss.length; j++) {
+    if (shellCss[j] === "{") depth++;
+    else if (shellCss[j] === "}") {
+      depth--;
+      if (depth === 0) {
+        end = j;
+        break;
+      }
+    }
+  }
+  if (end < 0) fail("short-landscape Consultation chrome media block unclosed");
+  const band = shellCss.slice(brace + 1, end);
+  const chromeBlock = extractBlock(band, ".page-consultation .shell-chrome", 0);
+  if (!chromeBlock) {
+    fail(
+      "short-landscape band must target .page-consultation .shell-chrome (Consultation-only; do not broaden)"
+    );
+  }
+  if (!/position\s*:\s*absolute/i.test(chromeBlock)) {
+    fail(
+      "short-landscape Consultation .shell-chrome must be position:absolute (document-bound; scrolls away with copy)"
+    );
+  }
+  if (/position\s*:\s*fixed/i.test(chromeBlock)) {
+    fail(
+      "short-landscape Consultation .shell-chrome must never be position:fixed (viewport-bound reading collision)"
+    );
+  }
+  if (/position\s*:\s*sticky/i.test(chromeBlock)) {
+    fail(
+      "short-landscape Consultation .shell-chrome must never be position:sticky (must leave the viewport on scroll)"
+    );
+  }
+}
+
 // --- Gallery mobile: no piece-mask islands ---
 const galFrameMobile = extractBlock(shellCss, ".gallery-item__frame", shellMobileIdx);
 if (!galFrameMobile) fail("missing mobile .gallery-item__frame");

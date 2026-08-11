@@ -2020,6 +2020,16 @@ html.is-quiet::view-transition-new(root) {
   }
 }
 
+/* Short phone landscape (above the 700px mobile breakpoint, short height):
+   desktop fixed chrome covers later Consultation copy while scrolling.
+   Document-bound absolute keeps the opening composition, then scrolls away.
+   Band and selector proven at 844×390 — do not broaden. */
+@media (min-width: 701px) and (max-width: 1100px) and (max-height: 500px) {
+  .page-consultation .shell-chrome {
+    position: absolute;
+  }
+}
+
 /* Explicit quiet mode: rest composition only, no decorative animation. */
 
 html.is-quiet .shell-ground__image,
