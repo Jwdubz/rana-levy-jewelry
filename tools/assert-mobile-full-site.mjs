@@ -297,6 +297,88 @@ for (const block of consultBlocks) {
   }
 }
 
+// --- Consultation mobile contrast: opening sketch → native ink ground ---
+// Fixed pale paper under the full scrolled article made contact links ~1.2:1.
+// Mechanism: document-absolute ground with var(--ink); sharp sketch owns 100svh only.
+// Forbidden: re-fixed pale paper, blur/mask/vignette, or card/panel contrast shells.
+{
+  const consultGroundBlocks = shellMobile.match(
+    /\.page-consultation(?:\.shell-body)?\s+\.shell-ground\s*\{[\s\S]*?\}/g
+  ) || [];
+  if (!consultGroundBlocks.length) {
+    fail("mobile consultation .shell-ground block missing");
+  }
+  const groundJoined = consultGroundBlocks.join("\n");
+  if (!/position\s*:\s*absolute/i.test(groundJoined)) {
+    fail(
+      "mobile consultation ground must be position:absolute so the opening sketch yields to ink on scroll"
+    );
+  }
+  if (/position\s*:\s*fixed/i.test(groundJoined)) {
+    fail("mobile consultation ground must not remain position:fixed under the scrolled passage");
+  }
+  if (!/background\s*:\s*var\(--ink\)/i.test(groundJoined)) {
+    fail("mobile consultation ground must use var(--ink) under the scrolled article");
+  }
+  if (/background\s*:\s*#f4f1ea/i.test(groundJoined)) {
+    fail("mobile consultation ground must not paint pale paper (#f4f1ea) under the full passage");
+  }
+
+  if (
+    !/\.page-consultation[\s\S]{0,800}\.shell-ground--sketch\s+\.shell-ground__image[\s\S]{0,500}height\s*:\s*100svh/i.test(
+      shellMobile
+    )
+  ) {
+    fail("mobile consultation sketch image must own the opening viewport only (height: 100svh)");
+  }
+
+  // Scrim must yield toward native ink at the opening bottom (contact zone on tall phones).
+  const consultScrimBlocks = shellMobile.match(
+    /\.page-consultation[\s\S]*?shell-ground__scrim\s*\{[\s\S]*?\}/g
+  ) || [];
+  if (!consultScrimBlocks.length) {
+    fail("mobile consultation scrim block missing");
+  }
+  const scrimJoined = consultScrimBlocks.join("\n");
+  if (!/height\s*:\s*100svh/i.test(scrimJoined)) {
+    fail("mobile consultation scrim must be scoped to the opening viewport (height: 100svh)");
+  }
+  if (!/rgba\(\s*2\s*,\s*0\s*,\s*5\s*,\s*0\.(9|9\d|96|94|95|97|98|99)\s*\)/i.test(scrimJoined)) {
+    fail("mobile consultation scrim must yield to near-opaque ink at the opening bottom");
+  }
+  // Transparent mid-stack was the contrast hole — require a mid-passage darkness floor.
+  if (/transparent\s+48%/i.test(scrimJoined) && /transparent\s+82%/i.test(scrimJoined)) {
+    fail("mobile consultation scrim must not recreate the fully-transparent mid-viewport stack");
+  }
+  if (
+    /\.page-consultation[\s\S]{0,800}\.shell-ground--sketch\s+\.shell-ground__image[\s\S]{0,500}filter\s*:\s*[^;]*blur/i.test(
+      shellMobile
+    )
+  ) {
+    fail("mobile consultation sketch must not use blur (Frame-Filler / atmosphere)");
+  }
+  if (
+    /\.page-consultation[\s\S]{0,800}\.shell-ground--sketch\s+\.shell-ground__image[\s\S]{0,500}mask-image\s*:/i.test(
+      shellMobile
+    )
+  ) {
+    fail("mobile consultation sketch must not use mask-image");
+  }
+
+  // No floating card / opaque panel substitute on the consult passage.
+  const consultPassageBlocks = shellMobile.match(
+    /\.page-consultation[\s\S]*?consult-passage(?:\s+[^{]+)?\s*\{[\s\S]*?\}/g
+  ) || [];
+  for (const block of consultPassageBlocks) {
+    if (/backdrop-filter/i.test(block)) {
+      fail("mobile consultation passage must not use backdrop-filter card treatment");
+    }
+    if (/background\s*:\s*(?:#(?:0{3,6}|020005)|rgba\(\s*2\s*,\s*0\s*,\s*5\s*,\s*0\.(?:[5-9]|\d{2,}))/i.test(block)) {
+      fail("mobile consultation passage must not solve contrast with an opaque utility panel");
+    }
+  }
+}
+
 // --- Gallery mobile: no piece-mask islands ---
 const galFrameMobile = extractBlock(shellCss, ".gallery-item__frame", shellMobileIdx);
 if (!galFrameMobile) fail("missing mobile .gallery-item__frame");
@@ -399,5 +481,5 @@ if (fs.existsSync(path.join(root, "package.json"))) {
 }
 
 console.log(
-  "PASS: mobile full-site from oracle (opening preserved; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); no mobile radial portrait/work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
+  "PASS: mobile full-site from oracle (opening preserved; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); consultation opening-sketch→ink ground (no fixed pale paper / Frame-Filler); no mobile radial portrait/work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
 );

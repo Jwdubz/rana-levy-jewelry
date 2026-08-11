@@ -1904,16 +1904,37 @@ html.is-quiet::view-transition-new(root) {
 }
 
 @media (max-width: 700px) {
+  /*
+    Mobile consultation contrast: the sharp sketch owns the opening world only.
+    Fixed pale paper under the full scrolled article washed cream contact copy
+    (~1.2:1). Document-absolute ground + native ink below the first viewport
+    lets the article continue onto the site's reading ground — no blur, mask,
+    vignette, card, panel, or Frame-Filler substitute. Desktop stays fixed.
+  */
+  .page-consultation.shell-body {
+    position: relative;
+    background: var(--ink);
+  }
+
   .page-consultation .shell-ground {
-    background: #f4f1ea;
+    /* Scroll with the page; ink under the whole passage after the opening. */
+    position: absolute;
+    inset: 0;
+    height: auto;
+    min-height: 100%;
+    background: var(--ink);
   }
 
   .page-consultation .shell-ground--sketch .shell-ground__image {
-    /* Sharp full-bleed sketch; intentional crop keeps stone + views legible. */
+    /* Sharp full-bleed opening only — not stretched under later paragraphs. */
     display: block;
-    inset: 0;
+    inset: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
     width: 100%;
-    height: 100%;
+    height: 100svh;
     opacity: 1;
     object-fit: cover;
     object-position: 50% 42%;
@@ -1922,28 +1943,44 @@ html.is-quiet::view-transition-new(root) {
   }
 
   .page-consultation .shell-ground__scrim {
-    /* Direct linear support only — no vignette-like multi-radial stack. */
+    /* Opening support only — linear stack, scoped to the first viewport.
+       Upper world keeps the sketch dominant; lower portion yields toward
+       native ink so full-width cream body/links (incl. contact) stay ≥4.5:1
+       even when the whole article fits one tall phone viewport. No radial
+       vignette, blur, mask, or card. Continuity with ink below 100svh. */
+    inset: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: 100svh;
     background:
       linear-gradient(
         180deg,
         rgba(10, 2, 14, 0.78) 0%,
-        rgba(10, 2, 14, 0.36) 16%,
-        rgba(10, 2, 14, 0.1) 32%,
-        transparent 48%
+        rgba(10, 2, 14, 0.46) 14%,
+        rgba(10, 2, 14, 0.4) 34%,
+        rgba(10, 2, 14, 0.5) 56%,
+        rgba(10, 2, 14, 0.78) 78%,
+        rgba(2, 0, 5, 0.96) 100%
       ),
       linear-gradient(
         90deg,
-        rgba(10, 2, 14, 0.82) 0%,
-        rgba(18, 4, 24, 0.52) 34%,
-        rgba(18, 4, 24, 0.16) 62%,
-        transparent 82%
-      ),
-      linear-gradient(
-        0deg,
-        rgba(10, 2, 14, 0.42) 0%,
-        rgba(10, 2, 14, 0.12) 22%,
-        transparent 48%
+        rgba(10, 2, 14, 0.62) 0%,
+        rgba(18, 4, 24, 0.32) 36%,
+        rgba(18, 4, 24, 0.16) 66%,
+        rgba(18, 4, 24, 0.1) 100%
       );
+  }
+
+  .page-consultation .shell-ground__grain {
+    /* Grain rides the opening sketch world only. */
+    inset: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: 100svh;
   }
 
   .page-consultation .shell-main {
