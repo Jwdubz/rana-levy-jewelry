@@ -804,18 +804,74 @@
     object-position: 100% 16%;
   }
 
-  /* Mobile subjects already fit vertically — no vertical art-direction shift. */
+  /* Portrait is a full-viewport photographic world on phones — no oval island. */
+  .hand-portrait-frame {
+    inset: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  /* Mobile subjects: full-viewport carriers, not contained square islands. */
   .work-world-0,
   .work-world-1,
   .work-world-2 {
     --work-subject-shift-y: 0svh;
+    background: #020005;
+  }
+
+  /* Kill blurred echo underlays on mobile — Frame-Filler Spiral residue. */
+  .work-world-0::before,
+  .work-world-1::before,
+  .work-world-2::before {
+    content: none;
+    display: none;
+    filter: none;
+    background: none;
+  }
+
+  .work-world-0 .layer-media,
+  .work-world-1 .layer-media,
+  .work-world-2 .layer-media {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   #workStack0 > img,
   #workStack1 > img,
   #workStack2 > img {
-    width: min(122vw, 150svh);
-    height: min(122vw, 150svh);
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: cover;
+    object-position: 50% 48%;
+    transform: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+    filter: none;
+    border-radius: 0;
+  }
+
+  .work-world-0 #workStack0 > img {
+    object-position: 50% 46%;
+  }
+
+  .work-world-1 #workStack1 > img {
+    object-position: 48% 50%;
+  }
+
+  .work-world-2 #workStack2 > img {
+    object-position: 52% 48%;
   }
 
   .work-links {
@@ -828,22 +884,32 @@
   /* Sit above the three-row .work-links stack with stable breath. */
   .work-thought-rest {
     bottom: calc(7svh + 8rem);
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.7),
+      0 2px 28px rgba(2, 0, 5, 0.62),
+      0 0 40px rgba(2, 0, 5, 0.34);
   }
 
+  /* No radial resting wash on mobile — readability via localized text shadow. */
   .work-rest-wash {
+    display: none;
+    opacity: 0 !important;
+    background: none;
+  }
+
+  .work-bridge .layer-media {
+    inset: 0;
     width: 100%;
-    height: min(56svh, 420px);
-    background: radial-gradient(
-      ellipse 95% 80% at 30% 85%,
-      rgba(2, 0, 5, 0.76) 0%,
-      rgba(2, 0, 5, 0.45) 40%,
-      rgba(2, 0, 5, 0.14) 64%,
-      transparent 80%
-    );
+    height: 100%;
+    margin: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   .work-bridge .layer-media img {
+    object-fit: cover;
     object-position: 100% 16%;
+    filter: none;
   }
 
   /*
@@ -878,6 +944,12 @@
     object-fit: cover;
     object-position: 50% 50%;
     filter: none;
+  }
+
+  /* Bench media stays full-frame under portrait handoff. */
+  .hand-bench .layer-media {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 

@@ -1367,37 +1367,103 @@ html.is-quiet::view-transition-new(root) {
 
 @media (max-width: 700px) {
   :root {
-    --mark-w: min(42vw, 156px);
-    --shell-pad-x: clamp(1.1rem, 5.6vw, 1.45rem);
-    /* Two-band chrome clearance at 390×844:
-       top pad (3.6svh) + mark/Index row + gap + primary row + calm breath. */
+    --mark-w: min(38vw, 9.5rem);
+    --shell-pad-x: clamp(0.85rem, 4.2vw, 1.25rem);
+    /* Two-band chrome clearance:
+       top pad + mark/Index row + gap + primary row + calm breath before h1. */
     --shell-pad-top: calc(
-      3.6svh
-      + max(calc(var(--mark-w) * 478 / 1485), 2.75rem)
-      + 0.45rem
+      3.2svh
+      + max(calc(var(--mark-w) * 478 / 1485), 2.6rem)
+      + 0.35rem
       + 2.75rem
-      + 1.35rem
+      + 1.1rem
       + var(--safe-top)
     );
   }
 
-  /* Keep atmospheric mask overscan inside the 20rem field without overflow. */
-  .piece__frame {
-    inset: -5.5% -2.4%;
+  /*
+    Mobile living ground: kill the shared blurred wallpaper filler.
+    Route-specific carriers re-enable sharp full-bleed only when the source earns it.
+  */
+  .shell-ground {
+    background: var(--ink);
   }
 
-  /* Mobile shell chrome: band 1 = mark + Index; band 2 = horizontal destinations. */
+  .shell-ground__image {
+    display: none;
+    filter: none;
+    opacity: 0;
+    transform: none;
+  }
+
+  .shell-ground__scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(2, 0, 5, 0.42) 0%,
+      rgba(2, 0, 5, 0.12) 18%,
+      transparent 36%
+    );
+  }
+
+  .shell-ground__grain {
+    opacity: 0.025;
+  }
+
+  /* Services + Journal: sharp studio/poster carrier, not a blur atmosphere. */
+  .page-services .shell-ground__image,
+  .page-journal .shell-ground__image {
+    display: block;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.34;
+    filter: none;
+    transform: none;
+    object-fit: cover;
+    object-position: 42% 28%;
+  }
+
+  .page-journal .shell-ground__image {
+    object-position: 50% 40%;
+    opacity: 0.3;
+  }
+
+  .page-services .shell-ground__scrim,
+  .page-journal .shell-ground__scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(2, 0, 5, 0.72) 0%,
+      rgba(2, 0, 5, 0.48) 28%,
+      rgba(2, 0, 5, 0.78) 100%
+    );
+  }
+
+  /* Catalog / FAQ / legal / gallery: native ink field — products and prose carry. */
+  .page-ready .shell-ground__scrim,
+  .page-made .shell-ground__scrim,
+  .page-faq .shell-ground__scrim,
+  .page-gallery .shell-ground__scrim,
+  .page-privacy .shell-ground__scrim,
+  .page-terms .shell-ground__scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(2, 0, 5, 0.28) 0%,
+      transparent 22%
+    );
+  }
+
+  /* Mobile shell chrome: band 1 = mark + Index; band 2 = four destinations, no wrap. */
   .shell-chrome {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
     align-items: center;
-    column-gap: 0.75rem;
-    row-gap: 0.45rem;
-    padding-top: calc(3.6svh + var(--safe-top));
+    column-gap: 0.55rem;
+    row-gap: 0.3rem;
+    padding-top: calc(3.2svh + var(--safe-top));
     padding-right: calc(var(--shell-pad-x) + var(--safe-right));
     padding-bottom: 0;
-    padding-left: calc(4.5vw + var(--safe-left));
+    padding-left: calc(4vw + var(--safe-left));
   }
 
   .shell-mark {
@@ -1413,6 +1479,9 @@ html.is-quiet::view-transition-new(root) {
     justify-self: end;
     align-self: center;
     margin-top: 0;
+    font-size: 0.92rem;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .shell-primary-nav {
@@ -1423,16 +1492,21 @@ html.is-quiet::view-transition-new(root) {
     margin-left: 0;
     margin-right: 0;
     flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 0.2rem 1.15rem;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 0;
   }
 
   .shell-primary-nav a {
-    font-size: 0.98rem;
-    padding: 0.4rem 0.05rem;
+    flex: 0 0 auto;
+    font-size: clamp(0.72rem, 2.35vw, 0.86rem);
+    letter-spacing: 0.005em;
+    padding: 0.2rem 0.08rem;
     min-height: 44px;
+    min-width: 44px;
+    white-space: nowrap;
+    justify-content: center;
   }
 
   .shell-main {
@@ -1440,22 +1514,23 @@ html.is-quiet::view-transition-new(root) {
   }
 
   .tray-intro {
-    margin-bottom: 1.05rem;
+    margin-bottom: 0.95rem;
   }
 
   .tray-intro h1 {
-    font-size: clamp(2.2rem, 10.2vw, 2.85rem);
+    font-size: clamp(2rem, 9.4vw, 2.7rem);
   }
 
   .tray-intro p {
-    margin-top: 0.42rem;
-    font-size: 1.04rem;
-    max-width: 19rem;
+    margin-top: 0.4rem;
+    font-size: 1rem;
+    max-width: 22rem;
   }
 
+  /* Filter instrument: search full row; remaining controls two usable columns. */
   .tray-instrument__row {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem 0.9rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.65rem 0.7rem;
   }
 
   .tray-field--search {
@@ -1465,50 +1540,109 @@ html.is-quiet::view-transition-new(root) {
   .tray-instrument .tray-count {
     grid-column: 1 / -1;
     padding-bottom: 0;
-    margin-top: 0.15rem;
+    margin-top: 0.1rem;
   }
 
+  .tray-field label {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tray-field input,
+  .tray-field select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+
+  /*
+    Two-column catalog field at every phone width including 320.
+    Equal square media boxes; grid align-items:start keeps row axes locked
+    while variable meta height does not shift the next row's images.
+  */
   .tray {
-    grid-template-columns: 1fr;
-    gap: 2.35rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    align-items: start;
+    gap: 1.15rem 0.7rem;
   }
 
   .piece,
   .piece:first-child {
-    gap: 0.85rem;
+    gap: 0.55rem;
     min-height: 0;
-    align-items: center;
+    align-items: stretch;
+    width: 100%;
   }
 
   .piece__media {
-    /* One centered 20rem field; same rule for every piece, including the first. */
-    width: min(100%, 20rem);
-    max-width: 20rem;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
     min-height: 0;
     aspect-ratio: 1 / 1;
     height: auto;
   }
 
+  /* Sharp square-edged product field — no radial mask, wash, or overscan. */
+  .piece__frame {
+    inset: 0;
+    overflow: hidden;
+    border-radius: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .piece__frame::after {
+    content: none;
+    display: none;
+    background: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .piece__image {
+    transform: none;
+    object-fit: cover;
+    object-position: 50% 48%;
+    filter: none;
+  }
+
+  .piece.is-sold .piece__image {
+    filter: grayscale(0.35) brightness(0.85);
+  }
+
   .piece__meta {
-    width: min(100%, 20rem);
-    max-width: 20rem;
-    padding: 0 0.1rem 0.15rem;
-    gap: 0.38rem;
-    align-self: center;
+    width: 100%;
+    max-width: none;
+    padding: 0 0.05rem 0.1rem;
+    gap: 0.28rem;
+    align-self: stretch;
   }
 
   .piece__title {
-    font-size: clamp(1.22rem, 5.2vw, 1.45rem);
+    font-size: clamp(0.98rem, 3.6vw, 1.12rem);
+    line-height: 1.2;
   }
 
   .piece__price {
-    font-size: 1.04rem;
+    font-size: 0.92rem;
   }
 
   .piece__cue {
-    font-size: 0.94rem;
+    font-size: 0.82rem;
+    line-height: 1.3;
+  }
+
+  /* Gallery: aligned sharp squares, never masked islands. */
+  .gallery-stream {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem 0.7rem;
+    align-items: start;
   }
 
   .gallery-item,
@@ -1516,9 +1650,13 @@ html.is-quiet::view-transition-new(root) {
   .gallery-item--b,
   .gallery-item--c,
   .gallery-item--d {
+    display: grid;
     grid-template-columns: 1fr;
     max-width: none;
     margin-left: 0;
+    margin-right: 0;
+    gap: 0.5rem;
+    width: 100%;
   }
 
   .gallery-item--b .gallery-item__meta {
@@ -1530,23 +1668,59 @@ html.is-quiet::view-transition-new(root) {
   .gallery-item__media,
   .gallery-item--a .gallery-item__media,
   .gallery-item--c .gallery-item__media {
-    width: calc(100% + (var(--shell-pad-x) * 0.9));
-    margin-left: calc(var(--shell-pad-x) * -0.45);
-    margin-right: calc(var(--shell-pad-x) * -0.45);
-    min-height: min(44svh, 19rem);
-    height: min(44svh, 19rem);
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    min-height: 0;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .gallery-item__frame {
+    inset: 0;
+    overflow: hidden;
+    border-radius: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .gallery-item__image {
+    transform: none;
+    object-fit: cover;
+    object-position: 50% 48%;
+    filter: none;
+  }
+
+  .gallery-item__meta {
+    max-width: none;
+    width: 100%;
+  }
+
+  /* Held: sharp square + composed chrome inside 320×568; no radial surround. */
+  .shell-held {
+    padding:
+      calc(2.4svh + var(--safe-top))
+      calc(var(--shell-pad-x) + var(--safe-right))
+      calc(1.1rem + var(--safe-bottom))
+      calc(var(--shell-pad-x) + var(--safe-left));
+    background: rgba(2, 0, 5, 0.97);
+  }
+
+  .shell-held[open] {
+    gap: 0.35rem;
   }
 
   .shell-held__body {
     grid-template-columns: 1fr;
-    gap: 0.9rem;
+    gap: 0.65rem;
     min-height: 0;
     justify-items: center;
+    align-content: start;
   }
 
   .shell-held__media {
-    width: min(100%, 20rem);
-    max-width: 20rem;
+    width: min(100%, 72vw, 42svh);
+    max-width: 100%;
     margin-left: auto;
     margin-right: auto;
     min-height: 0;
@@ -1556,18 +1730,67 @@ html.is-quiet::view-transition-new(root) {
   }
 
   .shell-held__frame {
-    inset: -5.5% -2.4%;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .shell-held__image {
+    transform: none;
+    object-fit: cover;
+    object-position: 50% 48%;
+    filter: none;
   }
 
   .shell-held__meta {
     max-width: min(100%, 22rem);
     width: 100%;
     justify-self: center;
+    gap: 0.4rem;
+    padding-bottom: 0.15rem;
+  }
+
+  .shell-held__title {
+    font-size: clamp(1.2rem, 5.4vw, 1.55rem);
+  }
+
+  .shell-held__price {
+    font-size: 1.05rem;
+  }
+
+  .shell-held__cue {
+    font-size: 0.92rem;
+  }
+
+  .shell-held__handoff a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 1rem;
+  }
+
+  .shell-held__nav {
+    gap: 0.75rem;
   }
 
   .prose h1,
   .gallery-intro h1 {
-    font-size: clamp(2.2rem, 10.2vw, 2.85rem);
+    font-size: clamp(2rem, 9.4vw, 2.7rem);
+  }
+
+  .prose,
+  .prose--wide,
+  .consult-passage,
+  .gallery-intro {
+    max-width: 100%;
+  }
+
+  .faq summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 }
 
@@ -1686,7 +1909,12 @@ html.is-quiet::view-transition-new(root) {
   }
 
   .page-consultation .shell-ground--sketch .shell-ground__image {
-    /* Tall mobile: crop outer band ends; keep stone + top/side views legible. */
+    /* Sharp full-bleed sketch; intentional crop keeps stone + views legible. */
+    display: block;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
     object-fit: cover;
     object-position: 50% 42%;
     transform: none;
@@ -1694,40 +1922,31 @@ html.is-quiet::view-transition-new(root) {
   }
 
   .page-consultation .shell-ground__scrim {
-    /* Stronger left/top wash so type stays legible over the pale sketch paper. */
+    /* Direct linear support only — no vignette-like multi-radial stack. */
     background:
       linear-gradient(
         180deg,
         rgba(10, 2, 14, 0.78) 0%,
-        rgba(10, 2, 14, 0.42) 14%,
-        rgba(10, 2, 14, 0.16) 28%,
-        transparent 42%
+        rgba(10, 2, 14, 0.36) 16%,
+        rgba(10, 2, 14, 0.1) 32%,
+        transparent 48%
       ),
       linear-gradient(
         90deg,
-        rgba(10, 2, 14, 0.88) 0%,
-        rgba(18, 4, 24, 0.72) 28%,
-        rgba(18, 4, 24, 0.36) 52%,
-        rgba(18, 4, 24, 0.1) 72%,
-        transparent 88%
-      ),
-      radial-gradient(
-        ellipse 130% 90% at 22% 40%,
-        rgba(10, 2, 14, 0.86) 0%,
-        rgba(18, 4, 24, 0.58) 36%,
-        rgba(18, 4, 24, 0.22) 62%,
-        transparent 80%
+        rgba(10, 2, 14, 0.82) 0%,
+        rgba(18, 4, 24, 0.52) 34%,
+        rgba(18, 4, 24, 0.16) 62%,
+        transparent 82%
       ),
       linear-gradient(
         0deg,
-        rgba(10, 2, 14, 0.58) 0%,
-        rgba(10, 2, 14, 0.22) 20%,
-        transparent 46%
+        rgba(10, 2, 14, 0.42) 0%,
+        rgba(10, 2, 14, 0.12) 22%,
+        transparent 48%
       );
   }
 
   .page-consultation .shell-main {
-    /* Existing full-viewport mobile behavior; allow exact height if words fit. */
     min-height: 100svh;
     height: auto;
     max-height: none;
@@ -1738,6 +1957,16 @@ html.is-quiet::view-transition-new(root) {
   .page-consultation .consult-passage {
     max-width: 100%;
     width: 100%;
+  }
+
+  .page-consultation .consult-passage h1,
+  .page-consultation .consult-passage .lede,
+  .page-consultation .consult-passage p,
+  .page-consultation .consult-passage a {
+    /* Localized contrast over the sharp sketch — not a full-frame wash. */
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.72),
+      0 2px 22px rgba(2, 0, 5, 0.55);
   }
 
   .page-consultation .consult-passage .lede,

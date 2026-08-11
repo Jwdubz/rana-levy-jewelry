@@ -25,7 +25,8 @@
     restFloorLuma: 0.10,
     mobileMaxWidth: 700,
     mobileSpanScale: 0.82,
-    /* Portrait subject: face-centered radial reveal (not plain opacity). */
+    /* Desktop portrait subject: face-centered radial reveal.
+       Mobile uses edge-spanning angled handoff instead (no radial island). */
     portraitFocusDesktop: [78, 26],
     portraitFocusMobile: [86, 22]
   };
@@ -1124,63 +1125,90 @@
       handBenchStack.style.transform = "translate3d(0,0,0) scale(" + benchScale + ")";
     }
 
-    // Caused radial reveal into portrait ~0.36–0.63 — face is the focus, not the machine.
-    // Mask does the reveal (no plain rectangular cross-fade of an opaque portrait).
-    // Final portion of portT resolves the soft outer alpha so rest is fully opaque.
+    // Portrait reveal ~0.36–0.63.
+    // Desktop: radial expand from her face (approved composition).
+    // Mobile: edge-spanning angled handoff between two full-viewport worlds
+    // (bench → portrait). No radial island, oval spotlight, or mask-to-empty.
     const portT = windowProgress(p, 0.36, 0.63);
-    const focus = mobile
-      ? SITE_MOTION.portraitFocusMobile
-      : SITE_MOTION.portraitFocusDesktop;
-    if (handPortrait) {
-      // Layer present once the reveal begins; recession is mask-driven.
-      handPortrait.style.opacity = portT <= 0.001 ? "0" : "1";
-    }
-    if (handPortraitFrame) {
-      const feather = SITE_MOTION.handPortraitFeather;
-      if (portT <= 0.001) {
-        handPortraitFrame.style.webkitMaskImage =
-          "radial-gradient(circle at " +
-          focus[0] +
-          "% " +
-          focus[1] +
-          "%, transparent 0%, transparent 100%)";
-        handPortraitFrame.style.maskImage = handPortraitFrame.style.webkitMaskImage;
-      } else if (portT >= 0.999) {
-        // At rest: fully opaque portrait — no bench ghost through any edge.
+    if (mobile) {
+      if (handPortraitFrame) {
         clearMask(handPortraitFrame);
-      } else {
-        // Expand soft solid core from her face; edge stays feathered mid-reveal.
-        const solidBase = lerp(6, Math.max(34, 70 - feather * 0.45), portT);
-        const midBase = Math.min(94, solidBase + feather * 0.55);
-        const outerBase = Math.min(100, midBase + feather * 0.7);
-        // Final portion of portT: smoothly close the soft outer alpha to solid.
-        const resolve = smoothstep((portT - 0.72) / 0.28);
-        const solid = lerp(solidBase, 100, resolve);
-        const mid = lerp(midBase, 100, resolve);
-        const outer = lerp(outerBase, 100, resolve);
-        const midA = lerp(0.55, 1, resolve);
-        const outerA = resolve;
-        const mask =
-          "radial-gradient(circle at " +
-          focus[0] +
-          "% " +
-          focus[1] +
-          "%, #000 0%, #000 " +
-          solid +
-          "%, rgba(0,0,0," +
-          midA.toFixed(3) +
-          ") " +
-          mid +
-          "%, rgba(0,0,0," +
-          outerA.toFixed(3) +
-          ") " +
-          outer +
-          "%)";
-        handPortraitFrame.style.webkitMaskImage = mask;
-        handPortraitFrame.style.maskImage = mask;
+        handPortraitFrame.style.transform =
+          "scale(" + lerp(1.03, 1.0, portT) + ")";
       }
-      handPortraitFrame.style.transform =
-        "scale(" + lerp(1.06, 1.0, portT) + ")";
+      if (handPortrait) {
+        if (portT <= 0.001) {
+          handPortrait.style.opacity = "0";
+          clearMask(handPortrait);
+        } else if (portT >= 0.999) {
+          handPortrait.style.opacity = "1";
+          clearMask(handPortrait);
+        } else {
+          handPortrait.style.opacity = "1";
+          applyAngledMask(
+            handPortrait,
+            portT,
+            angleEnter,
+            edges.edgeStart,
+            edges.edgeEnd,
+            SITE_MOTION.junctionFeather
+          );
+        }
+      }
+    } else {
+      const focus = SITE_MOTION.portraitFocusDesktop;
+      if (handPortrait) {
+        // Layer present once the reveal begins; recession is mask-driven.
+        handPortrait.style.opacity = portT <= 0.001 ? "0" : "1";
+        clearMask(handPortrait);
+      }
+      if (handPortraitFrame) {
+        const feather = SITE_MOTION.handPortraitFeather;
+        if (portT <= 0.001) {
+          handPortraitFrame.style.webkitMaskImage =
+            "radial-gradient(circle at " +
+            focus[0] +
+            "% " +
+            focus[1] +
+            "%, transparent 0%, transparent 100%)";
+          handPortraitFrame.style.maskImage = handPortraitFrame.style.webkitMaskImage;
+        } else if (portT >= 0.999) {
+          // At rest: fully opaque portrait — no bench ghost through any edge.
+          clearMask(handPortraitFrame);
+        } else {
+          // Expand soft solid core from her face; edge stays feathered mid-reveal.
+          const solidBase = lerp(6, Math.max(34, 70 - feather * 0.45), portT);
+          const midBase = Math.min(94, solidBase + feather * 0.55);
+          const outerBase = Math.min(100, midBase + feather * 0.7);
+          // Final portion of portT: smoothly close the soft outer alpha to solid.
+          const resolve = smoothstep((portT - 0.72) / 0.28);
+          const solid = lerp(solidBase, 100, resolve);
+          const mid = lerp(midBase, 100, resolve);
+          const outer = lerp(outerBase, 100, resolve);
+          const midA = lerp(0.55, 1, resolve);
+          const outerA = resolve;
+          const mask =
+            "radial-gradient(circle at " +
+            focus[0] +
+            "% " +
+            focus[1] +
+            "%, #000 0%, #000 " +
+            solid +
+            "%, rgba(0,0,0," +
+            midA.toFixed(3) +
+            ") " +
+            mid +
+            "%, rgba(0,0,0," +
+            outerA.toFixed(3) +
+            ") " +
+            outer +
+            "%)";
+          handPortraitFrame.style.webkitMaskImage = mask;
+          handPortraitFrame.style.maskImage = mask;
+        }
+        handPortraitFrame.style.transform =
+          "scale(" + lerp(1.06, 1.0, portT) + ")";
+      }
     }
 
     // Copy: one thought at a time; final stack holds at portrait rest.
@@ -1390,7 +1418,18 @@
     const workActive = work && sectionProximity(work).near;
 
     setWillChange(handBenchStack, handActive ? "transform" : "");
-    setWillChange(handPortraitFrame, handActive ? "transform, opacity" : "");
+    setWillChange(
+      handPortraitFrame,
+      handActive ? (state.isMobile ? "transform" : "transform, opacity") : ""
+    );
+    setWillChange(
+      handPortrait,
+      handActive
+        ? state.isMobile
+          ? "opacity, mask-image"
+          : "opacity"
+        : ""
+    );
     setWillChange(handBridge, handActive && handP < 0.2 ? "opacity, mask-image" : "");
     for (let i = 0; i < workStacks.length; i++) {
       setWillChange(workStacks[i], workActive ? "transform" : "");
