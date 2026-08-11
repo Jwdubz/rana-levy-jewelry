@@ -319,20 +319,21 @@
         margin-left: -59vw;
         z-index: 1;
         overflow: visible;
+        /* 50% 50% places the transparent 100% stop on every edge midpoint. */
         -webkit-mask-image: radial-gradient(
-          ellipse 96% 94% at 50% 50%,
+          ellipse 50% 50% at 50% 50%,
           #000 22%,
-          rgba(0, 0, 0, 0.98) 42%,
-          rgba(0, 0, 0, 0.78) 62%,
-          rgba(0, 0, 0, 0.34) 82%,
+          rgba(0, 0, 0, 0.98) 40%,
+          rgba(0, 0, 0, 0.72) 58%,
+          rgba(0, 0, 0, 0.28) 78%,
           transparent 100%
         );
         mask-image: radial-gradient(
-          ellipse 96% 94% at 50% 50%,
+          ellipse 50% 50% at 50% 50%,
           #000 22%,
-          rgba(0, 0, 0, 0.98) 42%,
-          rgba(0, 0, 0, 0.78) 62%,
-          rgba(0, 0, 0, 0.34) 82%,
+          rgba(0, 0, 0, 0.98) 40%,
+          rgba(0, 0, 0, 0.72) 58%,
+          rgba(0, 0, 0, 0.28) 78%,
           transparent 100%
         );
       }
