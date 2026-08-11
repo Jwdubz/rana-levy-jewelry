@@ -606,6 +606,37 @@ if (
     "hand bench poster img must declare desktop/mobile studio poster sources"
   );
 }
+// Quiet hand beat: poster img is paint authority; source-less #handVideo must
+// leave the quiet stacking path (opacity:0 alone left a black plane over the
+// loaded poster). Normal mode must keep the decoder in-flow for is-live fade.
+if (!/<img[\s\S]*?<video/.test(handBenchStack[0])) {
+  fail("handBenchStack must keep poster img before handVideo for quiet paint authority");
+}
+const quietLayerVideoRule = styles.match(
+  /\.is-quiet\s+\.layer\s+video\s*\{[^}]*\}/
+);
+if (!quietLayerVideoRule) {
+  fail("styles.css must keep .is-quiet .layer video quiet paint rule");
+}
+if (!/display\s*:\s*none\s*!important/i.test(quietLayerVideoRule[0])) {
+  fail(
+    "quiet .layer video must use display:none !important so source-less hand decoder cannot occlude the poster"
+  );
+}
+if (!/opacity\s*:\s*0\s*!important/i.test(quietLayerVideoRule[0])) {
+  fail("quiet .layer video must keep opacity:0 !important");
+}
+// Normal path: is-live opacity crossfade must remain; no global display:none on layer video.
+if (!/\.layer\s+video\.is-live\s*\{[^}]*opacity\s*:\s*1/i.test(styles)) {
+  fail("normal .layer video.is-live opacity:1 crossfade must remain");
+}
+const stylesWithoutQuietLayerVideo = styles.replace(
+  /\.is-quiet\s+\.layer\s+video\s*\{[^}]*\}/g,
+  ""
+);
+if (/\.layer\s+video[^{]*\{[^}]*display\s*:\s*none/i.test(stylesWithoutQuietLayerVideo)) {
+  fail("non-quiet .layer video must not use display:none (normal decoder path)");
+}
 // One live decoder: only a single handVideo element; responsive path only mutates data-src.
 if ((index.match(/id="handVideo"/g) || []).length !== 1) {
   fail("exactly one handVideo decoder element must exist");

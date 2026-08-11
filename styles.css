@@ -271,8 +271,14 @@
   opacity: 1;
 }
 
+/* Quiet: source-less layer decoders (hand bench / bridge) still occupy the
+   sticky + transformed stacking path and paint an opaque black plane above
+   the loaded poster img despite opacity:0. Remove them from the quiet paint
+   path so the responsive poster is the sole full-viewport paint authority.
+   Normal mode is untouched — no display rule outside .is-quiet. */
 .is-quiet .layer video {
   opacity: 0 !important;
+  display: none !important;
 }
 
 .movement-veil {
