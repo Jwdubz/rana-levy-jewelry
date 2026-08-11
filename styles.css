@@ -847,22 +847,20 @@
   }
 
   /*
-    Mobile hand-bridge matches opening-ring zero-effects composition:
-    exact 1:1 unmasked square parent at the same vertical rest, flat native
-    dark negative space, no atmosphere blur or edge fade. Outer #handBridge
-    still owns the angled Turn mask-out into the bench.
+    Mobile hand-bridge stays full-viewport with the opening ring so the
+    opening→Hand Turn never collapses back into a square island. Outer
+    #handBridge still owns the angled Turn mask-out into the bench.
   */
   .hand-bridge {
-    /* Match mobile .world-ring honest negative space. */
     background: #020005;
   }
 
   .hand-bridge .layer-media {
-    inset: auto;
-    top: 25svh;
-    left: 0;
-    width: 100vw;
-    height: 100vw; /* exact 1:1 source ratio — parity with opening ring */
+    inset: 0;
+    top: auto;
+    left: auto;
+    width: 100%;
+    height: 100%;
     margin: 0;
     z-index: 1;
     overflow: hidden;

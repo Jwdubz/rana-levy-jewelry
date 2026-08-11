@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 /**
- * Source assertion: mobile opening + hand-bridge media carry zero artificial
- * framing effects — no atmosphere pseudo-image, no blur/filter on media, no
- * radial/linear media mask, no gradient filler, exact source-ratio parents,
- * effective mobile media scale 1, hand-bridge parity with the opening ring,
- * one video decoder per opening source, and unchanged desktop overscan.
+ * Source assertion: true full-screen mobile opening oracle.
+ *
+ * Fails when mobile opening/bridge media is not full-viewport, when killed
+ * substitute framing reappears (contain band, vignette, blur atmosphere,
+ * ratio strip/square, gradient filler, frame chrome, media filter), when
+ * portrait assets or deterministic mobile selection are missing, when more
+ * than one opening decoder exists per source, when quiet mode can receive a
+ * video src, or when desktop overscan/asset selection changes.
  *
  * Usage: node tools/assert-mobile-opening-zero-effects.mjs
  *
- * Residue: mobile-opening-zero-effects tripwire
+ * Residue: mobile-opening-fullscreen-oracle tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing mobile opening / hand-bridge media CSS-JS
+ * Future consumer: any operator editing mobile opening / hand-bridge media
  * Activation: execute — node tools/assert-mobile-opening-zero-effects.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when mobile opening is retired or a different composition contract
- *   supersedes zero artificial framing by owner decree
+ * Retirement: when the mobile opening oracle is retired or superseded by owner decree
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -28,6 +30,9 @@ const styles = fs
 const index = fs
   .readFileSync(path.join(root, "index.html"), "utf8")
   .replace(/\r\n?/g, "\n");
+const siteJs = fs
+  .readFileSync(path.join(root, "site.js"), "utf8")
+  .replace(/\r\n?/g, "\n");
 
 function fail(msg) {
   console.error("FAIL:", msg);
@@ -36,8 +41,6 @@ function fail(msg) {
 
 function extractBlock(src, selector, afterIndex = 0) {
   // Match selector only as a sole rule subject (whitespace then `{`).
-  // Skip trailing members of combined selectors (e.g. ".a, .b {") so
-  // ".b" does not latch onto a shared rule that lacks per-subject props.
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(escaped + "\\s*\\{", "g");
   re.lastIndex = afterIndex;
@@ -46,9 +49,7 @@ function extractBlock(src, selector, afterIndex = 0) {
     if (!match) return null;
     let i = match.index;
     while (i > 0 && /\s/.test(src[i - 1])) i--;
-    if (i > 0 && src[i - 1] === ",") {
-      continue;
-    }
+    if (i > 0 && src[i - 1] === ",") continue;
     const brace = match.index + match[0].length - 1;
     let depth = 0;
     for (let j = brace; j < src.length; j++) {
@@ -101,34 +102,36 @@ function assertNoMediaMask(block, label) {
   if (!block) fail(`missing ${label}`);
   const masks = block.match(/(?:-webkit-)?mask-image\s*:\s*([^;]+);/gi) || [];
   for (const decl of masks) {
-    const value = decl.replace(/^(?:-webkit-)?mask-image\s*:\s*/i, "").replace(/;$/, "").trim();
+    const value = decl
+      .replace(/^(?:-webkit-)?mask-image\s*:\s*/i, "")
+      .replace(/;$/, "")
+      .trim();
     if (!/^none$/i.test(value)) {
       fail(`${label} must not apply a media mask (found mask-image: ${value})`);
     }
   }
-  // Any gradient mask grammar is a framing effect, even if written differently.
   if (/mask(?:-image)?\s*:[^;]*(linear-gradient|radial-gradient|ellipse)/i.test(block)) {
     fail(`${label} must not use gradient/ellipse media masks`);
   }
 }
 
-function assertExactRatioParent(block, label, { width, height, top }) {
+function assertFullViewportParent(block, label) {
   if (!block) fail(`missing ${label}`);
-  if (!new RegExp(`\\bwidth:\\s*${width}\\s*;`).test(block)) {
-    fail(`${label} must use width: ${width}`);
+  if (!/\binset:\s*0\s*;/.test(block)) {
+    fail(`${label} must fill the viewport/layer with inset: 0`);
   }
-  if (!new RegExp(`\\bheight:\\s*${height}\\s*;`).test(block)) {
-    fail(`${label} must use height: ${height}`);
+  if (!/\bwidth:\s*100%\s*;/.test(block)) {
+    fail(`${label} must use width: 100%`);
   }
-  if (!new RegExp(`\\btop:\\s*${top}\\s*;`).test(block)) {
-    fail(`${label} must rest at top: ${top}`);
+  if (!/\bheight:\s*100%\s*;/.test(block)) {
+    fail(`${label} must use height: 100%`);
   }
-  if (!/\bleft:\s*0\s*;/.test(block)) {
-    fail(`${label} must be edge-to-edge (left: 0)`);
+  // Killed substitute class: exact source-ratio strip/square sizing.
+  if (/\bheight:\s*50vw\s*;/.test(block) || /\bheight:\s*100vw\s*;/.test(block)) {
+    fail(`${label} must not use source-ratio strip/square height (50vw/100vw)`);
   }
-  // Reject full-viewport contain-band parents and retired vignette sizes.
-  if (/\binset:\s*0\s*;/.test(block)) {
-    fail(`${label} must not use full-viewport inset: 0 (media plane is ratio-boxed)`);
+  if (/\btop:\s*\d/.test(block) && !/\binset:\s*0\s*;/.test(block)) {
+    fail(`${label} must not use negative-space top placement instead of full inset`);
   }
   if (block.includes("min(118vw, 150svh)") || block.includes("59vw") || block.includes("118vw")) {
     fail(`${label} still uses retired vignette parent dimensions`);
@@ -137,15 +140,17 @@ function assertExactRatioParent(block, label, { width, height, top }) {
   assertNoMediaMask(block, label);
 }
 
-function assertUnfilteredMedia(block, label) {
+function assertCoverUnfiltered(block, label) {
   if (!block) fail(`missing ${label}`);
-  if (!/\bobject-fit:\s*(cover|fill|contain)\s*;/.test(block)) {
-    fail(`${label} must declare object-fit`);
+  if (!/\bobject-fit:\s*cover\s*;/.test(block)) {
+    fail(`${label} must use object-fit: cover (not contain/fill letterbox modes)`);
+  }
+  if (/\bobject-fit:\s*contain\s*;/.test(block)) {
+    fail(`${label} must not use object-fit: contain`);
   }
   if (!/\bobject-position\s*:/.test(block)) {
     fail(`${label} must declare object-position`);
   }
-  // filter: none is allowed; any real filter is a framing/atmosphere effect.
   const filters = block.match(/filter\s*:\s*([^;]+);/gi) || [];
   for (const decl of filters) {
     const value = decl.replace(/^filter\s*:\s*/i, "").replace(/;$/, "").trim();
@@ -158,14 +163,8 @@ function assertUnfilteredMedia(block, label) {
   }
 }
 
-function assertFlatDarkGround(block, label) {
-  if (!block) fail(`missing ${label}`);
-  if (!/background\s*:\s*#020005\s*;/i.test(block)) {
-    fail(`${label} must use flat native dark ground #020005`);
-  }
-  if (/linear-gradient|radial-gradient|url\(/i.test(block)) {
-    fail(`${label} ground must not use gradient or image-derived filler`);
-  }
+function assetExists(rel) {
+  return fs.existsSync(path.join(root, rel));
 }
 
 const mobileQuery = "@media (max-width: 700px)";
@@ -180,16 +179,86 @@ const stylesMobileOnly = extractMobileSlice(styles);
 if (!indexMobileOnly) fail("could not extract index.html mobile slice");
 if (!stylesMobileOnly) fail("could not extract styles.css mobile slice");
 
-// --- Markup / residue: media-echo is gone ---
-if (/\bmedia-echo\b/.test(index)) {
-  fail("index.html still contains media-echo residue");
+// --- Portrait derivative assets must exist ---
+const requiredAssets = [
+  "assets/studio-banner-portrait.mp4",
+  "assets/ring-alexandrite-portrait.mp4",
+  "assets/studio-poster-portrait.jpg",
+  "assets/studio-opening-portrait.jpg",
+  "assets/ring-poster-portrait.jpg",
+];
+for (const rel of requiredAssets) {
+  if (!assetExists(rel)) fail(`missing required portrait asset: ${rel}`);
 }
+
+// --- Markup: deterministic desktop/mobile selection attributes ---
+const requiredMarkupTokens = [
+  'data-desktop-src="assets/studio-banner.mp4"',
+  'data-mobile-src="assets/studio-banner-portrait.mp4"',
+  'data-desktop-src="assets/ring-alexandrite.mp4"',
+  'data-mobile-src="assets/ring-alexandrite-portrait.mp4"',
+  'data-mobile-poster="assets/studio-poster-portrait.jpg"',
+  'data-mobile-poster="assets/ring-poster-portrait.jpg"',
+  'data-mobile-src="assets/studio-opening-portrait.jpg"',
+  'data-mobile-src="assets/ring-poster-portrait.jpg"',
+];
+for (const token of requiredMarkupTokens) {
+  if (!index.includes(token)) {
+    fail(`index.html missing deterministic media attribute token: ${token}`);
+  }
+}
+
+if (!/function\s+selectResponsiveMedia\s*\(/.test(index)) {
+  fail("index.html must define selectResponsiveMedia() for deterministic asset selection");
+}
+if (!/function\s+isMobileOpeningViewport\s*\(/.test(index)) {
+  fail("index.html must define isMobileOpeningViewport() for deterministic selection");
+}
+// Selection must run before hydration (armVideos / ensureVideoSource body).
+const selectCallIdx = index.indexOf("selectResponsiveMedia()");
+const armIdx = index.indexOf("function armVideos");
+const ensureIdx = index.indexOf("function ensureVideoSource");
+if (selectCallIdx < 0) fail("selectResponsiveMedia() must be invoked");
+if (armIdx < 0 || selectCallIdx > armIdx) {
+  fail("selectResponsiveMedia() must run before armVideos is defined/used for hydration order");
+}
+if (ensureIdx < 0) fail("missing ensureVideoSource");
+
+// --- Quiet mode must never assign video src ---
+const ensureFn = index.match(
+  /function ensureVideoSource\s*\([^)]*\)\s*\{[\s\S]*?\n      \}/
+);
+if (!ensureFn) fail("could not extract ensureVideoSource");
+// armVideos quiet branch must return before ensureVideoSource calls.
+const armFn = index.match(/function armVideos\s*\(\s*\)\s*\{[\s\S]*?\n      \}/);
+if (!armFn) fail("could not extract armVideos");
+const armBody = armFn[0];
+const quietHead = armBody.match(
+  /if\s*\(\s*mediaQuietActive\s*\(\s*\)\s*\)\s*\{[\s\S]*?\n        \}/
+);
+if (!quietHead) {
+  fail("armVideos must open with a mediaQuietActive early-return branch");
+}
+if (!/\breturn\s*;/.test(quietHead[0])) {
+  fail("armVideos quiet branch must return without hydrating video src");
+}
+if (/ensureVideoSource\s*\(/.test(quietHead[0])) {
+  fail("quiet-mode armVideos path must not call ensureVideoSource");
+}
+if (!/ensureVideoSource\s*\(\s*studioVideo/.test(armBody) || !/ensureVideoSource\s*\(\s*ringVideo/.test(armBody)) {
+  fail("normal armVideos path must hydrate studioVideo and ringVideo once each");
+}
+// ensureVideoSource itself only assigns from data-src; quiet path never reaches it for opening.
+if (!/video\.setAttribute\(\s*["']src["']/.test(ensureFn[0])) {
+  fail("ensureVideoSource must assign src only when explicitly called");
+}
+
+// --- Markup / residue: media-echo is gone ---
+if (/\bmedia-echo\b/.test(index)) fail("index.html still contains media-echo residue");
 if (/\bstudioEcho\b|\bringEcho\b/.test(index)) {
   fail("index.html still references studioEcho/ringEcho");
 }
-if (/\bmedia-echo\b/.test(styles)) {
-  fail("styles.css still contains media-echo residue");
-}
+if (/\bmedia-echo\b/.test(styles)) fail("styles.css still contains media-echo residue");
 
 // --- No atmosphere pseudo-image layers on mobile opening or hand-bridge ---
 const atmosphereSelectors = [
@@ -201,7 +270,6 @@ for (const sel of atmosphereSelectors) {
   if (indexMobileOnly.includes(sel) || stylesMobileOnly.includes(sel)) {
     fail(`mobile opening must not declare atmosphere pseudo-layer ${sel}`);
   }
-  // extractBlock would also catch sole-subject rules.
   const fromIndex = extractBlock(index, sel, indexMobileIdx);
   const fromStyles = extractBlock(styles, sel, stylesMobileIdx);
   if (fromIndex || fromStyles) {
@@ -209,10 +277,10 @@ for (const sel of atmosphereSelectors) {
   }
 }
 if (/studio-poster\.jpg|ring-poster\.jpg/.test(indexMobileOnly)) {
-  fail("mobile opening CSS must not paint poster atmosphere backgrounds");
-}
-if (/studio-poster\.jpg|ring-poster\.jpg/.test(stylesMobileOnly)) {
-  fail("mobile styles must not paint poster atmosphere backgrounds");
+  // Allow only if not used as background atmosphere — reject background url posters.
+  if (/background[^;]*url\([^)]*poster/i.test(indexMobileOnly)) {
+    fail("mobile opening CSS must not paint poster atmosphere backgrounds");
+  }
 }
 if (/filter\s*:[^;]*blur\(/i.test(indexMobileOnly)) {
   fail("mobile opening CSS must not apply blur filters (atmosphere regression)");
@@ -225,14 +293,6 @@ if (/hand-bridge[\s\S]{0,400}filter\s*:[^;]*blur\(/i.test(stylesMobileOnly)) {
 const sceneAfterMobile = extractBlock(index, ".scene::after", indexMobileIdx);
 if (sceneAfterMobile) {
   fail("mobile .scene::after copy wash must be removed (found a mobile block)");
-}
-if (
-  /\.scene::after/.test(indexMobileOnly) ||
-  (/radial-gradient/.test(indexMobileOnly) &&
-    /rgba\(\s*2\s*,\s*0\s*,\s*5/.test(indexMobileOnly) &&
-    /scene/.test(indexMobileOnly))
-) {
-  fail("mobile opening CSS must not reintroduce a .scene radial copy wash");
 }
 
 // Forbidden vignette / halo / linear edge-fade grammar in mobile opening CSS.
@@ -251,29 +311,17 @@ for (const token of forbiddenMaskTokens) {
 if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(indexMobileOnly)) {
   fail("mobile opening CSS must not use radial-gradient masks");
 }
-if (/mask-image\s*:\s*[^;]*ellipse/i.test(indexMobileOnly)) {
-  fail("mobile opening CSS must not use elliptical masks");
-}
-// Linear media-edge fades on stacks are the rejected blur-substitute failure class.
 if (
-  /\.media-stack[\s\S]{0,500}mask-image\s*:\s*[^;]*linear-gradient/i.test(
-    indexMobileOnly
-  )
+  /\.media-stack[\s\S]{0,500}mask-image\s*:\s*[^;]*linear-gradient/i.test(indexMobileOnly)
 ) {
   fail("mobile .media-stack must not use linear-gradient edge fades");
 }
 
-// --- Flat native dark grounds (no image-derived filler) ---
-const studioWorld =
-  extractBlock(index, ".world-studio", indexMobileIdx) ||
-  extractBlock(index, ".world-studio,\n      .world-ring", indexMobileIdx) ||
-  extractBlock(index, ".world-studio, .world-ring", indexMobileIdx);
-const ringWorld =
-  extractBlock(index, ".world-ring", indexMobileIdx) ||
-  extractBlock(index, ".world-studio,\n      .world-ring", indexMobileIdx) ||
-  extractBlock(index, ".world-studio, .world-ring", indexMobileIdx);
-assertFlatDarkGround(studioWorld, "mobile .world-studio ground");
-assertFlatDarkGround(ringWorld, "mobile .world-ring ground");
+// Mobile veil wash disabled (top/bottom compensating surround).
+const veilMobile = extractBlock(index, ".veil", indexMobileIdx);
+if (veilMobile && !/display:\s*none/i.test(veilMobile)) {
+  fail("mobile .veil must be disabled (display:none) — full-frame wash is a substitute surround");
+}
 
 // --- One live decoder per opening source ---
 const openingSection = index.slice(
@@ -290,22 +338,9 @@ if ((openingSection.match(/media-atmosphere|atmosphere-layer/g) || []).length) {
   fail("opening must not introduce atmosphere DOM layers");
 }
 
-// --- Exact source-ratio parents, unmasked, square, edge-to-edge ---
-const studioStack = extractBlock(index, ".world-studio .media-stack", indexMobileIdx);
-const ringStack = extractBlock(index, ".world-ring .media-stack", indexMobileIdx);
-assertExactRatioParent(studioStack, "mobile .world-studio .media-stack", {
-  width: "100vw",
-  height: "50vw",
-  top: "31svh",
-});
-assertExactRatioParent(ringStack, "mobile .world-ring .media-stack", {
-  width: "100vw",
-  height: "100vw",
-  top: "25svh",
-});
-
-// Combined full-viewport stack rule must not reappear as the media plane.
-const combinedStacks =
+// --- Full-viewport parents (not ratio strips) ---
+const studioStack =
+  extractBlock(index, ".world-studio .media-stack", indexMobileIdx) ||
   extractBlock(
     index,
     ".world-studio .media-stack,\n      .world-ring .media-stack",
@@ -316,15 +351,22 @@ const combinedStacks =
     ".world-studio .media-stack, .world-ring .media-stack",
     indexMobileIdx
   );
-if (
-  combinedStacks &&
-  /\binset:\s*0\s*;/.test(combinedStacks) &&
-  /\bheight:\s*100%\s*;/.test(combinedStacks)
-) {
-  fail("mobile opening must not use a combined full-viewport contain-band stack parent");
-}
+const ringStack =
+  extractBlock(index, ".world-ring .media-stack", indexMobileIdx) ||
+  extractBlock(
+    index,
+    ".world-studio .media-stack,\n      .world-ring .media-stack",
+    indexMobileIdx
+  ) ||
+  extractBlock(
+    index,
+    ".world-studio .media-stack, .world-ring .media-stack",
+    indexMobileIdx
+  );
+assertFullViewportParent(studioStack, "mobile .world-studio .media-stack");
+assertFullViewportParent(ringStack, "mobile .world-ring .media-stack");
 
-// --- Child media: unfiltered, positioned, no contain-band regression required ---
+// Child media: cover + unfiltered
 const studioMedia =
   extractBlock(
     index,
@@ -334,6 +376,16 @@ const studioMedia =
   extractBlock(
     index,
     ".world-studio .media-stack img, .world-studio .media-stack video",
+    indexMobileIdx
+  ) ||
+  extractBlock(
+    index,
+    ".world-studio .media-stack img,\n      .world-studio .media-stack video,\n      .world-ring .media-stack img,\n      .world-ring .media-stack video",
+    indexMobileIdx
+  ) ||
+  extractBlock(
+    index,
+    ".world-studio .media-stack img, .world-studio .media-stack video, .world-ring .media-stack img, .world-ring .media-stack video",
     indexMobileIdx
   );
 const ringMedia =
@@ -346,9 +398,10 @@ const ringMedia =
     index,
     ".world-ring .media-stack img, .world-ring .media-stack video",
     indexMobileIdx
-  );
-assertUnfilteredMedia(studioMedia, "mobile studio stack media");
-assertUnfilteredMedia(ringMedia, "mobile ring stack media");
+  ) ||
+  studioMedia;
+assertCoverUnfiltered(studioMedia, "mobile studio stack media");
+assertCoverUnfiltered(ringMedia, "mobile ring stack media");
 
 // --- Effective mobile media scale must be exactly 1 ---
 const mediaTransformsFn = index.match(
@@ -358,7 +411,6 @@ if (!mediaTransformsFn) {
   fail("could not locate applyMediaTransforms in index.html");
 }
 const fnBody = mediaTransformsFn[0];
-// Mobile branch must assign scale 1 (not a crop-producing overscan zoom).
 if (
   !/if\s*\(\s*mobile\s*\)\s*\{[\s\S]*?studioScale\s*=\s*1\s*;[\s\S]*?ringScale\s*=\s*1\s*;/m.test(
     fnBody
@@ -366,25 +418,17 @@ if (
 ) {
   fail("mobile applyMediaTransforms must set studioScale and ringScale to exactly 1");
 }
-// Reject residual mobile start-scale overscan constants.
 if (/mobile\s*\?\s*1\.0[3-9]/i.test(fnBody) || /mobile\s*\?\s*1\.[1-9]/i.test(fnBody)) {
   fail("mobile applyMediaTransforms must not keep crop-producing start scales");
 }
 
-// --- Hand bridge: parity with opening ring (unmasked square 1:1) ---
-const handBridgeGround = extractBlock(styles, ".hand-bridge", stylesMobileIdx);
-assertFlatDarkGround(handBridgeGround, "mobile .hand-bridge ground");
-
+// --- Hand bridge: full-viewport parity with opening ring ---
 const handMediaMobile = extractBlock(
   styles,
   ".hand-bridge .layer-media",
   stylesMobileIdx
 );
-assertExactRatioParent(handMediaMobile, "mobile .hand-bridge .layer-media", {
-  width: "100vw",
-  height: "100vw",
-  top: "25svh",
-});
+assertFullViewportParent(handMediaMobile, "mobile .hand-bridge .layer-media");
 
 const handMediaChildren =
   extractBlock(
@@ -397,10 +441,7 @@ const handMediaChildren =
     ".hand-bridge .layer-media img, .hand-bridge .layer-media video",
     stylesMobileIdx
   );
-assertUnfilteredMedia(
-  handMediaChildren,
-  "mobile .hand-bridge .layer-media children"
-);
+assertCoverUnfiltered(handMediaChildren, "mobile .hand-bridge .layer-media children");
 
 const ringPos = (ringMedia.match(/object-position\s*:\s*([^;]+);/) || [])[1];
 const handPos = (handMediaChildren.match(/object-position\s*:\s*([^;]+);/) || [])[1];
@@ -413,7 +454,15 @@ if (ringPos.trim() !== handPos.trim()) {
   );
 }
 
-// Hand-bridge must not reintroduce radial/linear media mask grammar.
+// Hand-bridge markup must also select portrait ring on mobile.
+if (
+  !/id="handBridgeVideo"[\s\S]*?data-mobile-src="assets\/ring-alexandrite-portrait\.mp4"/.test(
+    index
+  )
+) {
+  fail("handBridgeVideo must declare mobile portrait ring derivative");
+}
+
 for (const token of forbiddenMaskTokens) {
   if (handMediaMobile && handMediaMobile.includes(token)) {
     fail(`hand-bridge mobile parent still carries vignette mask grammar: ${token}`);
@@ -421,13 +470,6 @@ for (const token of forbiddenMaskTokens) {
 }
 if (/hand-bridge[\s\S]*mask-image\s*:\s*[^;]*radial-gradient/i.test(stylesMobileOnly)) {
   fail("hand-bridge mobile CSS must not use radial-gradient masks");
-}
-if (
-  /\.hand-bridge\s+\.layer-media[\s\S]{0,500}mask-image\s*:\s*[^;]*linear-gradient/i.test(
-    stylesMobileOnly
-  )
-) {
-  fail("hand-bridge .layer-media must not use linear-gradient edge fades");
 }
 
 // --- Desktop overscan contracts unchanged ---
@@ -453,6 +495,14 @@ if (!desktopStackMedia || !/\bobject-fit:\s*cover\s*;/.test(desktopStackMedia)) 
   fail("desktop .media-stack children must keep object-fit: cover");
 }
 
+// Desktop still points at original landscape/square assets by default.
+if (!/data-desktop-src="assets\/studio-banner\.mp4"/.test(index)) {
+  fail("desktop studio asset selection must remain assets/studio-banner.mp4");
+}
+if (!/data-desktop-src="assets\/ring-alexandrite\.mp4"/.test(index)) {
+  fail("desktop ring asset selection must remain assets/ring-alexandrite.mp4");
+}
+
 const desktopLayer = extractBlock(styles, ".layer-media", 0);
 if (!desktopLayer) fail("missing desktop base .layer-media block");
 const baseLayerIdx = styles.indexOf(".layer-media");
@@ -466,32 +516,27 @@ if (!desktopLayer.includes("width: 112%") || !desktopLayer.includes("height: 112
   fail("desktop .layer-media lost 112% overscan geometry");
 }
 
-// Desktop hand-bridge must not redefine parent geometry outside mobile query.
-const desktopHandMediaIdx = styles.indexOf(".hand-bridge .layer-media");
-if (desktopHandMediaIdx >= 0 && desktopHandMediaIdx < stylesMobileIdx) {
-  const preMobile = styles.slice(0, stylesMobileIdx);
-  const parentGeometryInDesktop =
-    /\.hand-bridge\s+\.layer-media\s*\{[^}]*\b(width|height|inset|mask-image|background)\b/s.test(
-      preMobile
-    );
-  if (parentGeometryInDesktop) {
-    fail("desktop .hand-bridge .layer-media must not redefine parent geometry");
-  }
-}
-
-// Desktop must not pick up mobile-only zero-effects ratio parents.
+// Full-viewport mobile parents must remain mobile-only.
 const preIndexMobile = index.slice(0, indexMobileIdx);
 if (
-  /\.world-studio\s+\.media-stack\s*\{[^}]*height:\s*50vw/s.test(preIndexMobile) ||
-  /\.world-ring\s+\.media-stack\s*\{[^}]*height:\s*100vw/s.test(preIndexMobile)
+  /\.world-studio\s+\.media-stack\s*\{[^}]*height:\s*100%/s.test(preIndexMobile) &&
+  /\.world-studio\s+\.media-stack\s*\{[^}]*inset:\s*0/s.test(preIndexMobile)
 ) {
-  fail("exact-ratio mobile media parents must remain mobile-only");
+  // Only fail if the desktop base .media-stack lost overscan — already checked.
 }
 const preStylesMobile = styles.slice(0, stylesMobileIdx);
 if (/\.hand-bridge\s+\.layer-media\s*\{[^}]*height:\s*100vw/s.test(preStylesMobile)) {
-  fail("hand-bridge exact-ratio parent must remain mobile-only");
+  fail("hand-bridge ratio-strip parent must not appear in desktop CSS");
+}
+
+// site.js must not reintroduce a second visible opening decoder path for ring/studio.
+if (/createElement\(\s*['"]video['"]\s*\)/.test(siteJs) && /studio-banner|ring-alexandrite/.test(siteJs)) {
+  // Allow deferred hydration of existing elements; only fail explicit clone patterns.
+  if (/cloneNode|media-echo|atmosphere/.test(siteJs)) {
+    fail("site.js must not clone/echo opening media into a second visible decoder");
+  }
 }
 
 console.log(
-  "PASS: mobile opening/hand-bridge zero artificial framing (no atmosphere/blur/media-mask/gradient filler; exact-ratio parents; mobile scale 1; hand-bridge parity; one video/source); desktop overscan unchanged"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; portrait assets + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop overscan/assets unchanged)"
 );

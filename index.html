@@ -276,28 +276,26 @@
 
     @media (max-width: 700px) {
       /*
-        Opening media oracle — honest source geometry, zero artificial framing:
-        Media parents match exact source ratios (studio 2:1 → 100vw×50vw,
-        ring 1:1 → 100vw×100vw), sit edge-to-edge horizontally, and keep
-        square unmasked edges. Surrounding viewport is flat native dark
-        negative space (#020005) — no vignette, atmosphere blur layer,
-        linear edge fade, gradient filler, or card chrome. JS keeps mobile
-        media scale at exactly 1; motion stays in the source video and
-        passage timing.
+        True full-screen mobile opening oracle:
+        The complete visible viewport is the carrier. Portrait-art-directed
+        derivatives fill .media-stack edge-to-edge (inset:0; width/height 100%)
+        with square unmasked edges and object-fit:cover. No vignette, blurred
+        atmosphere, contained source-ratio strip/square, letterbox, gradient
+        filler, card chrome, or media filter. JS keeps mobile scale at 1.
       */
       .world-studio,
       .world-ring {
-        /* Native site dark — honest negative space, not image-derived filler. */
+        /* Fallback under full-viewport media only — never a visible surround. */
         background: #020005;
       }
 
-      /* Studio plane: 2:1 edge-to-edge; vertical rest ~31svh. */
-      .world-studio .media-stack {
-        inset: auto;
-        top: 31svh;
-        left: 0;
-        width: 100vw;
-        height: 50vw; /* exact 2:1 source ratio */
+      .world-studio .media-stack,
+      .world-ring .media-stack {
+        inset: 0;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: 100%;
         margin: 0;
         z-index: 1;
         overflow: hidden;
@@ -310,37 +308,17 @@
       }
 
       .world-studio .media-stack img,
-      .world-studio .media-stack video {
-        /* Parent matches 2:1 source — full frame, no crop at scale 1. */
-        object-fit: cover;
-        object-position: 50% 50%;
-        filter: none;
-      }
-
-      /* Ring plane: 1:1 edge-to-edge; vertical rest ~25svh. */
-      .world-ring .media-stack {
-        inset: auto;
-        top: 25svh;
-        left: 0;
-        width: 100vw;
-        height: 100vw; /* exact 1:1 source ratio */
-        margin: 0;
-        z-index: 1;
-        overflow: hidden;
-        border: 0;
-        border-radius: 0;
-        box-shadow: none;
-        outline: none;
-        -webkit-mask-image: none;
-        mask-image: none;
-      }
-
+      .world-studio .media-stack video,
       .world-ring .media-stack img,
       .world-ring .media-stack video {
-        /* Parent matches 1:1 source — full frame, no crop at scale 1. */
         object-fit: cover;
         object-position: 50% 50%;
         filter: none;
+      }
+
+      /* Compensating full-frame wash reads as top/bottom vignette on phones. */
+      .veil {
+        display: none;
       }
 
       .mark {
@@ -476,11 +454,24 @@
       <div class="scene" id="scene">
         <div class="world world-studio" id="worldStudio">
           <div class="media-stack" id="studioStack">
-            <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async" fetchpriority="high">
+            <img
+              src="assets/studio-opening.jpg"
+              data-desktop-src="assets/studio-opening.jpg"
+              data-mobile-src="assets/studio-opening-portrait.jpg"
+              alt=""
+              width="1920"
+              height="960"
+              decoding="async"
+              fetchpriority="high"
+            >
             <video
               id="studioVideo"
               data-src="assets/studio-banner.mp4"
+              data-desktop-src="assets/studio-banner.mp4"
+              data-mobile-src="assets/studio-banner-portrait.mp4"
               poster="assets/studio-poster.jpg"
+              data-desktop-poster="assets/studio-poster.jpg"
+              data-mobile-poster="assets/studio-poster-portrait.jpg"
               muted
               loop
               playsinline
@@ -493,11 +484,23 @@
 
         <div class="world world-ring" id="worldRing">
           <div class="media-stack" id="ringStack">
-            <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
+            <img
+              src="assets/ring-poster.jpg"
+              data-desktop-src="assets/ring-poster.jpg"
+              data-mobile-src="assets/ring-poster-portrait.jpg"
+              alt=""
+              width="1000"
+              height="1000"
+              decoding="async"
+            >
             <video
               id="ringVideo"
               data-src="assets/ring-alexandrite.mp4"
+              data-desktop-src="assets/ring-alexandrite.mp4"
+              data-mobile-src="assets/ring-alexandrite-portrait.mp4"
               poster="assets/ring-poster.jpg"
+              data-desktop-poster="assets/ring-poster.jpg"
+              data-mobile-poster="assets/ring-poster-portrait.jpg"
               muted
               loop
               playsinline
@@ -565,11 +568,23 @@
         <!-- Outgoing opening ring already full-bleed; angled mask-out reveals the bench/studio. -->
         <div class="layer hand-bridge" id="handBridge" aria-hidden="true">
           <div class="layer-media" id="handBridgeStack">
-            <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
+            <img
+              src="assets/ring-poster.jpg"
+              data-desktop-src="assets/ring-poster.jpg"
+              data-mobile-src="assets/ring-poster-portrait.jpg"
+              alt=""
+              width="1000"
+              height="1000"
+              decoding="async"
+            >
             <video
               id="handBridgeVideo"
               data-src="assets/ring-alexandrite.mp4"
+              data-desktop-src="assets/ring-alexandrite.mp4"
+              data-mobile-src="assets/ring-alexandrite-portrait.mp4"
               poster="assets/ring-poster.jpg"
+              data-desktop-poster="assets/ring-poster.jpg"
+              data-mobile-poster="assets/ring-poster-portrait.jpg"
               muted
               loop
               playsinline
@@ -727,6 +742,55 @@
           if (next !== href) link.setAttribute("href", next);
         }
       }
+
+      // Deterministic desktop vs mobile asset selection before any video hydration.
+      // Markup carries explicit data-desktop-* / data-mobile-*; one live decoder per
+      // source keeps a single data-src. Quiet mode never assigns a video src.
+      function isMobileOpeningViewport() {
+        return window.matchMedia("(max-width: 700px)").matches;
+      }
+
+      function selectResponsiveMedia() {
+        const mobile = isMobileOpeningViewport();
+        const nodes = document.querySelectorAll(
+          "[data-desktop-src], [data-mobile-src], [data-desktop-poster], [data-mobile-poster]"
+        );
+        for (let i = 0; i < nodes.length; i++) {
+          const el = nodes[i];
+          const desktopSrc = el.getAttribute("data-desktop-src");
+          const mobileSrc = el.getAttribute("data-mobile-src");
+          const chosenSrc = mobile
+            ? mobileSrc || desktopSrc
+            : desktopSrc || mobileSrc;
+          if (chosenSrc) {
+            if (el.tagName === "VIDEO") {
+              // Never touch the live src here — only the inert data-src used later.
+              if (el.getAttribute("data-src") !== chosenSrc) {
+                el.setAttribute("data-src", chosenSrc);
+              }
+            } else if (el.tagName === "IMG") {
+              if (el.getAttribute("src") !== chosenSrc) {
+                el.setAttribute("src", chosenSrc);
+              }
+            }
+          }
+          const desktopPoster = el.getAttribute("data-desktop-poster");
+          const mobilePoster = el.getAttribute("data-mobile-poster");
+          const chosenPoster = mobile
+            ? mobilePoster || desktopPoster
+            : desktopPoster || mobilePoster;
+          if (chosenPoster && el.tagName === "VIDEO") {
+            if (el.getAttribute("poster") !== chosenPoster) {
+              el.setAttribute("poster", chosenPoster);
+            }
+          }
+        }
+        document.documentElement.classList.toggle("is-mobile-opening", mobile);
+        return mobile;
+      }
+
+      // Run before any hydration path (including quiet poster composition).
+      selectResponsiveMedia();
 
       // Assign real media src from inert data-src only when playback is allowed.
       function ensureVideoSource(video, preloadValue) {
@@ -1082,9 +1146,8 @@
         let ringScale;
 
         if (mobile) {
-          // Exact-ratio mobile parents must show the complete frame — no
-          // crop-producing overscan/zoom. Motion lives in the source video
-          // and passage timing only.
+          // Full-viewport portrait media must stay scale 1 — no crop-producing
+          // overscan/zoom. Motion lives in the source video and passage timing.
           studioScale = 1;
           ringScale = 1;
         } else {
@@ -1273,6 +1336,14 @@
       function onResize() {
         state.isMobile = window.matchMedia("(max-width: 700px)").matches;
         state.finePointer = window.matchMedia("(pointer: fine)").matches;
+        // Re-resolve asset paths only while opening videos remain unhydrated.
+        const studioHydrated =
+          studioVideo && (studioVideo.getAttribute("src") || studioVideo.currentSrc);
+        const ringHydrated =
+          ringVideo && (ringVideo.getAttribute("src") || ringVideo.currentSrc);
+        if (!studioHydrated && !ringHydrated) {
+          selectResponsiveMedia();
+        }
         state.targetProgress = measureScrollProgress();
         if (quietModeActive()) {
           state.visualProgress = state.targetProgress;
