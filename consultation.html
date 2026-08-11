@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Custom Consultation &mdash; RANA LEVY</title>
+  <script>
+    (function () {
+      try {
+        var urlQuiet = new URLSearchParams(location.search).get("motion") === "quiet";
+        if (urlQuiet) {
+          document.documentElement.classList.add("is-quiet");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body class="shell-body page-consultation" data-page="consultation">
+  <div class="shell-ground shell-ground--sketch" aria-hidden="true">
+    <img
+      class="shell-ground__image"
+      src="assets/rana-ring-sketch.jpg"
+      alt=""
+      width="1440"
+      height="1440"
+      decoding="async"
+      fetchpriority="high"
+    >
+    <div class="shell-ground__scrim"></div>
+    <div class="shell-ground__grain"></div>
+  </div>
+
+  <header class="shell-chrome">
+    <a class="shell-mark" id="shell-mark" href="index.html" aria-label="RANA LEVY home"></a>
+    <nav class="shell-primary-nav" aria-label="Primary">
+      <a href="ready.html">Ready Now</a>
+      <a href="made.html">Made To Order</a>
+      <a href="consultation.html">Consultation</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <button type="button" class="shell-index-open" id="shell-index-open" aria-expanded="false" aria-controls="shell-index-dialog">Index</button>
+  </header>
+
+  <main class="shell-main" id="main">
+    <article class="prose consult-passage">
+      <h1>Custom Consultation</h1>
+      <p class="lede">
+        Bring Rana the stone, color, or idea you keep returning to.
+      </p>
+
+      <p>
+        Custom or modified work needs a consultation. The call is on Zoom and costs $30.
+        That $30 is credited toward your order. It is non-refundable.
+        It must be used within three months of purchase.
+      </p>
+
+      <p>
+        Open days and times run Monday through Sunday, 11AM to 8PM Pacific.
+        You need a working connection, a microphone, and a screen. A camera is optional.
+      </p>
+
+      <p>
+        Contact Rana first and agree on a day and time.
+      </p>
+
+      <p>
+        Write her at
+        <a href="mailto:ThePacificLightsGems@gmail.com?subject=Custom%20Consultation%20with%20Rana&amp;body=Hi%20Rana%2C%0A%0AI%27d%20like%20to%20begin%20a%20Custom%20Consultation.%0A%0AWhat%20I%27m%20hoping%20for%3A%0A">ThePacificLightsGems@gmail.com</a>,
+        or use her
+        <a href="https://www.ranalevyjewelry.com/contact" rel="noopener">contact page</a>.
+      </p>
+
+      <p>
+        If you already have a time, pay on her
+        <a href="https://www.ranalevyjewelry.com/shop-i1Da8/p/consultation-via-zoom-30-usd" target="_blank" rel="noopener">live Zoom consultation listing</a>.
+      </p>
+
+      <p>
+        Her
+        <a href="https://docs.google.com/document/d/1JekvLp9vzd2R-6RvFpEMIaoO9SGPUKK9H_cA4Urr3P8/edit?usp=sharing" target="_blank" rel="noopener">commission contract</a>
+        is a separate reference for custom work.
+      </p>
+    </article>
+  </main>
+
+  <script src="shell.js"></script>
+</body>
+</html>

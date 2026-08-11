@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy &mdash; RANA LEVY</title>
+  <script>
+    (function () {
+      try {
+        var urlQuiet = new URLSearchParams(location.search).get("motion") === "quiet";
+        if (urlQuiet) {
+          document.documentElement.classList.add("is-quiet");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body class="shell-body page-privacy" data-page="privacy">
+  <div class="shell-ground" aria-hidden="true">
+    <img
+      class="shell-ground__image"
+      src="assets/ring-heirloom.webp"
+      alt=""
+      width="1440"
+      height="1440"
+      decoding="async"
+      fetchpriority="high"
+    >
+    <div class="shell-ground__scrim"></div>
+    <div class="shell-ground__grain"></div>
+  </div>
+
+  <header class="shell-chrome">
+    <a class="shell-mark" id="shell-mark" href="index.html" aria-label="RANA LEVY home"></a>
+    <nav class="shell-primary-nav" aria-label="Primary">
+      <a href="ready.html">Ready Now</a>
+      <a href="made.html">Made To Order</a>
+      <a href="consultation.html">Consultation</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <button type="button" class="shell-index-open" id="shell-index-open" aria-expanded="false" aria-controls="shell-index-dialog">Index</button>
+  </header>
+
+  <main class="shell-main" id="main">
+    <article class="prose">
+      <h1>Privacy on this site.</h1>
+      <p class="lede">
+        A plain account of what happens here &mdash; not a claim about Rana&rsquo;s live shop.
+      </p>
+
+      <p>
+        This site does not collect form submissions, run analytics, create accounts, keep a cart, run checkout, or store personal data on a server of its own. There is no login and no payment flow here.
+      </p>
+
+      <p>
+        External links &mdash; including the live shop, journal articles, Instagram, YouTube, email, and the commission contract &mdash; leave this site. Those destinations follow their own practices.
+      </p>
+
+      <p>
+        Photographs of the pieces you see here are part of this site. Ready, made, gallery, and held views show those photographs so you can look closely before you decide where to continue.
+      </p>
+
+      <p class="caveat">
+        If you continue to the live site, that site&rsquo;s own privacy practices apply there.
+      </p>
+    </article>
+  </main>
+
+  <script src="shell.js"></script>
+</body>
+</html>

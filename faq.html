@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FAQ &mdash; RANA LEVY</title>
+  <script>
+    (function () {
+      try {
+        var urlQuiet = new URLSearchParams(location.search).get("motion") === "quiet";
+        if (urlQuiet) {
+          document.documentElement.classList.add("is-quiet");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body class="shell-body page-faq" data-page="faq">
+  <div class="shell-ground shell-ground--gem" aria-hidden="true">
+    <img
+      class="shell-ground__image"
+      src="assets/ring-poster.jpg"
+      alt=""
+      width="1000"
+      height="1000"
+      decoding="async"
+      fetchpriority="high"
+    >
+    <div class="shell-ground__scrim"></div>
+    <div class="shell-ground__grain"></div>
+  </div>
+
+  <header class="shell-chrome">
+    <a class="shell-mark" id="shell-mark" href="index.html" aria-label="RANA LEVY home"></a>
+    <nav class="shell-primary-nav" aria-label="Primary">
+      <a href="ready.html">Ready Now</a>
+      <a href="made.html">Made To Order</a>
+      <a href="consultation.html">Consultation</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <button type="button" class="shell-index-open" id="shell-index-open" aria-expanded="false" aria-controls="shell-index-dialog">Index</button>
+  </header>
+
+  <main class="shell-main" id="main">
+    <article class="prose prose--wide">
+      <h1>FAQ.</h1>
+      <p class="lede">
+        Straight answers about cutting, materials, setting, returns, and consultations.
+      </p>
+
+      <div class="faq shell-faq">
+        <details>
+          <summary>How long does a gemstone take?</summary>
+          <div class="faq-body">
+            Precision cutting usually takes 5–10 hours. The current queue is usually 2–4 weeks.
+          </div>
+        </details>
+
+        <details>
+          <summary>What can I choose?</summary>
+          <div class="faq-body">
+            Natural or lab-grown gemstones; gold or platinum. Current gold colors are yellow, white, green, and pink. Current gold range is 5kt–24kt.
+          </div>
+        </details>
+
+        <details>
+          <summary>Who sets the stones?</summary>
+          <div class="faq-body">
+            On classic settings, expert melee setters place accent stones. Rana sets the center stone.
+          </div>
+        </details>
+
+        <details>
+          <summary>Can custom work be returned?</summary>
+          <div class="faq-body">
+            Custom and made-to-order work is non-refundable. Other current returns carry a 10% restocking fee and must be shipped back within 72 hours.
+            See the <a href="services.html">services page</a> for current terms.
+          </div>
+        </details>
+
+        <details>
+          <summary>How does a consultation work?</summary>
+          <div class="faq-body">
+            The current live consultation is $30, non-refundable, reschedulable within three months, and credited toward the order.
+            See the <a href="consultation.html">Custom Consultation page</a> for current terms and scheduling.
+          </div>
+        </details>
+      </div>
+    </article>
+  </main>
+
+  <script src="shell.js"></script>
+</body>
+</html>

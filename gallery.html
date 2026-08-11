@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gallery &mdash; RANA LEVY</title>
+  <script>
+    (function () {
+      try {
+        var urlQuiet = new URLSearchParams(location.search).get("motion") === "quiet";
+        if (urlQuiet) {
+          document.documentElement.classList.add("is-quiet");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body class="shell-body page-gallery" data-page="gallery">
+  <div class="shell-ground shell-ground--gem" aria-hidden="true">
+    <img
+      class="shell-ground__image"
+      src="assets/ring-pink-star.webp"
+      alt=""
+      width="1500"
+      height="1500"
+      decoding="async"
+      fetchpriority="high"
+    >
+    <div class="shell-ground__scrim"></div>
+    <div class="shell-ground__grain"></div>
+  </div>
+
+  <header class="shell-chrome">
+    <a class="shell-mark" id="shell-mark" href="index.html" aria-label="RANA LEVY home"></a>
+    <nav class="shell-primary-nav" aria-label="Primary">
+      <a href="ready.html">Ready Now</a>
+      <a href="made.html">Made To Order</a>
+      <a href="consultation.html">Consultation</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <button type="button" class="shell-index-open" id="shell-index-open" aria-expanded="false" aria-controls="shell-index-dialog">Index</button>
+  </header>
+
+  <main class="shell-main" id="main">
+    <header class="gallery-intro">
+      <h1>Work that has already passed through her hands.</h1>
+      <p>A quiet current of real pieces and designs &mdash; not a showcase wall.</p>
+    </header>
+
+    <p id="gallery-status" class="tray-status" hidden>Loading the gallery&hellip;</p>
+    <ol class="gallery-stream" id="gallery-stream" aria-label="Gallery of real work"></ol>
+
+    <noscript>
+      <p class="tray-fallback">
+        This collection needs JavaScript to unfold here.
+        See more on
+        <a href="https://www.ranalevyjewelry.com/">Rana&rsquo;s live site</a>.
+      </p>
+    </noscript>
+  </main>
+
+  <script src="data/catalog.js"></script>
+  <script src="shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Made To Order &mdash; RANA LEVY</title>
+  <script>
+    (function () {
+      try {
+        var urlQuiet = new URLSearchParams(location.search).get("motion") === "quiet";
+        if (urlQuiet) {
+          document.documentElement.classList.add("is-quiet");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body class="shell-body page-made" data-page="made">
+  <div class="shell-ground shell-ground--gem" aria-hidden="true">
+    <img
+      class="shell-ground__image"
+      src="assets/ring-art-deco.webp"
+      alt=""
+      width="1440"
+      height="1440"
+      decoding="async"
+      fetchpriority="high"
+    >
+    <div class="shell-ground__scrim"></div>
+    <div class="shell-ground__grain"></div>
+  </div>
+
+  <header class="shell-chrome">
+    <a class="shell-mark" id="shell-mark" href="index.html" aria-label="RANA LEVY home"></a>
+    <nav class="shell-primary-nav" aria-label="Primary">
+      <a href="ready.html">Ready Now</a>
+      <a href="made.html">Made To Order</a>
+      <a href="consultation.html">Consultation</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <button type="button" class="shell-index-open" id="shell-index-open" aria-expanded="false" aria-controls="shell-index-dialog">Index</button>
+  </header>
+
+  <main class="shell-main" id="main">
+    <header class="tray-intro">
+      <h1>Made To Order.</h1>
+      <p>Begin with a cut, a setting, or one impossible color.</p>
+    </header>
+
+    <section class="tray-instrument" aria-label="Browse made-to-order designs">
+      <div class="tray-instrument__row">
+        <div class="tray-field tray-field--search">
+          <label for="tray-search">Search</label>
+          <input id="tray-search" type="search" name="q" autocomplete="off" spellcheck="false" placeholder="Title, stone, or kind">
+        </div>
+        <div class="tray-field">
+          <label for="tray-kind">Kind</label>
+          <select id="tray-kind" name="kind">
+            <option value="">All kinds</option>
+          </select>
+        </div>
+        <div class="tray-field">
+          <label for="tray-stone">Stone</label>
+          <select id="tray-stone" name="stone">
+            <option value="">All stones</option>
+          </select>
+        </div>
+        <div class="tray-field">
+          <label for="tray-sort">Sort</label>
+          <select id="tray-sort" name="sort">
+            <option value="source">Featured order</option>
+            <option value="price-asc">Price low to high</option>
+            <option value="price-desc">Price high to low</option>
+          </select>
+        </div>
+        <div class="tray-field">
+          <label for="tray-availability">Availability</label>
+          <select id="tray-availability" name="availability">
+            <option value="all">All designs</option>
+            <option value="available">Made to order</option>
+            <option value="sold">Sold</option>
+          </select>
+        </div>
+        <p id="tray-count" class="tray-count" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <p id="tray-status" class="tray-status" hidden>Loading designs&hellip;</p>
+    <ol class="tray" id="tray" aria-label="Made-to-order designs"></ol>
+
+    <noscript>
+      <p class="tray-fallback">
+        This collection needs JavaScript to unfold here.
+        Browse made-to-order work on
+        <a href="https://www.ranalevyjewelry.com/shop-i1Da8">Rana&rsquo;s live shop</a>.
+      </p>
+    </noscript>
+  </main>
+
+  <script src="data/catalog.js"></script>
+  <script src="shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>RANA LEVY — Fine Jewelry &amp; Lapidary</title>
+  <script>
+    // Explicit quiet-mode gate before any script may assign video sources.
+    // Markup keeps media URLs in data-src only; real src is assigned later in JS.
+    // The OS reduced-motion preference never changes the authored experience.
+    (function () {
+      try {
+        var urlQuiet =
+          new URLSearchParams(location.search).get("motion") === "quiet";
+        if (urlQuiet) {
+          document.documentElement.classList.add("is-quiet");
+          document.documentElement.classList.add("is-media-quiet");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background: #020005;
+      color: #fffaf5;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100%;
+      overflow-x: hidden;
+      font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+      background: #020005;
+      color: #fffaf5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* 340svh = 100 sticky + 180 choreography travel + 60 terminal hold (OPENING_SPAN). */
+    .passage {
+      position: relative;
+      height: 340svh;
+      width: 100%;
+    }
+
+    .scene {
+      position: sticky;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100svh;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .world {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      will-change: transform;
+    }
+
+    .world-studio {
+      z-index: 1;
+    }
+
+    .world-ring {
+      z-index: 2;
+      /* Full-bleed underneath; revealed by diagonal feathered mask only. */
+      will-change: transform, mask-image, -webkit-mask-image;
+    }
+
+    .caustic-light {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      filter: blur(10px);
+      opacity: 0;
+      background-repeat: no-repeat;
+      background-size: 260% 100%;
+      will-change: opacity, background-position;
+    }
+
+    .media-stack {
+      position: absolute;
+      inset: -6%;
+      width: 112%;
+      height: 112%;
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    .media-stack img,
+    .media-stack video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .world-studio .media-stack img,
+    .world-studio .media-stack video {
+      object-position: 50% 52%;
+    }
+
+    .world-ring .media-stack img,
+    .world-ring .media-stack video {
+      object-position: 50% 48%;
+    }
+
+    .media-stack video {
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+
+    .media-stack video.is-live {
+      opacity: 1;
+    }
+
+    .veil {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      background: linear-gradient(
+        180deg,
+        rgba(2, 0, 5, 0.06) 0%,
+        rgba(2, 0, 5, 0) 42%,
+        rgba(2, 0, 5, 0.28) 100%
+      );
+    }
+
+    .light-wash {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0;
+      background: radial-gradient(
+        circle 26vmax at var(--px, 50%) var(--py, 42%),
+        rgba(215, 185, 255, 0.16),
+        rgba(255, 188, 218, 0.08) 32%,
+        transparent 68%
+      );
+      transition: opacity 0.35s ease;
+    }
+
+    .light-wash.is-active {
+      opacity: 1;
+    }
+
+    .grain {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      opacity: 0.045;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+    }
+
+    .mark {
+      position: absolute;
+      z-index: 7;
+      top: 7svh;
+      left: 50%;
+      width: min(34vw, 460px);
+      height: auto;
+      transform: translate3d(-50%, 0, 0);
+      opacity: 0.94;
+      pointer-events: none;
+      will-change: transform, width, top, left;
+    }
+
+    .mark canvas,
+    .mark img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .type {
+      position: absolute;
+      z-index: 8;
+      color: #fffaf5;
+      text-shadow: 0 2px 28px rgba(0, 0, 0, 0.32);
+      pointer-events: none;
+      will-change: transform, opacity;
+      white-space: nowrap;
+    }
+
+    .setup {
+      left: 50%;
+      bottom: 12svh;
+      transform: translate3d(-50%, 0, 0);
+      font-size: clamp(1.15rem, 2vw, 1.75rem);
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
+      opacity: 1;
+    }
+
+    .headline {
+      left: 50%;
+      top: 50%;
+      transform: translate3d(-50%, calc(-50% + 6svh), 0);
+      font-size: clamp(4.1rem, 6.8vw, 7.2rem);
+      font-weight: 400;
+      line-height: 0.9;
+      letter-spacing: -0.01em;
+      opacity: 0;
+      text-align: center;
+    }
+
+    .headline .line {
+      display: inline;
+    }
+
+    .headline .break {
+      display: none;
+    }
+
+    .heads {
+      font-style: italic;
+      font-weight: 400;
+      color: transparent;
+      background-image: linear-gradient(
+        105deg,
+        #d7b9ff 0%,
+        #a98cff 28%,
+        #ff9cc9 58%,
+        #f4ddb0 100%
+      );
+      background-size: 180% 100%;
+      background-position: 18% 50%;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      text-shadow: none;
+      filter: drop-shadow(0 2px 28px rgba(0, 0, 0, 0.32));
+    }
+
+    .final {
+      left: 6vw;
+      bottom: 10svh;
+      transform: translate3d(0, 5svh, 0);
+      font-size: clamp(2.8rem, 5vw, 5.8rem);
+      font-weight: 400;
+      line-height: 0.96;
+      letter-spacing: -0.01em;
+      opacity: 0;
+      white-space: normal;
+    }
+
+    .final .line {
+      display: block;
+    }
+
+    @media (max-width: 700px) {
+      .world-studio .media-stack img,
+      .world-studio .media-stack video {
+        object-position: 35% 50%;
+      }
+
+      .world-ring .media-stack img,
+      .world-ring .media-stack video {
+        object-position: 50% 50%;
+      }
+
+      .mark {
+        /* Below the fixed primary stack (≈3.4svh + three 40px rows) with breath. */
+        top: 21svh;
+        width: 74vw;
+      }
+
+      .setup {
+        left: 8vw;
+        bottom: 12svh;
+        transform: translate3d(0, 0, 0);
+        font-size: 1.18rem;
+        text-align: left;
+        white-space: normal;
+        max-width: 84vw;
+      }
+
+      .headline {
+        left: 8vw;
+        top: 62%;
+        right: auto;
+        transform: translate3d(0, 6svh, 0);
+        font-size: clamp(3.35rem, 13.6vw, 4rem);
+        line-height: 0.88;
+        text-align: left;
+        white-space: normal;
+        max-width: 86vw;
+      }
+
+      .headline .line {
+        display: block;
+      }
+
+      .headline .break {
+        display: block;
+      }
+
+      .final {
+        left: 8vw;
+        bottom: 11svh;
+        font-size: clamp(2.65rem, 12vw, 3.4rem);
+        max-width: 84vw;
+      }
+    }
+
+    @media (pointer: coarse) {
+      .light-wash {
+        display: none;
+      }
+    }
+
+    .is-quiet .light-wash {
+      display: none;
+    }
+
+    .is-quiet .media-stack video {
+      opacity: 0 !important;
+    }
+  </style>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#opening">Skip to opening</a>
+  <nav class="jump-nav" aria-label="Page sections">
+    <a href="#opening">Opening</a>
+    <a href="#hand">The hand</a>
+    <a href="#work">The work</a>
+  </nav>
+
+  <header class="site-header">
+    <a
+      class="persistent-mark"
+      id="persistentMark"
+      href="#opening"
+      aria-label="Rana Levy — Fine Jewelry and Lapidary, back to opening"
+    ></a>
+    <nav class="site-primary-nav" aria-label="Primary">
+      <a href="ready.html">Ready Now</a>
+      <a href="made.html">Made To Order</a>
+      <a href="consultation.html">Consultation</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+  </header>
+
+  <main class="site-main" id="siteMain">
+    <!-- M1 — Opening (approved first passage) -->
+    <section class="passage movement movement-opening" id="opening" aria-label="Opening">
+      <div class="scene" id="scene">
+        <div class="world world-studio" id="worldStudio">
+          <div class="media-stack" id="studioStack">
+            <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async" fetchpriority="high">
+            <video
+              id="studioVideo"
+              data-src="assets/studio-banner.mp4"
+              poster="assets/studio-poster.jpg"
+              muted
+              loop
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
+          </div>
+        </div>
+
+        <div class="world world-ring" id="worldRing">
+          <div class="media-stack" id="ringStack">
+            <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
+            <video
+              id="ringVideo"
+              data-src="assets/ring-alexandrite.mp4"
+              poster="assets/ring-poster.jpg"
+              muted
+              loop
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
+          </div>
+        </div>
+
+        <div class="caustic-light" id="causticLight" aria-hidden="true"></div>
+        <div class="veil" aria-hidden="true"></div>
+        <div class="light-wash" id="lightWash" aria-hidden="true"></div>
+        <div class="grain" aria-hidden="true"></div>
+
+        <div class="mark" id="mark" aria-hidden="true"></div>
+
+        <p class="type setup" id="setupLine">Some stones turn colors.</p>
+
+        <h1 class="type headline" id="headline">
+          <span class="line">Custom Gems</span><span class="break"></span>
+          <span class="line"> Turn <span class="heads" id="heads">Heads</span></span>
+        </h1>
+
+        <p class="type final" id="finalLine">
+          <span class="line">Cut by hand,</span>
+          <span class="line">one at a time.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- M2 — The hand and the cut -->
+    <section class="movement movement-hand" id="hand" aria-labelledby="hand-heading">
+      <div class="movement-sticky" id="handScene">
+        <h2 id="hand-heading" class="visually-hidden">The hand and the cut</h2>
+
+        <div class="layer hand-bench" id="handBench">
+          <div class="layer-media" id="handBenchStack">
+            <img src="assets/studio-poster.jpg" alt="" width="1920" height="960" decoding="async">
+            <video
+              id="handVideo"
+              data-src="assets/studio-banner.mp4"
+              poster="assets/studio-poster.jpg"
+              muted
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
+          </div>
+        </div>
+
+        <div class="layer hand-portrait" id="handPortrait">
+          <div class="hand-portrait-frame" id="handPortraitFrame">
+            <img
+              src="assets/rana-studio.webp"
+              alt="Rana Levy at her lapidary bench in her Las Vegas studio."
+              width="1050"
+              height="1083"
+              decoding="async"
+            >
+          </div>
+        </div>
+
+        <!-- Outgoing opening ring already full-bleed; angled mask-out reveals the bench/studio. -->
+        <div class="layer hand-bridge" id="handBridge" aria-hidden="true">
+          <div class="layer-media" id="handBridgeStack">
+            <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
+            <video
+              id="handBridgeVideo"
+              data-src="assets/ring-alexandrite.mp4"
+              poster="assets/ring-poster.jpg"
+              muted
+              loop
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
+          </div>
+        </div>
+
+        <div class="movement-veil" aria-hidden="true"></div>
+        <div class="junction-light" id="handJunction" aria-hidden="true"></div>
+        <div class="movement-grain" aria-hidden="true"></div>
+
+        <p class="thought thought-lg hand-thought-a" id="handThought0">Rana works each facet at the lap.</p>
+        <div class="thought thought-md hand-thought-rest thought-stack" id="handThought1">
+          <span>From her home studio in Las Vegas.</span>
+          <span>Cutting stones for six years. Designing Jewelry for nearly a Decade</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- M3 — The work (terminal) -->
+    <section class="movement movement-work" id="work" aria-labelledby="work-heading">
+      <div class="movement-sticky" id="workScene">
+        <h2 id="work-heading" class="visually-hidden">Selected work</h2>
+
+        <div class="layer work-world work-world-0 is-base" id="workWorld0">
+          <div class="layer-media" id="workStack0">
+            <img src="assets/ring-art-deco.webp" alt="" width="1440" height="1440" decoding="async">
+          </div>
+        </div>
+
+        <div class="layer work-world work-world-1" id="workWorld1">
+          <div class="layer-media" id="workStack1">
+            <img src="assets/ring-heirloom.webp" alt="" width="1440" height="1440" decoding="async">
+          </div>
+        </div>
+
+        <div class="layer work-world work-world-2" id="workWorld2">
+          <div class="layer-media" id="workStack2">
+            <img src="assets/ring-pink-star.webp" alt="" width="1500" height="1500" decoding="async">
+          </div>
+        </div>
+
+        <!-- Outgoing studio portrait already full-bleed; angled mask-out reveals the first work still. -->
+        <div class="layer work-bridge" id="workBridge" aria-hidden="true">
+          <div class="layer-media" id="workBridgeStack">
+            <img
+              src="assets/rana-studio.webp"
+              alt=""
+              width="1050"
+              height="1083"
+              decoding="async"
+            >
+          </div>
+        </div>
+
+        <div class="movement-veil" aria-hidden="true"></div>
+        <div class="junction-light" id="workJunction" aria-hidden="true"></div>
+        <div class="work-rest-wash" id="workRestWash" aria-hidden="true"></div>
+        <div class="movement-grain" aria-hidden="true"></div>
+
+        <p class="thought thought-lg work-thought-open" id="workThoughtOpen">Some of what she's made.</p>
+        <p class="thought thought-md work-thought-rest" id="workThoughtRest">See what's ready now, or choose a design Rana can make for you.</p>
+        <div class="work-links" id="workLinks">
+          <a class="choice-link" href="ready.html">Ready Now</a>
+          <a class="choice-link" href="made.html">Made To Order</a>
+          <a class="choice-link" href="consultation.html">Custom Consultation</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const MOTION = {
+        scrollTau: 0.32,
+        pointerTau: 0.24,
+        mediaScaleStart: 1.08,
+        pointerTravelVw: 1.8,
+        markStart: 0.06,
+        markEnd: 0.34,
+        setupOutStart: 0.14,
+        setupOutEnd: 0.34,
+        headlineInStart: 0.20,
+        headlineInEnd: 0.46,
+        headlineOutStart: 0.68,
+        headlineOutEnd: 0.84,
+        handoffStart: 0.31,
+        handoffEnd: 0.62,
+        finalTextStart: 0.68,
+        finalTextEnd: 0.86
+      };
+
+      // Physical opening span: sticky viewport + choreography travel + terminal hold.
+      // MOTION cue fractions remain authored against the 180svh choreography; the hold
+      // is pure plateau after finalTextEnd. Passage CSS height must match the sum.
+      const OPENING_SPAN = {
+        stickySvh: 100,
+        choreographySvh: 180,
+        terminalHoldSvh: 60
+      };
+      // Physical progress (0–1 over choreography+hold travel) at which all cues reach terminal.
+      OPENING_SPAN.choreographyEnd =
+        OPENING_SPAN.choreographySvh /
+        (OPENING_SPAN.choreographySvh + OPENING_SPAN.terminalHoldSvh);
+
+      const params = new URLSearchParams(window.location.search);
+      const urlQuiet = params.get("motion") === "quiet";
+
+      // Quiet choreography is available only through the explicit URL mode.
+      function quietModeActive() {
+        return urlQuiet;
+      }
+
+      function syncQuietClasses() {
+        const quiet = quietModeActive();
+        document.documentElement.classList.toggle("is-quiet", quiet);
+        if (document.body) document.body.classList.toggle("is-quiet", quiet);
+        document.documentElement.classList.toggle("is-media-quiet", quiet);
+      }
+
+      syncQuietClasses();
+
+      // Media quiet matches full quiet: no video body fetch; posters stay.
+      function mediaQuietActive() {
+        return quietModeActive();
+      }
+
+      function withMotionQuery(href) {
+        if (!href || typeof href !== "string") return href;
+        if (/^(https?:|mailto:|tel:)/i.test(href)) return href;
+        if (href.charAt(0) === "#") return href;
+        if (!urlQuiet) return href;
+        if (/(?:^|[?&])motion=/.test(href)) return href;
+        const hashIndex = href.indexOf("#");
+        const beforeHash = hashIndex === -1 ? href : href.slice(0, hashIndex);
+        const hash = hashIndex === -1 ? "" : href.slice(hashIndex);
+        const join = beforeHash.indexOf("?") === -1 ? "?" : "&";
+        return beforeHash + join + "motion=quiet" + hash;
+      }
+
+      function preserveQuietOnLocalLinks() {
+        if (!urlQuiet) return;
+        const links = document.querySelectorAll("a[href]");
+        for (let i = 0; i < links.length; i++) {
+          const link = links[i];
+          const href = link.getAttribute("href");
+          if (!href) continue;
+          const next = withMotionQuery(href);
+          if (next !== href) link.setAttribute("href", next);
+        }
+      }
+
+      // Assign real media src from inert data-src only when playback is allowed.
+      function ensureVideoSource(video, preloadValue) {
+        if (!video) return false;
+        const url = video.getAttribute("data-src");
+        if (!url) {
+          return !!(video.getAttribute("src") || video.currentSrc);
+        }
+        if (video.getAttribute("src") === url) return true;
+        if (preloadValue) {
+          video.preload = preloadValue;
+        }
+        video.setAttribute("src", url);
+        try {
+          video.load();
+        } catch (e) {}
+        return true;
+      }
+
+      function pauseAllPageVideos() {
+        const videos = document.querySelectorAll("video");
+        for (let i = 0; i < videos.length; i++) {
+          const video = videos[i];
+          try {
+            video.pause();
+          } catch (e) {}
+          video.classList.remove("is-live");
+          video.removeAttribute("autoplay");
+          video.autoplay = false;
+        }
+      }
+
+      // Shared with site.js for deferred M2–M4 hydration.
+      window.__ranaQuietModeActive = quietModeActive;
+      window.__ranaMediaQuietActive = mediaQuietActive;
+      window.__ranaEnsureVideoSource = ensureVideoSource;
+      window.__ranaPauseAllPageVideos = pauseAllPageVideos;
+
+      if (mediaQuietActive()) {
+        pauseAllPageVideos();
+      }
+
+      // Preserve ?motion=quiet across every same-origin local page link.
+      preserveQuietOnLocalLinks();
+
+      // Opening passage only — whole-site progress is handled by the site tick hook.
+      const passage = document.getElementById("opening");
+      const markEl = document.getElementById("mark");
+      const setupLine = document.getElementById("setupLine");
+      const headline = document.getElementById("headline");
+      const heads = document.getElementById("heads");
+      const finalLine = document.getElementById("finalLine");
+      const worldRing = document.getElementById("worldRing");
+      const studioStack = document.getElementById("studioStack");
+      const ringStack = document.getElementById("ringStack");
+      const studioVideo = document.getElementById("studioVideo");
+      const ringVideo = document.getElementById("ringVideo");
+      const causticLight = document.getElementById("causticLight");
+      const lightWash = document.getElementById("lightWash");
+
+      const studioMedia = studioStack.querySelectorAll("img, video");
+      const ringMedia = ringStack.querySelectorAll("img, video");
+
+      const state = {
+        targetProgress: 0,
+        visualProgress: 0,
+        hasSettledFirstFrame: false,
+        pointerTargetX: 0,
+        pointerTargetY: 0,
+        pointerX: 0,
+        pointerY: 0,
+        pointerActive: false,
+        lastTime: performance.now(),
+        isMobile: window.matchMedia("(max-width: 700px)").matches,
+        finePointer: window.matchMedia("(pointer: fine)").matches
+      };
+
+      function clamp(v, a, b) {
+        return Math.max(a, Math.min(b, v));
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function smoothstep(t) {
+        const x = clamp(t, 0, 1);
+        return x * x * (3 - 2 * x);
+      }
+
+      function windowProgress(p, start, end) {
+        if (end <= start) return p >= end ? 1 : 0;
+        return smoothstep((p - start) / (end - start));
+      }
+
+      // Remap raw physical section progress → opening choreography timeline.
+      // First choreographySvh of travel runs MOTION cues 0→1 at the original absolute
+      // scroll distances; the remaining terminalHoldSvh holds every cue at 1.
+      function openingTimeline(physicalProgress) {
+        return clamp(physicalProgress / OPENING_SPAN.choreographyEnd, 0, 1);
+      }
+
+      function measureScrollProgress() {
+        const rect = passage.getBoundingClientRect();
+        const total = Math.max(1, passage.offsetHeight - window.innerHeight);
+        return clamp(-rect.top / total, 0, 1);
+      }
+
+      function rebuildLogo(source) {
+        const canvas = document.createElement("canvas");
+        const w = source.naturalWidth || source.width;
+        const h = source.naturalHeight || source.height;
+        canvas.width = w;
+        canvas.height = h;
+        canvas.setAttribute("aria-hidden", "true");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(source, 0, 0, w, h);
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3] / 255;
+          const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+          const darkness = 1 - lum;
+          data[i] = 255;
+          data[i + 1] = 255;
+          data[i + 2] = 255;
+          data[i + 3] = Math.round(255 * darkness * a);
+        }
+        ctx.putImageData(imageData, 0, 0);
+        markEl.appendChild(canvas);
+      }
+
+      function loadMark() {
+        const img = new Image();
+        img.decoding = "async";
+        img.onload = function () {
+          try {
+            rebuildLogo(img);
+          } catch (err) {
+            // Fallback: show source if canvas is unavailable.
+            img.alt = "";
+            img.style.width = "100%";
+            img.style.height = "auto";
+            img.style.filter = "brightness(0) invert(1)";
+            img.style.opacity = "0.94";
+            markEl.appendChild(img);
+          }
+        };
+        img.src = "assets/rana-logo.png";
+      }
+
+      function applyObjectPositions(progress) {
+        const mobile = state.isMobile;
+        let studioX;
+        let studioY;
+        let ringX;
+        let ringY;
+
+        if (mobile) {
+          studioX = lerp(35, 42, progress);
+          studioY = 50;
+          ringX = 50;
+          ringY = 50;
+        } else {
+          studioX = lerp(50, 52, progress);
+          studioY = lerp(52, 49, progress);
+          ringX = 50;
+          ringY = 48;
+        }
+
+        // Pointer crop drift is additive via transform; object-position holds art direction.
+        const studioPos = studioX.toFixed(2) + "% " + studioY.toFixed(2) + "%";
+        const ringPos = ringX.toFixed(2) + "% " + ringY.toFixed(2) + "%";
+        for (let i = 0; i < studioMedia.length; i++) {
+          studioMedia[i].style.objectPosition = studioPos;
+        }
+        for (let i = 0; i < ringMedia.length; i++) {
+          ringMedia[i].style.objectPosition = ringPos;
+        }
+      }
+
+      function applyMark(progress) {
+        const t = windowProgress(progress, MOTION.markStart, MOTION.markEnd);
+        const mobile = state.isMobile;
+        const vw = window.innerWidth;
+
+        let widthPx;
+        let top;
+        let leftPx;
+        let translateX;
+
+        if (mobile) {
+          const startW = 0.74 * vw;
+          const endW = 0.44 * vw;
+          widthPx = lerp(startW, endW, t);
+          // Start under the fixed primary destinations; settle to persistent top-left.
+          top = lerp(21, 4, t);
+          const startLeft = (vw - startW) / 2;
+          const endLeft = 0.05 * vw;
+          // Keep mark centered relative to its interpolated width while gliding left.
+          const startCenter = startLeft + startW / 2;
+          const endCenter = endLeft + endW / 2;
+          const center = lerp(startCenter, endCenter, t);
+          leftPx = center - widthPx / 2;
+          translateX = 0;
+        } else {
+          const startW = Math.min(0.34 * vw, 460);
+          const endW = Math.min(0.17 * vw, 240);
+          widthPx = lerp(startW, endW, t);
+          top = lerp(7, 5.2, t);
+          const startLeft = (vw - startW) / 2;
+          const endLeft = 0.042 * vw;
+          const startCenter = startLeft + startW / 2;
+          const endCenter = endLeft + endW / 2;
+          const center = lerp(startCenter, endCenter, t);
+          leftPx = center - widthPx / 2;
+          translateX = 0;
+        }
+
+        markEl.style.width = widthPx + "px";
+        markEl.style.top = top + "svh";
+        markEl.style.left = leftPx + "px";
+        markEl.style.transform = "translate3d(" + translateX + "px, 0, 0)";
+      }
+
+      function applyCopy(progress) {
+        const setupT = windowProgress(progress, MOTION.setupOutStart, MOTION.setupOutEnd);
+        const setupY = lerp(0, -5, setupT);
+        const setupOpacity = 1 - setupT;
+        const mobile = state.isMobile;
+
+        if (mobile) {
+          setupLine.style.transform = "translate3d(0, " + setupY + "svh, 0)";
+        } else {
+          setupLine.style.transform = "translate3d(-50%, " + setupY + "svh, 0)";
+        }
+        setupLine.style.opacity = String(setupOpacity);
+
+        const headIn = windowProgress(progress, MOTION.headlineInStart, MOTION.headlineInEnd);
+        const headOut = windowProgress(progress, MOTION.headlineOutStart, MOTION.headlineOutEnd);
+        let headY;
+        let headOpacity;
+        if (headOut > 0) {
+          headY = lerp(0, -4, headOut);
+          headOpacity = 1 - headOut;
+        } else {
+          headY = lerp(6, 0, headIn);
+          headOpacity = headIn;
+        }
+
+        if (mobile) {
+          headline.style.transform = "translate3d(0, " + headY + "svh, 0)";
+        } else {
+          headline.style.transform = "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
+        }
+        headline.style.opacity = String(headOpacity);
+
+        const prismT = windowProgress(progress, MOTION.headlineInStart, MOTION.headlineOutEnd);
+        const prismX = lerp(18, 82, prismT);
+        heads.style.backgroundPosition = prismX + "% 50%";
+
+        const finalT = windowProgress(progress, MOTION.finalTextStart, MOTION.finalTextEnd);
+        const finalY = lerp(5, 0, finalT);
+        finalLine.style.transform = "translate3d(0, " + finalY + "svh, 0)";
+        finalLine.style.opacity = String(finalT);
+      }
+
+      function applyHandoff(progress) {
+        const t = windowProgress(progress, MOTION.handoffStart, MOTION.handoffEnd);
+        const mobile = state.isMobile;
+        const angle = mobile ? 28 : 62;
+        const edgeStart = mobile ? -22 : -18;
+        const edgeEnd = mobile ? 112 : 108;
+        const edge = lerp(edgeStart, edgeEnd, t);
+
+        // At completion the ring world is unconditionally full-bleed.
+        if (t >= 1) {
+          worldRing.style.maskImage = "none";
+          worldRing.style.webkitMaskImage = "none";
+          worldRing.style.maskSize = "";
+          worldRing.style.webkitMaskSize = "";
+          worldRing.style.maskRepeat = "";
+          worldRing.style.webkitMaskRepeat = "";
+        } else {
+          const mask =
+            "linear-gradient(" +
+            angle +
+            "deg, #000 0%, #000 " +
+            (edge - 10) +
+            "%, rgba(0,0,0,.82) " +
+            (edge - 4) +
+            "%, rgba(0,0,0,.28) " +
+            (edge + 4) +
+            "%, transparent " +
+            (edge + 10) +
+            "%)";
+          worldRing.style.maskImage = mask;
+          worldRing.style.webkitMaskImage = mask;
+          worldRing.style.maskSize = "100% 100%";
+          worldRing.style.webkitMaskSize = "100% 100%";
+          worldRing.style.maskRepeat = "no-repeat";
+          worldRing.style.webkitMaskRepeat = "no-repeat";
+        }
+
+        // Passing refraction: same angle, sin(πt) envelope, opacity zero outside handoff.
+        const bgPos = lerp(112, -12, t);
+        const lightOpacity = Math.sin(Math.PI * t) * 0.72;
+        causticLight.style.backgroundImage =
+          "linear-gradient(" +
+          angle +
+          "deg, transparent 42%, rgba(255,244,232,.06) 46%, rgba(215,185,255,.34) 49%, rgba(255,156,201,.22) 51.5%, rgba(244,221,176,.13) 54%, transparent 59%)";
+        causticLight.style.backgroundSize = "260% 100%";
+        causticLight.style.backgroundPosition = bgPos + "% 50%";
+        causticLight.style.opacity = String(lightOpacity);
+      }
+
+      function applyMediaTransforms(progress, px, py) {
+        // Studio: 1.08 at 0 → 1.015 at 0.62
+        const studioScaleT = windowProgress(progress, 0, 0.62);
+        const studioScale = lerp(MOTION.mediaScaleStart, 1.015, studioScaleT);
+
+        // Ring: 1.045 at 0.31 → 1.015 at 0.86
+        const ringScaleT = windowProgress(progress, MOTION.handoffStart, MOTION.finalTextEnd);
+        const ringScale = lerp(1.045, 1.015, ringScaleT);
+
+        const allowPointer =
+          !quietModeActive() && state.finePointer && state.pointerActive;
+        const nx = allowPointer ? px : 0;
+        const ny = allowPointer ? py : 0;
+
+        // Cap media crop travel at 1.8vw via ring mapping amplitude.
+        const studioTx = nx * -0.9;
+        const studioTy = ny * -0.6;
+        const ringTx = nx * -1.8;
+        const ringTy = ny * -1.2;
+
+        studioStack.style.transform =
+          "translate3d(" +
+          studioTx +
+          "vw, " +
+          studioTy +
+          "vw, 0) scale(" +
+          studioScale +
+          ")";
+        ringStack.style.transform =
+          "translate3d(" +
+          ringTx +
+          "vw, " +
+          ringTy +
+          "vw, 0) scale(" +
+          ringScale +
+          ")";
+      }
+
+      function applyPointerWash(px, py) {
+        if (quietModeActive() || !state.finePointer) {
+          lightWash.classList.remove("is-active");
+          return;
+        }
+        // Map normalized pointer [-1,1] to percentage around center.
+        const xPct = 50 + px * 50;
+        const yPct = 50 + py * 50;
+        lightWash.style.setProperty("--px", xPct + "%");
+        lightWash.style.setProperty("--py", yPct + "%");
+        if (state.pointerActive) {
+          lightWash.classList.add("is-active");
+        } else {
+          lightWash.classList.remove("is-active");
+        }
+      }
+
+      function render(progress, px, py) {
+        applyMark(progress);
+        applyCopy(progress);
+        applyHandoff(progress);
+        applyObjectPositions(progress);
+        applyMediaTransforms(progress, px, py);
+        applyPointerWash(px, py);
+      }
+
+      function onPointerMove(event) {
+        if (quietModeActive() || !state.finePointer) return;
+        const cx = window.innerWidth * 0.5;
+        const cy = window.innerHeight * 0.5;
+        const halfW = Math.max(1, cx);
+        const halfH = Math.max(1, cy);
+        state.pointerTargetX = clamp((event.clientX - cx) / halfW, -1, 1);
+        state.pointerTargetY = clamp((event.clientY - cy) / halfH, -1, 1);
+        state.pointerActive = true;
+      }
+
+      function onPointerLeave() {
+        state.pointerTargetX = 0;
+        state.pointerTargetY = 0;
+        state.pointerActive = false;
+      }
+
+      function onResize() {
+        state.isMobile = window.matchMedia("(max-width: 700px)").matches;
+        state.finePointer = window.matchMedia("(pointer: fine)").matches;
+        state.targetProgress = measureScrollProgress();
+        if (quietModeActive()) {
+          state.visualProgress = state.targetProgress;
+        }
+        // Physical progress is measured/smoothed; render consumes remapped timeline.
+        render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
+      }
+
+      function tick(now) {
+        const dt = Math.min(0.064, Math.max(0.001, (now - state.lastTime) / 1000));
+        state.lastTime = now;
+
+        // Measure and damp in raw physical section progress (0–1 over full travel).
+        state.targetProgress = measureScrollProgress();
+
+        if (quietModeActive()) {
+          // Direct scroll-linked states; no temporal smoothing.
+          state.visualProgress = state.targetProgress;
+          state.pointerX = 0;
+          state.pointerY = 0;
+        } else {
+          const scrollK = 1 - Math.exp(-dt / MOTION.scrollTau);
+          state.visualProgress += (state.targetProgress - state.visualProgress) * scrollK;
+
+          const pointerK = 1 - Math.exp(-dt / MOTION.pointerTau);
+          state.pointerX += (state.pointerTargetX - state.pointerX) * pointerK;
+          state.pointerY += (state.pointerTargetY - state.pointerY) * pointerK;
+
+          // Stabilize first frame only: snap to measured initial state, then damp.
+          if (!state.hasSettledFirstFrame) {
+            state.visualProgress = state.targetProgress;
+            state.pointerX = 0;
+            state.pointerY = 0;
+            state.hasSettledFirstFrame = true;
+          }
+        }
+
+        // All MOTION cues run on the remapped choreography timeline.
+        render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
+
+        // Whole-site single-clock hook (M2–M5). No second rAF loop.
+        if (typeof window.__ranaSiteTick === "function") {
+          window.__ranaSiteTick(dt);
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      function armVideos() {
+        // Explicit quiet mode: never assign media sources; posters remain composed.
+        if (mediaQuietActive()) {
+          document.documentElement.classList.add("is-media-quiet");
+          [studioVideo, ringVideo].forEach(function (el) {
+            if (!el) return;
+            el.removeAttribute("autoplay");
+            el.autoplay = false;
+            try {
+              el.pause();
+            } catch (e) {}
+            el.classList.remove("is-live");
+          });
+          return;
+        }
+
+        document.documentElement.classList.remove("is-media-quiet");
+
+        function tryPlay(video, startAt) {
+          if (!video) return;
+          const begin = function () {
+            if (mediaQuietActive()) {
+              try {
+                video.pause();
+              } catch (e) {}
+              video.classList.remove("is-live");
+              return;
+            }
+            try {
+              if (typeof startAt === "number" && isFinite(video.duration)) {
+                const t = Math.min(startAt, Math.max(0, video.duration - 0.05));
+                if (Math.abs(video.currentTime - t) > 0.05) {
+                  video.currentTime = t;
+                }
+              }
+            } catch (e) {}
+            const playPromise = video.play();
+            if (playPromise && typeof playPromise.then === "function") {
+              playPromise
+                .then(function () {
+                  if (mediaQuietActive()) {
+                    try {
+                      video.pause();
+                    } catch (e) {}
+                    video.classList.remove("is-live");
+                    return;
+                  }
+                  video.classList.add("is-live");
+                })
+                .catch(function () {
+                  // Keep poster visible if autoplay is blocked.
+                });
+            } else {
+              video.classList.add("is-live");
+            }
+          };
+
+          if (video.readyState >= 1) {
+            begin();
+          } else {
+            video.addEventListener(
+              "loadedmetadata",
+              function () {
+                begin();
+              },
+              { once: true }
+            );
+          }
+
+          video.addEventListener(
+            "playing",
+            function () {
+              if (mediaQuietActive()) {
+                try {
+                  video.pause();
+                } catch (e) {}
+                video.classList.remove("is-live");
+                return;
+              }
+              video.classList.add("is-live");
+            },
+            { once: true }
+          );
+        }
+
+        // Opening scene media only — later duplicates hydrate from site.js.
+        ensureVideoSource(studioVideo, "auto");
+        ensureVideoSource(ringVideo, "auto");
+
+        // Studio begins near 0.3s once metadata is ready; ring may loop from start.
+        tryPlay(studioVideo, 0.3);
+        tryPlay(ringVideo, 0);
+      }
+
+      // Pause opening videos when far offscreen; restore when near.
+      function manageOpeningVideoActivity() {
+        if (mediaQuietActive() || !passage) return;
+        const rect = passage.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const near = rect.bottom > -vh * 0.35 && rect.top < vh * 1.35;
+        [studioVideo, ringVideo].forEach(function (video) {
+          if (!video) return;
+          if (near) {
+            if (!video.getAttribute("src") && video.getAttribute("data-src")) {
+              ensureVideoSource(video, "auto");
+            }
+            if (video.paused) {
+              const p = video.play();
+              if (p && typeof p.catch === "function") p.catch(function () {});
+            }
+            studioStack && (studioStack.style.willChange = "transform");
+            ringStack && (ringStack.style.willChange = "transform");
+          } else {
+            if (!video.paused) {
+              try {
+                video.pause();
+              } catch (e) {}
+            }
+            if (studioStack) studioStack.style.willChange = "auto";
+            if (ringStack) ringStack.style.willChange = "auto";
+          }
+        });
+      }
+
+      // Initial zero-delta frame before first rAF.
+      state.targetProgress = measureScrollProgress();
+      state.visualProgress = state.targetProgress;
+      render(openingTimeline(state.visualProgress), 0, 0);
+
+      loadMark();
+      armVideos();
+
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      window.addEventListener("pointerleave", onPointerLeave, { passive: true });
+      window.addEventListener("blur", onPointerLeave, { passive: true });
+      window.addEventListener("resize", onResize, { passive: true });
+      window.addEventListener(
+        "scroll",
+        function () {
+          state.targetProgress = measureScrollProgress();
+          manageOpeningVideoActivity();
+        },
+        { passive: true }
+      );
+
+      // Expose MOTION for inspection; values are frozen.
+      // OPENING_SPAN + openingTimeline are the shared physical→choreography remap
+      // consumed by the inline renderer and site.js persistent-mark state.
+      window.MOTION = MOTION;
+      window.OPENING_SPAN = OPENING_SPAN;
+      window.openingTimeline = openingTimeline;
+
+      requestAnimationFrame(function (now) {
+        state.lastTime = now;
+        requestAnimationFrame(tick);
+      });
+    })();
+  </script>
+  <script src="site.js"></script>
+</body>
+</html>
