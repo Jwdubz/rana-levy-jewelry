@@ -108,8 +108,7 @@
 
     .media-stack img,
     .media-stack video,
-    .media-echo img,
-    .media-echo video {
+    .media-echo img {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -131,14 +130,12 @@
       object-position: 50% 48%;
     }
 
-    .media-stack video,
-    .media-echo video {
+    .media-stack video {
       opacity: 0;
       transition: opacity 0.45s ease;
     }
 
-    .media-stack video.is-live,
-    .media-echo video.is-live {
+    .media-stack video.is-live {
       opacity: 1;
     }
 
@@ -286,9 +283,10 @@
     @media (max-width: 700px) {
       /*
         Opening media oracle:
-        2:1 studio and 1:1 ring keep a full-viewport atmospheric echo (cover),
-        while the sharp plane uses contain-class geometry and a generous feather
-        so the whole subject remains intelligible without letterbox bars.
+        Full-viewport atmospheric echo stays cover/blurred (poster still only).
+        Sharp planes are real parent boxes (2:1 studio, square ring) so the
+        feather is measured at content perimeter — not a full-height contain child.
+        JS owns stack transform; position with top/left/margins only.
       */
       .media-echo {
         display: block;
@@ -302,73 +300,80 @@
         transform-origin: center center;
       }
 
-      .media-echo img,
-      .media-echo video {
+      .media-echo img {
         object-fit: cover;
         object-position: 50% 50%;
-        filter: blur(30px) brightness(0.44) saturate(1.08);
+        filter: blur(30px) brightness(0.34) saturate(0.92);
         transform: scale(1.14);
         transform-origin: center center;
       }
 
-      .world-studio .media-stack,
-      .world-ring .media-stack {
-        inset: 0;
-        width: 100%;
-        height: 100%;
+      /* Studio: deliberate 2:1 portrait-world stop, slightly overscan width. */
+      .world-studio .media-stack {
+        inset: auto;
+        top: 46%;
+        left: 50%;
+        width: 118vw;
+        height: 59vw; /* 2:1 */
+        margin-top: -29.5vw;
+        margin-left: -59vw;
         z-index: 1;
+        overflow: visible;
+        -webkit-mask-image: radial-gradient(
+          ellipse 96% 94% at 50% 50%,
+          #000 22%,
+          rgba(0, 0, 0, 0.98) 42%,
+          rgba(0, 0, 0, 0.78) 62%,
+          rgba(0, 0, 0, 0.34) 82%,
+          transparent 100%
+        );
+        mask-image: radial-gradient(
+          ellipse 96% 94% at 50% 50%,
+          #000 22%,
+          rgba(0, 0, 0, 0.98) 42%,
+          rgba(0, 0, 0, 0.78) 62%,
+          rgba(0, 0, 0, 0.34) 82%,
+          transparent 100%
+        );
       }
 
       .world-studio .media-stack img,
       .world-studio .media-stack video {
-        object-fit: contain;
+        object-fit: cover;
         object-position: 50% 46%;
-        /* Soft dissolve into the echo — no readable rectangle or empty bar. */
+      }
+
+      /* Ring: square parent, continuous soft radial dissolve into atmosphere. */
+      .world-ring .media-stack {
+        inset: auto;
+        top: 50%;
+        left: 50%;
+        width: min(118vw, 150svh);
+        height: min(118vw, 150svh);
+        margin-top: calc(min(118vw, 150svh) * -0.5);
+        margin-left: calc(min(118vw, 150svh) * -0.5);
+        z-index: 1;
+        overflow: visible;
         -webkit-mask-image: radial-gradient(
-          ellipse 78% 64% at 50% 48%,
-          #000 34%,
-          rgba(0, 0, 0, 0.96) 48%,
-          rgba(0, 0, 0, 0.72) 62%,
-          rgba(0, 0, 0, 0.28) 78%,
+          closest-side,
+          #000 52%,
+          rgba(0, 0, 0, 0.94) 68%,
+          rgba(0, 0, 0, 0.42) 86%,
           transparent 100%
         );
         mask-image: radial-gradient(
-          ellipse 78% 64% at 50% 48%,
-          #000 34%,
-          rgba(0, 0, 0, 0.96) 48%,
-          rgba(0, 0, 0, 0.72) 62%,
-          rgba(0, 0, 0, 0.28) 78%,
+          closest-side,
+          #000 52%,
+          rgba(0, 0, 0, 0.94) 68%,
+          rgba(0, 0, 0, 0.42) 86%,
           transparent 100%
         );
       }
 
       .world-ring .media-stack img,
       .world-ring .media-stack video {
-        /* Square source may claim more portrait width; same spatial logic. */
-        inset: auto;
-        top: 50%;
-        left: 50%;
-        width: min(118vw, 150svh);
-        height: min(118vw, 150svh);
-        max-width: none;
-        max-height: none;
-        object-fit: contain;
+        object-fit: cover;
         object-position: 50% 50%;
-        transform: translate3d(-50%, -50%, 0);
-        -webkit-mask-image: radial-gradient(
-          closest-side,
-          #000 58%,
-          rgba(0, 0, 0, 0.94) 72%,
-          rgba(0, 0, 0, 0.42) 88%,
-          transparent 100%
-        );
-        mask-image: radial-gradient(
-          closest-side,
-          #000 58%,
-          rgba(0, 0, 0, 0.94) 72%,
-          rgba(0, 0, 0, 0.42) 88%,
-          transparent 100%
-        );
       }
 
       .mark {
@@ -458,8 +463,7 @@
       display: none;
     }
 
-    .is-quiet .media-stack video,
-    .is-quiet .media-echo video {
+    .is-quiet .media-stack video {
       opacity: 0 !important;
     }
   </style>
@@ -524,17 +528,6 @@
         <div class="world world-studio" id="worldStudio">
           <div class="media-echo" id="studioEcho" aria-hidden="true">
             <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async">
-            <video
-              id="studioEchoVideo"
-              data-src="assets/studio-banner.mp4"
-              poster="assets/studio-poster.jpg"
-              muted
-              loop
-              playsinline
-              preload="none"
-              disablepictureinpicture
-              disableremoteplayback
-            ></video>
           </div>
           <div class="media-stack" id="studioStack">
             <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async" fetchpriority="high">
@@ -555,17 +548,6 @@
         <div class="world world-ring" id="worldRing">
           <div class="media-echo" id="ringEcho" aria-hidden="true">
             <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
-            <video
-              id="ringEchoVideo"
-              data-src="assets/ring-alexandrite.mp4"
-              poster="assets/ring-poster.jpg"
-              muted
-              loop
-              playsinline
-              preload="none"
-              disablepictureinpicture
-              disableremoteplayback
-            ></video>
           </div>
           <div class="media-stack" id="ringStack">
             <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
@@ -861,8 +843,6 @@
       const ringEcho = document.getElementById("ringEcho");
       const studioVideo = document.getElementById("studioVideo");
       const ringVideo = document.getElementById("ringVideo");
-      const studioEchoVideo = document.getElementById("studioEchoVideo");
-      const ringEchoVideo = document.getElementById("ringEchoVideo");
       const causticLight = document.getElementById("causticLight");
       const lightWash = document.getElementById("lightWash");
       const siteHeader = document.getElementById("siteHeader");
@@ -877,17 +857,11 @@
         : [];
       const ringMedia = ringStack ? ringStack.querySelectorAll("img, video") : [];
       const studioEchoMedia = studioEcho
-        ? studioEcho.querySelectorAll("img, video")
+        ? studioEcho.querySelectorAll("img")
         : [];
-      const ringEchoMedia = ringEcho
-        ? ringEcho.querySelectorAll("img, video")
-        : [];
-      const openingVideos = [
-        studioVideo,
-        ringVideo,
-        studioEchoVideo,
-        ringEchoVideo
-      ].filter(Boolean);
+      const ringEchoMedia = ringEcho ? ringEcho.querySelectorAll("img") : [];
+      // One live decoder per source — atmosphere uses poster stills only.
+      const openingVideos = [studioVideo, ringVideo].filter(Boolean);
       const indexPanelLinks = siteIndexPanel
         ? Array.prototype.slice.call(siteIndexPanel.querySelectorAll("a, button"))
         : [];
@@ -996,7 +970,7 @@
         let ringEchoPos;
 
         if (mobile) {
-          // Sharp planes are contain-class; keep the full subject centered.
+          // Sharp planes fill parent geometry; keep the full subject centered.
           studioX = 50;
           studioY = lerp(46, 48, progress);
           ringX = 50;
@@ -1183,7 +1157,7 @@
 
       function applyMediaTransforms(progress, px, py) {
         const mobile = state.isMobile;
-        // Studio: 1.08 at 0 → 1.015 at 0.62 (mobile starts calmer over contain geometry)
+        // Studio: 1.08 at 0 → 1.015 at 0.62 (mobile starts calmer over parent geometry)
         const studioScaleT = windowProgress(progress, 0, 0.62);
         const studioStart = mobile ? 1.035 : MOTION.mediaScaleStart;
         const studioScale = lerp(studioStart, 1.015, studioScaleT);
@@ -1505,39 +1479,12 @@
         }
 
         // Opening scene media only — later duplicates hydrate from site.js.
-        // Echo videos share the same bytes so atmosphere matches the sharp plane live.
+        // Atmosphere uses lightweight poster stills; one live decoder per source.
         ensureVideoSource(studioVideo, "auto");
         ensureVideoSource(ringVideo, "auto");
         // Studio begins near 0.3s once metadata is ready; ring may loop from start.
         tryPlay(studioVideo, 0.3);
         tryPlay(ringVideo, 0);
-
-        if (state.isMobile) {
-          ensureVideoSource(studioEchoVideo, "auto");
-          ensureVideoSource(ringEchoVideo, "auto");
-          tryPlay(studioEchoVideo, 0.3);
-          tryPlay(ringEchoVideo, 0);
-
-          function bindEchoSync(primary, echo) {
-            if (!primary || !echo) return;
-            const sync = function () {
-              if (mediaQuietActive()) return;
-              try {
-                if (
-                  isFinite(primary.currentTime) &&
-                  Math.abs((echo.currentTime || 0) - primary.currentTime) > 0.12
-                ) {
-                  echo.currentTime = primary.currentTime;
-                }
-              } catch (e) {}
-            };
-            primary.addEventListener("playing", sync);
-            primary.addEventListener("timeupdate", sync);
-            primary.addEventListener("seeked", sync);
-          }
-          bindEchoSync(studioVideo, studioEchoVideo);
-          bindEchoSync(ringVideo, ringEchoVideo);
-        }
       }
 
       // Pause opening videos when far offscreen; restore when near.
@@ -1546,10 +1493,7 @@
         const rect = passage.getBoundingClientRect();
         const vh = window.innerHeight;
         const near = rect.bottom > -vh * 0.35 && rect.top < vh * 1.35;
-        const activeVideos = state.isMobile
-          ? openingVideos
-          : [studioVideo, ringVideo].filter(Boolean);
-        activeVideos.forEach(function (video) {
+        openingVideos.forEach(function (video) {
           if (!video) return;
           if (near) {
             if (!video.getAttribute("src") && video.getAttribute("data-src")) {
