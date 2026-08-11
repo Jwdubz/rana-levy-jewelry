@@ -407,19 +407,40 @@ for (const block of consultBlocks) {
   }
 }
 
-// --- Short-landscape Consultation chrome: document-bound, never fixed/sticky ---
-// Observed residual at 844×390 / 932×430: desktop fixed .shell-chrome overlaps
-// later copy (desktop shell applies above 700px). Proven causal fix is absolute
-// only in the 701–1100 × max-height 500 Consultation band — header stays in the
-// opening frame and scrolls away with the document.
+// --- Mid-band shell chrome (701–1100px): document-bound, never fixed/sticky ---
+// Observed shared residual: transparent fixed .shell-chrome overlaps later copy
+// on every long shell route at 844×390 and at 1024×600 (above the retired
+// max-height: 500px gate). Proven causal fix is unscoped absolute across the
+// complete 701–1100 band — opening composition stays, header scrolls away.
 {
-  const shortLandscapeRe =
-    /@media\s*\(\s*min-width\s*:\s*701px\s*\)\s*and\s*\(\s*max-width\s*:\s*1100px\s*\)\s*and\s*\(\s*max-height\s*:\s*500px\s*\)\s*\{/g;
-  const m = shortLandscapeRe.exec(shellCss);
+  // Retired narrow forms must be gone (one source of truth for the band).
+  if (
+    /@media\s*\(\s*min-width\s*:\s*701px\s*\)\s*and\s*\(\s*max-width\s*:\s*1100px\s*\)\s*and\s*\(\s*max-height\s*:\s*500px\s*\)/i.test(
+      shellCss
+    )
+  ) {
+    fail(
+      "mid-band chrome must not retain retired max-height: 500px gate; band is width-only 701–1100px"
+    );
+  }
+  if (/\.page-consultation\s+\.shell-chrome/i.test(shellCss)) {
+    fail(
+      "mid-band chrome must not retain Consultation-scoped .page-consultation .shell-chrome; unscoped .shell-chrome is required"
+    );
+  }
+
+  const midBandRe =
+    /@media\s*\(\s*min-width\s*:\s*701px\s*\)\s*and\s*\(\s*max-width\s*:\s*1100px\s*\)\s*\{/g;
+  const m = midBandRe.exec(shellCss);
   if (!m) {
     fail(
-      "short-landscape Consultation chrome media missing: @media (min-width: 701px) and (max-width: 1100px) and (max-height: 500px)"
+      "mid-band shell chrome media missing: @media (min-width: 701px) and (max-width: 1100px)"
     );
+  }
+  // Ensure this match is not a longer compound that reintroduces height/other gates.
+  const mediaHead = shellCss.slice(m.index, shellCss.indexOf("{", m.index));
+  if (/max-height/i.test(mediaHead)) {
+    fail("mid-band shell chrome media must not include max-height (width-only 701–1100px)");
   }
   const brace = shellCss.indexOf("{", m.index);
   let depth = 0;
@@ -434,27 +455,40 @@ for (const block of consultBlocks) {
       }
     }
   }
-  if (end < 0) fail("short-landscape Consultation chrome media block unclosed");
+  if (end < 0) fail("mid-band shell chrome media block unclosed");
   const band = shellCss.slice(brace + 1, end);
-  const chromeBlock = extractBlock(band, ".page-consultation .shell-chrome", 0);
+  const chromeBlock = extractBlock(band, ".shell-chrome", 0);
   if (!chromeBlock) {
     fail(
-      "short-landscape band must target .page-consultation .shell-chrome (Consultation-only; do not broaden)"
+      "mid-band must target unscoped .shell-chrome (all shell routes in 701–1100px)"
+    );
+  }
+  // Reject Consultation-scoped form if it somehow appears inside the band.
+  if (extractBlock(band, ".page-consultation .shell-chrome", 0)) {
+    fail(
+      "mid-band must not target .page-consultation .shell-chrome; use unscoped .shell-chrome only"
     );
   }
   if (!/position\s*:\s*absolute/i.test(chromeBlock)) {
     fail(
-      "short-landscape Consultation .shell-chrome must be position:absolute (document-bound; scrolls away with copy)"
+      "mid-band .shell-chrome must be position:absolute (document-bound; scrolls away with copy)"
     );
   }
   if (/position\s*:\s*fixed/i.test(chromeBlock)) {
     fail(
-      "short-landscape Consultation .shell-chrome must never be position:fixed (viewport-bound reading collision)"
+      "mid-band .shell-chrome must never be position:fixed (viewport-bound reading collision)"
     );
   }
   if (/position\s*:\s*sticky/i.test(chromeBlock)) {
     fail(
-      "short-landscape Consultation .shell-chrome must never be position:sticky (must leave the viewport on scroll)"
+      "mid-band .shell-chrome must never be position:sticky (must leave the viewport on scroll)"
+    );
+  }
+  // Exactly one complete mid-band law for this chrome correction.
+  midBandRe.lastIndex = end + 1;
+  if (midBandRe.exec(shellCss)) {
+    fail(
+      "mid-band shell chrome media must appear exactly once (one source of truth for 701–1100px)"
     );
   }
 }

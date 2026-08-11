@@ -2020,12 +2020,12 @@ html.is-quiet::view-transition-new(root) {
   }
 }
 
-/* Short phone landscape (above the 700px mobile breakpoint, short height):
-   desktop fixed chrome covers later Consultation copy while scrolling.
+/* Mid-band shell (above 700px mobile, at/below 1100px desktop):
+   transparent fixed chrome collides with scrolling copy on every long route.
    Document-bound absolute keeps the opening composition, then scrolls away.
-   Band and selector proven at 844×390 — do not broaden. */
-@media (min-width: 701px) and (max-width: 1100px) and (max-height: 500px) {
-  .page-consultation .shell-chrome {
+   Unscoped across shell routes; not height-limited (1024×600 still fails). */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .shell-chrome {
     position: absolute;
   }
 }
