@@ -186,6 +186,7 @@ const requiredAssets = [
   "assets/studio-poster-portrait.jpg",
   "assets/studio-opening-portrait.jpg",
   "assets/ring-poster-portrait.jpg",
+  "assets/studio-hand-work-cycle-portrait.mp4",
 ];
 for (const rel of requiredAssets) {
   if (!assetExists(rel)) fail(`missing required portrait asset: ${rel}`);
@@ -201,11 +202,28 @@ const requiredMarkupTokens = [
   'data-mobile-poster="assets/ring-poster-portrait.jpg"',
   'data-mobile-src="assets/studio-opening-portrait.jpg"',
   'data-mobile-src="assets/ring-poster-portrait.jpg"',
+  'data-desktop-src="assets/studio-hand-work-cycle.mp4"',
+  'data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"',
 ];
 for (const token of requiredMarkupTokens) {
   if (!index.includes(token)) {
     fail(`index.html missing deterministic media attribute token: ${token}`);
   }
+}
+
+// handVideo must stay on the single pre-hydration responsive selector (one decoder).
+const handVideoBlock = index.match(/id="handVideo"[\s\S]*?<\/video>/);
+if (!handVideoBlock) fail("handVideo element must be present");
+if (
+  !/data-desktop-src="assets\/studio-hand-work-cycle\.mp4"/.test(handVideoBlock[0]) ||
+  !/data-mobile-src="assets\/studio-hand-work-cycle-portrait\.mp4"/.test(
+    handVideoBlock[0]
+  )
+) {
+  fail("handVideo must declare desktop cycle and portrait cycle data sources");
+}
+if ((index.match(/id="handVideo"/g) || []).length !== 1) {
+  fail("exactly one handVideo decoder must exist (no second selector/decoder)");
 }
 
 if (!/function\s+selectResponsiveMedia\s*\(/.test(index)) {

@@ -559,15 +559,56 @@ if (!/is-quiet/.test(siteJs)) fail("site.js must still toggle is-quiet");
 
 // --- Home hand beat: derived Lap→Engraving cycle + exact terminal copy ---
 // handVideo uses the contiguous derived cycle; BENCH_WINDOWS.hand covers its full duration.
-if (
-  !/id="handVideo"[\s\S]*?data-src="assets\/studio-hand-work-cycle\.mp4"/.test(index)
-) {
+// Desktop fallback remains data-src; mobile/desktop explicit sources share one decoder.
+const handVideoBlock = index.match(
+  /id="handVideo"[\s\S]*?<\/video>/
+);
+if (!handVideoBlock) fail("handVideo element must be present");
+const handVideoMarkup = handVideoBlock[0];
+if (!/data-src="assets\/studio-hand-work-cycle\.mp4"/.test(handVideoMarkup)) {
   fail('handVideo must use data-src="assets/studio-hand-work-cycle.mp4"');
 }
 if (
-  /id="handVideo"[\s\S]*?data-src="assets\/studio-banner\.mp4"/.test(index)
+  !/data-desktop-src="assets\/studio-hand-work-cycle\.mp4"/.test(handVideoMarkup)
 ) {
+  fail(
+    'handVideo must declare data-desktop-src="assets/studio-hand-work-cycle.mp4"'
+  );
+}
+if (
+  !/data-mobile-src="assets\/studio-hand-work-cycle-portrait\.mp4"/.test(
+    handVideoMarkup
+  )
+) {
+  fail(
+    'handVideo must declare data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"'
+  );
+}
+if (
+  !/data-desktop-poster="assets\/studio-poster\.jpg"/.test(handVideoMarkup) ||
+  !/data-mobile-poster="assets\/studio-poster-portrait\.jpg"/.test(handVideoMarkup)
+) {
+  fail("handVideo must declare desktop and mobile studio posters");
+}
+if (/data-src="assets\/studio-banner\.mp4"/.test(handVideoMarkup)) {
   fail("handVideo must not still point at the full studio-banner montage");
+}
+// Preceding poster img must share the same frame authority on phones.
+const handBenchStack = index.match(
+  /id="handBenchStack"[\s\S]*?<\/div>/
+);
+if (!handBenchStack) fail("handBenchStack must be present");
+if (
+  !/data-desktop-src="assets\/studio-poster\.jpg"/.test(handBenchStack[0]) ||
+  !/data-mobile-src="assets\/studio-poster-portrait\.jpg"/.test(handBenchStack[0])
+) {
+  fail(
+    "hand bench poster img must declare desktop/mobile studio poster sources"
+  );
+}
+// One live decoder: only a single handVideo element; responsive path only mutates data-src.
+if ((index.match(/id="handVideo"/g) || []).length !== 1) {
+  fail("exactly one handVideo decoder element must exist");
 }
 const handWindowDecl = siteJs.match(
   /const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*(\[[^\]]+\])/
