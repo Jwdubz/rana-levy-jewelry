@@ -101,14 +101,8 @@
       will-change: transform;
     }
 
-    /* Echo field is mobile-only atmosphere; desktop never paints it. */
-    .media-echo {
-      display: none;
-    }
-
     .media-stack img,
-    .media-stack video,
-    .media-echo img {
+    .media-stack video {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -282,93 +276,26 @@
 
     @media (max-width: 700px) {
       /*
-        Opening media oracle:
-        Full-viewport atmospheric echo stays cover/blurred (poster still only).
-        Sharp planes are real parent boxes (2:1 studio, square ring) so the
-        feather is measured at content perimeter — not a full-height contain child.
-        JS owns stack transform; position with top/left/margins only.
+        Opening media oracle — full-bleed passage, not a vignette:
+        Active footage fills the viewport edge-to-edge. Art direction is crop
+        and object-position only; no radial/elliptical perimeter mask, no
+        atmospheric echo field, no copy wash panel. JS owns stack transform.
       */
-      .media-echo {
-        display: block;
-        position: absolute;
-        inset: -10%;
-        width: 120%;
-        height: 120%;
-        z-index: 0;
+      .world-studio .media-stack,
+      .world-ring .media-stack {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
         overflow: hidden;
-        pointer-events: none;
-        transform-origin: center center;
-      }
-
-      .media-echo img {
-        object-fit: cover;
-        object-position: 50% 50%;
-        filter: blur(30px) brightness(0.34) saturate(0.92);
-        transform: scale(1.14);
-        transform-origin: center center;
-      }
-
-      /* Studio: deliberate 2:1 portrait-world stop, slightly overscan width. */
-      .world-studio .media-stack {
-        inset: auto;
-        top: 46%;
-        left: 50%;
-        width: 118vw;
-        height: 59vw; /* 2:1 */
-        margin-top: -29.5vw;
-        margin-left: -59vw;
-        z-index: 1;
-        overflow: visible;
-        /* 50% 50% places the transparent 100% stop on every edge midpoint. */
-        -webkit-mask-image: radial-gradient(
-          ellipse 50% 50% at 50% 50%,
-          #000 22%,
-          rgba(0, 0, 0, 0.98) 40%,
-          rgba(0, 0, 0, 0.72) 58%,
-          rgba(0, 0, 0, 0.28) 78%,
-          transparent 100%
-        );
-        mask-image: radial-gradient(
-          ellipse 50% 50% at 50% 50%,
-          #000 22%,
-          rgba(0, 0, 0, 0.98) 40%,
-          rgba(0, 0, 0, 0.72) 58%,
-          rgba(0, 0, 0, 0.28) 78%,
-          transparent 100%
-        );
+        -webkit-mask-image: none;
+        mask-image: none;
       }
 
       .world-studio .media-stack img,
       .world-studio .media-stack video {
         object-fit: cover;
         object-position: 50% 46%;
-      }
-
-      /* Ring: square parent, continuous soft radial dissolve into atmosphere. */
-      .world-ring .media-stack {
-        inset: auto;
-        top: 50%;
-        left: 50%;
-        width: min(118vw, 150svh);
-        height: min(118vw, 150svh);
-        margin-top: calc(min(118vw, 150svh) * -0.5);
-        margin-left: calc(min(118vw, 150svh) * -0.5);
-        z-index: 1;
-        overflow: visible;
-        -webkit-mask-image: radial-gradient(
-          closest-side,
-          #000 52%,
-          rgba(0, 0, 0, 0.94) 68%,
-          rgba(0, 0, 0, 0.42) 86%,
-          transparent 100%
-        );
-        mask-image: radial-gradient(
-          closest-side,
-          #000 52%,
-          rgba(0, 0, 0, 0.94) 68%,
-          rgba(0, 0, 0, 0.42) 86%,
-          transparent 100%
-        );
       }
 
       .world-ring .media-stack img,
@@ -433,24 +360,6 @@
           0 1px 2px rgba(2, 0, 5, 0.55),
           0 2px 26px rgba(2, 0, 5, 0.5),
           0 0 40px rgba(2, 0, 5, 0.3);
-      }
-
-      /* Local contrast under copy only — no global opaque panel. */
-      .scene::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: min(42svh, 360px);
-        z-index: 7;
-        pointer-events: none;
-        background: radial-gradient(
-          ellipse 110% 90% at 28% 100%,
-          rgba(2, 0, 5, 0.42) 0%,
-          rgba(2, 0, 5, 0.18) 42%,
-          transparent 74%
-        );
       }
     }
 
@@ -527,9 +436,6 @@
     <section class="passage movement movement-opening" id="opening" aria-label="Opening">
       <div class="scene" id="scene">
         <div class="world world-studio" id="worldStudio">
-          <div class="media-echo" id="studioEcho" aria-hidden="true">
-            <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async">
-          </div>
           <div class="media-stack" id="studioStack">
             <img src="assets/studio-opening.jpg" alt="" width="1920" height="960" decoding="async" fetchpriority="high">
             <video
@@ -547,9 +453,6 @@
         </div>
 
         <div class="world world-ring" id="worldRing">
-          <div class="media-echo" id="ringEcho" aria-hidden="true">
-            <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
-          </div>
           <div class="media-stack" id="ringStack">
             <img src="assets/ring-poster.jpg" alt="" width="1000" height="1000" decoding="async">
             <video
@@ -840,8 +743,6 @@
       const worldRing = document.getElementById("worldRing");
       const studioStack = document.getElementById("studioStack");
       const ringStack = document.getElementById("ringStack");
-      const studioEcho = document.getElementById("studioEcho");
-      const ringEcho = document.getElementById("ringEcho");
       const studioVideo = document.getElementById("studioVideo");
       const ringVideo = document.getElementById("ringVideo");
       const causticLight = document.getElementById("causticLight");
@@ -857,11 +758,7 @@
         ? studioStack.querySelectorAll("img, video")
         : [];
       const ringMedia = ringStack ? ringStack.querySelectorAll("img, video") : [];
-      const studioEchoMedia = studioEcho
-        ? studioEcho.querySelectorAll("img")
-        : [];
-      const ringEchoMedia = ringEcho ? ringEcho.querySelectorAll("img") : [];
-      // One live decoder per source — atmosphere uses poster stills only.
+      // One live decoder per source.
       const openingVideos = [studioVideo, ringVideo].filter(Boolean);
       const indexPanelLinks = siteIndexPanel
         ? Array.prototype.slice.call(siteIndexPanel.querySelectorAll("a, button"))
@@ -967,24 +864,18 @@
         let studioY;
         let ringX;
         let ringY;
-        let studioEchoPos;
-        let ringEchoPos;
 
         if (mobile) {
-          // Sharp planes fill parent geometry; keep the full subject centered.
+          // Full-bleed cover crop; keep jewelry/studio subjects intentional.
           studioX = 50;
           studioY = lerp(46, 48, progress);
           ringX = 50;
           ringY = 50;
-          studioEchoPos = "50% 50%";
-          ringEchoPos = "50% 50%";
         } else {
           studioX = lerp(50, 52, progress);
           studioY = lerp(52, 49, progress);
           ringX = 50;
           ringY = 48;
-          studioEchoPos = null;
-          ringEchoPos = null;
         }
 
         // Pointer crop drift is additive via transform; object-position holds art direction.
@@ -995,16 +886,6 @@
         }
         for (let i = 0; i < ringMedia.length; i++) {
           ringMedia[i].style.objectPosition = ringPos;
-        }
-        if (studioEchoPos) {
-          for (let i = 0; i < studioEchoMedia.length; i++) {
-            studioEchoMedia[i].style.objectPosition = studioEchoPos;
-          }
-        }
-        if (ringEchoPos) {
-          for (let i = 0; i < ringEchoMedia.length; i++) {
-            ringEchoMedia[i].style.objectPosition = ringEchoPos;
-          }
         }
       }
 
@@ -1202,9 +1083,6 @@
 
         if (studioStack) studioStack.style.transform = studioTf;
         if (ringStack) ringStack.style.transform = ringTf;
-        // Echo shares the same breath so live handoff never jumps against atmosphere.
-        if (studioEcho) studioEcho.style.transform = studioTf;
-        if (ringEcho) ringEcho.style.transform = ringTf;
       }
 
       function applyPointerWash(px, py) {
@@ -1515,13 +1393,9 @@
         if (near) {
           if (studioStack) studioStack.style.willChange = "transform";
           if (ringStack) ringStack.style.willChange = "transform";
-          if (studioEcho) studioEcho.style.willChange = "transform";
-          if (ringEcho) ringEcho.style.willChange = "transform";
         } else {
           if (studioStack) studioStack.style.willChange = "auto";
           if (ringStack) ringStack.style.willChange = "auto";
-          if (studioEcho) studioEcho.style.willChange = "auto";
-          if (ringEcho) ringEcho.style.willChange = "auto";
         }
       }
 

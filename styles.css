@@ -847,34 +847,19 @@
   }
 
   /*
-    Mobile hand-bridge duplicate must inherit the final opening-ring composition:
-    centered square parent + soft radial perimeter dissolve. Outer #handBridge
-    keeps the angled mask-out that reveals the bench; only the media parent
-    matches the ring geometry so retirement is spatially continuous.
+    Mobile hand-bridge media matches the final opening-ring full-bleed stack:
+    edge-to-edge viewport fill, no radial/elliptical perimeter mask. Outer
+    #handBridge still owns the angled Turn mask-out into the bench; the media
+    parent itself is continuous full-viewport composition, not a vignette.
   */
   .hand-bridge .layer-media {
-    inset: auto;
-    top: 50%;
-    left: 50%;
-    width: min(118vw, 150svh);
-    height: min(118vw, 150svh);
-    margin-top: calc(min(118vw, 150svh) * -0.5);
-    margin-left: calc(min(118vw, 150svh) * -0.5);
-    overflow: visible;
-    -webkit-mask-image: radial-gradient(
-      closest-side,
-      #000 52%,
-      rgba(0, 0, 0, 0.94) 68%,
-      rgba(0, 0, 0, 0.42) 86%,
-      transparent 100%
-    );
-    mask-image: radial-gradient(
-      closest-side,
-      #000 52%,
-      rgba(0, 0, 0, 0.94) 68%,
-      rgba(0, 0, 0, 0.42) 86%,
-      transparent 100%
-    );
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   .hand-bridge .layer-media img,
