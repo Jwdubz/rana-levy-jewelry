@@ -7,6 +7,8 @@
  * - portrait: 517 frames, ~17.233s, 498x1080, 30 fps, H.264/yuv420p, no audio
  * and that decoded boundary frames match the intended source order closely enough
  * to reject an accidental old rotation (banner start or cluster start).
+ * Portrait source frames are normalized through the H.264 coded-frame display
+ * crop (498x1080 at x=830,y=4 inside 2160x1088) before comparison.
  *
  * Intended order (source frames, once each):
  *   [171..204] + [0..35] + [36..170] + [205..516]
@@ -53,6 +55,10 @@ const contracts = [
     width: 498,
     height: 1080,
     label: "portrait",
+    // studio-banner-portrait stores a 498x1080 display window inside a 2160x1088
+    // coded frame (H.264 frame_crop left=830 right=832 top=4 bottom=4). Naive
+    // decode/scale compares unequal geometry across ffmpeg crop modes.
+    sourceCodedCrop: { w: 498, h: 1080, x: 830, y: 4 },
   },
 ];
 
@@ -107,33 +113,47 @@ function probeJson(assetPath) {
   }
 }
 
-function extractRawFrame(videoPath, frameIndex, outPath, width, height) {
+function extractRawFrame(videoPath, frameIndex, outPath, width, height, codedCrop = null) {
   // Downscale for stable, fast comparison across re-encodes.
   const targetW = Math.min(160, width);
   const targetH = Math.round((height / width) * targetW);
   // force even dims for raw rgb24 convenience
   const w = targetW % 2 === 0 ? targetW : targetW - 1;
   const h = targetH % 2 === 0 ? targetH : targetH - 1;
-  const r = spawnSync(
-    ffmpeg,
-    [
-      "-y",
-      "-i",
-      videoPath,
-      "-vf",
-      `select=eq(n\\,${frameIndex}),scale=${w}:${h}`,
-      "-vframes",
-      "1",
-      "-update",
-      "1",
-      "-f",
-      "rawvideo",
-      "-pix_fmt",
-      "rgb24",
-      outPath,
-    ],
-    { encoding: "utf8" }
+
+  // Normalize to the contract display geometry before comparison. Some sources
+  // (notably studio-banner-portrait) carry a wider coded frame with an H.264
+  // display crop; decoding without an explicit crop/scale/setsar path makes
+  // order MAD depend on ffmpeg crop-application mode rather than content.
+  const vfParts = [`select=eq(n\\,${frameIndex})`];
+  const args = ["-y"];
+  if (codedCrop) {
+    args.push("-apply_cropping", "0");
+    vfParts.push(
+      `crop=${codedCrop.w}:${codedCrop.h}:${codedCrop.x}:${codedCrop.y}`,
+      "setsar=1"
+    );
+  }
+  // Candidates are already display-sized; force exact contract size + SAR so a
+  // macroblock-padded coded frame still compares at the same geometry.
+  vfParts.push(`scale=${width}:${height}`, "setsar=1", `scale=${w}:${h}`);
+  args.push(
+    "-i",
+    videoPath,
+    "-vf",
+    vfParts.join(","),
+    "-vframes",
+    "1",
+    "-update",
+    "1",
+    "-f",
+    "rawvideo",
+    "-pix_fmt",
+    "rgb24",
+    outPath
   );
+
+  const r = spawnSync(ffmpeg, args, { encoding: "utf8" });
   if (r.status !== 0 || !fs.existsSync(outPath) || fs.statSync(outPath).size === 0) {
     process.stderr.write(r.stderr || "");
     fail(`failed to extract frame ${frameIndex} from ${videoPath}`);
@@ -269,8 +289,17 @@ function assertOrder(contract) {
     for (const p of pairs) {
       const newRaw = path.join(tmp, `new_${p.newFrame}.raw`);
       const srcRaw = path.join(tmp, `src_${p.srcFrame}.raw`);
-      extractRawFrame(assetPath, p.newFrame, newRaw, contract.width, contract.height);
-      extractRawFrame(sourcePath, p.srcFrame, srcRaw, contract.width, contract.height);
+      // Candidate is authored at contract display size; source may need an
+      // explicit coded-frame crop (portrait banner) before the same scale path.
+      extractRawFrame(assetPath, p.newFrame, newRaw, contract.width, contract.height, null);
+      extractRawFrame(
+        sourcePath,
+        p.srcFrame,
+        srcRaw,
+        contract.width,
+        contract.height,
+        contract.sourceCodedCrop || null
+      );
       const mad = meanAbsDiff(newRaw, srcRaw);
       if (p.mustMatch) {
         if (mad > p.maxMad) {
