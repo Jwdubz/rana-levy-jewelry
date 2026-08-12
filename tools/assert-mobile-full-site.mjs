@@ -528,27 +528,16 @@ if (!handMediaMobile || !/\binset:\s*0\s*;/.test(handMediaMobile)) {
   fail("mobile hand-bridge media parent must remain full-viewport inset:0");
 }
 
-// --- site.js: mobile portrait uses edge-spanning path, not radial ---
-if (!/if\s*\(\s*mobile\s*\)\s*\{[\s\S]*?applyAngledMask\s*\(\s*handPortrait/m.test(siteJs)) {
-  fail("mobile portrait reveal must use edge-spanning applyAngledMask on handPortrait");
-}
-// Ensure radial-gradient portrait focus path is desktop-gated (inside else).
-const portSection = siteJs.slice(
-  siteJs.indexOf("Portrait reveal"),
-  siteJs.indexOf("// Copy: one thought at a time")
+// --- site.js: Hand portrait world retired; direct bench passage + opening-final exit ---
+const handPassage = spawnSync(
+  process.execPath,
+  [path.join(root, "tools/assert-hand-direct-bench-passage.mjs")],
+  { encoding: "utf8" }
 );
-if (!portSection.includes("if (mobile)")) {
-  fail("portrait reveal must branch on mobile");
-}
-if (!/portraitFocusDesktop/.test(portSection)) {
-  fail("desktop portrait radial focus must remain");
-}
-if (/portraitFocusMobile/.test(portSection)) {
-  fail("mobile portrait must not use portraitFocusMobile radial island path");
-}
-// Mobile branch must clear frame mask (no radial on frame).
-if (!/clearMask\(\s*handPortraitFrame\s*\)/.test(portSection)) {
-  fail("mobile portrait frame must clearMask (no residual radial mask)");
+if (handPassage.status !== 0) {
+  process.stdout.write(handPassage.stdout || "");
+  process.stderr.write(handPassage.stderr || "");
+  fail("hand direct bench passage tripwire failed");
 }
 
 // Quiet mode helpers still present.
@@ -840,5 +829,5 @@ if (fs.existsSync(path.join(root, "package.json"))) {
 }
 
 console.log(
-  "PASS: mobile full-site from oracle (opening preserved; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); consultation opening-sketch→ink ground (no fixed pale paper / Frame-Filler); no mobile radial portrait/work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
+  "PASS: mobile full-site from oracle (opening preserved; direct bench Hand passage; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); consultation opening-sketch→ink ground (no fixed pale paper / Frame-Filler); no mobile work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
 );

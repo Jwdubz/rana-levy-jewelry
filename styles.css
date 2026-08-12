@@ -350,14 +350,16 @@
   opacity: 1;
 }
 
+/* Exact scale-1 full-viewport bench carrier — no overscan pad for retired zoom. */
+.hand-bench .layer-media {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .hand-bench .layer-media img,
 .hand-bench .layer-media video {
   object-position: 42% 48%;
-}
-
-.hand-portrait {
-  z-index: 3;
-  opacity: 0;
 }
 
 /* Opening ring already full-bleed under the entry Turn into the bench/studio world. */
@@ -371,24 +373,6 @@
 .hand-bridge .layer-media img,
 .hand-bridge .layer-media video {
   object-position: 50% 48%;
-}
-
-.hand-portrait-frame {
-  position: absolute;
-  inset: 0;
-}
-
-.hand-portrait-frame img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* Face is upper-right; keep Rana the subject, not the lap machine. */
-  object-position: 82% 18%;
-  display: block;
-  pointer-events: none;
-  user-select: none;
 }
 
 .hand-thought-a,
@@ -419,7 +403,7 @@
   opacity: 1;
 }
 
-/* Hand portrait already full-bleed under the entry Turn into the first work still.
+/* Hand bench still already full-bleed under the entry Turn into the first work still.
    z-index stays above work worlds (JS stacks worlds at 1–4). */
 .work-bridge {
   z-index: 8;
@@ -427,9 +411,15 @@
   visibility: hidden;
 }
 
+.work-bridge .layer-media {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .work-bridge .layer-media img {
   object-fit: cover;
-  object-position: 82% 18%;
+  object-position: 42% 48%;
 }
 
 /* Fluid local darkening for rest type — caused light, not a card/panel. */
@@ -805,18 +795,6 @@
     object-position: 32% 48%;
   }
 
-  .hand-portrait-frame img {
-    /* Bias decisively right so her face is the cover subject on tall viewports. */
-    object-position: 100% 16%;
-  }
-
-  /* Portrait is a full-viewport photographic world on phones — no oval island. */
-  .hand-portrait-frame {
-    inset: 0;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-
   /* Mobile subjects: full-viewport carriers, not contained square islands. */
   .work-world-0,
   .work-world-1,
@@ -914,7 +892,7 @@
 
   .work-bridge .layer-media img {
     object-fit: cover;
-    object-position: 100% 16%;
+    object-position: 32% 48%;
     filter: none;
   }
 
@@ -952,7 +930,7 @@
     filter: none;
   }
 
-  /* Bench media stays full-frame under portrait handoff. */
+  /* Bench media stays full-frame under the ring→bench Turn. */
   .hand-bench .layer-media {
     -webkit-mask-image: none;
     mask-image: none;

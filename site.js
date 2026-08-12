@@ -13,10 +13,7 @@
     junctionFeather: 20,
     junctionFeatherFloor: 16,
     junctionLightPeak: 0.72,
-    // Direct ring→bench carrier: former gem recession class re-homed on the bench.
-    handBenchScaleStart: 1.28,
-    handBenchScaleEnd: 1.02,
-    handPortraitFeather: 34,
+    // Direct ring→bench carrier stays exact scale 1 for the whole Hand movement.
     // Surviving work worlds: art-deco, heirloom, pink-star terminal.
     workSpans: [1.00, 0.86, 0.94],
     workHoldFraction: 0.56,
@@ -25,10 +22,14 @@
     restFloorLuma: 0.10,
     mobileMaxWidth: 700,
     mobileSpanScale: 0.82,
-    /* Desktop portrait subject: face-centered radial reveal.
-       Mobile uses edge-spanning angled handoff instead (no radial island). */
-    portraitFocusDesktop: [78, 26],
-    portraitFocusMobile: [86, 22]
+    // Opening final ("Cut by hand…") exits as Hand entry begins; fully gone
+    // before first Hand thought enters at 0.14.
+    openingFinalExitStart: 0.0,
+    openingFinalExitEnd: 0.12,
+    handThought0InStart: 0.14,
+    handThought0InEnd: 0.26,
+    handThought0OutStart: 0.40,
+    handThought0OutEnd: 0.52
   };
 
   // Hand bench loop: full derived Lap→Engraving cycle asset
@@ -739,12 +740,11 @@
 
   const handBenchLayer = document.getElementById("handBench");
   const handBenchStack = document.getElementById("handBenchStack");
-  const handPortrait = document.getElementById("handPortrait");
-  const handPortraitFrame = document.getElementById("handPortraitFrame");
   const handVideo = document.getElementById("handVideo");
   const handBridge = document.getElementById("handBridge");
   const handBridgeVideo = document.getElementById("handBridgeVideo");
   const handJunction = document.getElementById("handJunction");
+  const openingFinalLine = document.getElementById("finalLine");
   const handThoughts = [
     document.getElementById("handThought0"),
     document.getElementById("handThought1")
@@ -1139,117 +1139,30 @@
       applyJunctionLight(handJunction, 0, angleEnter);
     }
 
-    // Continuous recession inside the bench/studio world — scale the image, never the frame.
-    // Media-layer overscan absorbs the start scale so no edges expose.
+    // Bench/lap carrier stays exact scale 1 on phone and desktop — no lerped
+    // overscan, scale drift, or pointer-induced scale for this movement.
     if (handBenchStack) {
-      const benchScale = lerp(
-        SITE_MOTION.handBenchScaleStart,
-        SITE_MOTION.handBenchScaleEnd,
-        smoothstep(p)
-      );
-      handBenchStack.style.transform = "translate3d(0,0,0) scale(" + benchScale + ")";
+      handBenchStack.style.transform = "translate3d(0,0,0) scale(1)";
     }
 
-    // Portrait reveal ~0.36–0.63.
-    // Desktop: radial expand from her face (approved composition).
-    // Mobile: edge-spanning angled handoff between two full-viewport worlds
-    // (bench → portrait). No radial island, oval spotlight, or mask-to-empty.
-    const portT = windowProgress(p, 0.36, 0.63);
-    if (mobile) {
-      if (handPortraitFrame) {
-        clearMask(handPortraitFrame);
-        handPortraitFrame.style.transform =
-          "scale(" + lerp(1.03, 1.0, portT) + ")";
-      }
-      if (handPortrait) {
-        if (portT <= 0.001) {
-          handPortrait.style.opacity = "0";
-          clearMask(handPortrait);
-        } else if (portT >= 0.999) {
-          handPortrait.style.opacity = "1";
-          clearMask(handPortrait);
-        } else {
-          handPortrait.style.opacity = "1";
-          applyAngledMask(
-            handPortrait,
-            portT,
-            angleEnter,
-            edges.edgeStart,
-            edges.edgeEnd,
-            SITE_MOTION.junctionFeather
-          );
-        }
-      }
-    } else {
-      const focus = SITE_MOTION.portraitFocusDesktop;
-      if (handPortrait) {
-        // Layer present once the reveal begins; recession is mask-driven.
-        handPortrait.style.opacity = portT <= 0.001 ? "0" : "1";
-        clearMask(handPortrait);
-      }
-      if (handPortraitFrame) {
-        const feather = SITE_MOTION.handPortraitFeather;
-        if (portT <= 0.001) {
-          handPortraitFrame.style.webkitMaskImage =
-            "radial-gradient(circle at " +
-            focus[0] +
-            "% " +
-            focus[1] +
-            "%, transparent 0%, transparent 100%)";
-          handPortraitFrame.style.maskImage = handPortraitFrame.style.webkitMaskImage;
-        } else if (portT >= 0.999) {
-          // At rest: fully opaque portrait — no bench ghost through any edge.
-          clearMask(handPortraitFrame);
-        } else {
-          // Expand soft solid core from her face; edge stays feathered mid-reveal.
-          const solidBase = lerp(6, Math.max(34, 70 - feather * 0.45), portT);
-          const midBase = Math.min(94, solidBase + feather * 0.55);
-          const outerBase = Math.min(100, midBase + feather * 0.7);
-          // Final portion of portT: smoothly close the soft outer alpha to solid.
-          const resolve = smoothstep((portT - 0.72) / 0.28);
-          const solid = lerp(solidBase, 100, resolve);
-          const mid = lerp(midBase, 100, resolve);
-          const outer = lerp(outerBase, 100, resolve);
-          const midA = lerp(0.55, 1, resolve);
-          const outerA = resolve;
-          const mask =
-            "radial-gradient(circle at " +
-            focus[0] +
-            "% " +
-            focus[1] +
-            "%, #000 0%, #000 " +
-            solid +
-            "%, rgba(0,0,0," +
-            midA.toFixed(3) +
-            ") " +
-            mid +
-            "%, rgba(0,0,0," +
-            outerA.toFixed(3) +
-            ") " +
-            outer +
-            "%)";
-          handPortraitFrame.style.webkitMaskImage = mask;
-          handPortraitFrame.style.maskImage = mask;
-        }
-        handPortraitFrame.style.transform =
-          "scale(" + lerp(1.06, 1.0, portT) + ")";
-      }
-    }
-
-    // Copy: one thought at a time; final stack holds at portrait rest.
+    // Copy: one thought at a time on the continuous bench/lap world.
     // 0: Rana works...  1: From her home... + Cutting stones / Designing Jewelry...
     // Re-anchored for the direct ring→bench passage: no long uncaused silent middle.
     // Authored fade durations preserved (0.12 / 0.12 and 0.12 / 0.08); 60svh plateaus
     // remain at BEAT_DWELL.hand fully-composed anchors.
     // End-fade keeps M2 type from coexisting with Work above 0.15 opacity.
     const endFade = 1 - windowProgress(p, 0.9, 0.98);
-    const o0 = thoughtOpacity(p, 0.14, 0.26, 0.40, 0.52) * endFade;
+    const t0In0 = SITE_MOTION.handThought0InStart;
+    const t0In1 = SITE_MOTION.handThought0InEnd;
+    const t0Out0 = SITE_MOTION.handThought0OutStart;
+    const t0Out1 = SITE_MOTION.handThought0OutEnd;
+    const o0 = thoughtOpacity(p, t0In0, t0In1, t0Out0, t0Out1) * endFade;
     const o1 = thoughtOpacity(p, 0.70, 0.82, 0.90, 0.98);
 
     if (handThoughts[0]) {
       handThoughts[0].style.opacity = String(o0);
       handThoughts[0].style.transform =
-        "translate3d(0," + lerp(4, 0, windowProgress(p, 0.14, 0.26)) + "svh,0)";
+        "translate3d(0," + lerp(4, 0, windowProgress(p, t0In0, t0In1)) + "svh,0)";
     }
     if (handThoughts[1]) {
       handThoughts[1].style.opacity = String(o1);
@@ -1266,6 +1179,25 @@
       if (img) img.style.objectPosition = x + y;
       if (video) video.style.objectPosition = x + y;
     }
+  }
+
+  // Opening final line owns entrance in the opening script; Hand entry owns the
+  // explicit exit so "Cut by hand…" cannot coexist with the first Hand thought.
+  // lead = max(target, visual): forward target leads so rapid scroll cannot leave
+  // the line lagging; reverse visual leads so Hand thought yields before restore.
+  function applyOpeningFinalExit(handTargetChoreo, handVisualChoreo) {
+    if (!openingFinalLine) return;
+    const enterOp = parseFloat(openingFinalLine.style.opacity);
+    const enter = isFinite(enterOp) ? clamp(enterOp, 0, 1) : 0;
+    const lead = Math.max(handTargetChoreo, handVisualChoreo);
+    const exitT = windowProgress(
+      lead,
+      SITE_MOTION.openingFinalExitStart,
+      SITE_MOTION.openingFinalExitEnd
+    );
+    const op = enter * (1 - exitT);
+    openingFinalLine.style.opacity = String(op);
+    openingFinalLine.style.visibility = op < 0.02 ? "hidden" : "visible";
   }
 
   // ——— M3 Work (terminal) ———
@@ -1313,7 +1245,7 @@
     const edges = edgeParams();
     const hold = SITE_MOTION.workHoldFraction;
 
-    // Portrait already full-bleed on the bridge; first work still under it.
+    // Hand bench still already full-bleed on the bridge; first work still under it.
     const enterT = windowProgress(p, 0.0, 0.14);
     if (workWorlds[0]) {
       workWorlds[0].style.opacity = "1";
@@ -1410,7 +1342,7 @@
         stack.style.transform = "translate3d(0,0,0) scale(" + scale + ")";
       }
 
-      // Stack below .work-bridge (z-index 8) so the portrait Turn stays on top.
+      // Stack below .work-bridge (z-index 8) so the Hand→Work Turn stays on top.
       world.style.zIndex = String(1 + i);
     }
 
@@ -1442,19 +1374,7 @@
     const handActive = handNear;
     const workActive = work && sectionProximity(work).near;
 
-    setWillChange(handBenchStack, handActive ? "transform" : "");
-    setWillChange(
-      handPortraitFrame,
-      handActive ? (state.isMobile ? "transform" : "transform, opacity") : ""
-    );
-    setWillChange(
-      handPortrait,
-      handActive
-        ? state.isMobile
-          ? "opacity, mask-image"
-          : "opacity"
-        : ""
-    );
+    setWillChange(handBenchStack, "");
     setWillChange(handBridge, handActive && handP < 0.2 ? "opacity, mask-image" : "");
     for (let i = 0; i < workStacks.length; i++) {
       setWillChange(workStacks[i], workActive ? "transform" : "");
@@ -1642,6 +1562,10 @@
     if (renderHandNow) renderHand(handChoreo);
     if (renderWorkNow) renderWork(workChoreo);
 
+    // Always apply: even when Hand is far, lead progress must keep the opening
+    // final line restored (or held out) coherently on reverse/forward travel.
+    applyOpeningFinalExit(handTargetChoreo, handChoreo);
+
     updateActivity(handChoreo, workChoreo, handProx.near);
   }
 
@@ -1668,6 +1592,7 @@
     const workChoreo0 = remapBeatProgress(work, state.workVisual, BEAT_DWELL.work);
     renderHand(handChoreo0);
     renderWork(workChoreo0);
+    applyOpeningFinalExit(handChoreo0, handChoreo0);
   }
 
   // Bind windowed natural loops (no scroll-seeking). Playback arms when near.
