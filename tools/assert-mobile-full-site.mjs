@@ -762,11 +762,51 @@ if (!/function\s+setupIndex\s*\(/.test(shellJs)) {
 }
 if (!/aria-current/.test(shellJs)) fail("shell.js must set aria-current");
 
-// Desktop assets unchanged.
-assertIncludes(index, 'data-desktop-src="assets/studio-banner.mp4"', "desktop studio asset");
-assertIncludes(index, 'data-desktop-src="assets/ring-alexandrite.mp4"', "desktop ring asset");
-assertIncludes(index, 'data-mobile-src="assets/studio-banner-portrait.mp4"', "mobile studio portrait");
-assertIncludes(index, 'data-mobile-src="assets/ring-alexandrite-portrait.mp4"', "mobile ring portrait");
+// Opening uses owner-approved jewelry-cluster temporal rotation (not pre-rotation banner).
+assertIncludes(
+  index,
+  'data-desktop-src="assets/studio-opening-cluster.mp4"',
+  "desktop studio opening-cluster asset"
+);
+assertIncludes(
+  index,
+  'data-desktop-src="assets/ring-alexandrite.mp4"',
+  "desktop ring asset"
+);
+assertIncludes(
+  index,
+  'data-mobile-src="assets/studio-opening-cluster-portrait.mp4"',
+  "mobile studio opening-cluster portrait"
+);
+assertIncludes(
+  index,
+  'data-mobile-src="assets/ring-alexandrite-portrait.mp4"',
+  "mobile ring portrait"
+);
+assertIncludes(
+  index,
+  'data-desktop-src="assets/studio-opening-cluster.jpg"',
+  "desktop studio opening-cluster still"
+);
+assertIncludes(
+  index,
+  'data-mobile-src="assets/studio-opening-cluster-portrait.jpg"',
+  "mobile studio opening-cluster still"
+);
+// Opening must not retain the pre-rotation montage as film authority.
+const openingWorldSlice = index.slice(
+  index.indexOf('id="worldStudio"'),
+  index.indexOf('id="worldRing"')
+);
+if (/studio-banner(?:-portrait)?\.mp4/.test(openingWorldSlice)) {
+  fail("opening world must not use pre-rotation studio-banner as film authority");
+}
+if (
+  !/studio-opening-cluster\.mp4/.test(openingWorldSlice) ||
+  !/studio-opening-cluster-portrait\.mp4/.test(openingWorldSlice)
+) {
+  fail("opening world must pin both desktop and portrait cluster opening films");
+}
 
 // Required routes exist.
 const routes = [
