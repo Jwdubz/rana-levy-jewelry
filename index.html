@@ -455,9 +455,9 @@
         <div class="world world-studio" id="worldStudio">
           <div class="media-stack" id="studioStack">
             <img
-              src="assets/studio-opening-bench-engraving.jpg"
-              data-desktop-src="assets/studio-opening-bench-engraving.jpg"
-              data-mobile-src="assets/studio-opening-bench-engraving-portrait.jpg"
+              src="assets/studio-opening-cluster-bench-engraving.jpg"
+              data-desktop-src="assets/studio-opening-cluster-bench-engraving.jpg"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-portrait.jpg"
               alt=""
               width="2160"
               height="1080"
@@ -466,12 +466,12 @@
             >
             <video
               id="studioVideo"
-              data-src="assets/studio-opening-bench-engraving.mp4"
-              data-desktop-src="assets/studio-opening-bench-engraving.mp4"
-              data-mobile-src="assets/studio-opening-bench-engraving-portrait.mp4"
-              poster="assets/studio-opening-bench-engraving.jpg"
-              data-desktop-poster="assets/studio-opening-bench-engraving.jpg"
-              data-mobile-poster="assets/studio-opening-bench-engraving-portrait.jpg"
+              data-src="assets/studio-opening-cluster-bench-engraving.mp4"
+              data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-portrait.mp4"
+              poster="assets/studio-opening-cluster-bench-engraving.jpg"
+              data-desktop-poster="assets/studio-opening-cluster-bench-engraving.jpg"
+              data-mobile-poster="assets/studio-opening-cluster-bench-engraving-portrait.jpg"
               muted
               loop
               playsinline
@@ -1493,8 +1493,8 @@
         // Atmosphere uses lightweight poster stills; one live decoder per source.
         ensureVideoSource(studioVideo, "auto");
         ensureVideoSource(ringVideo, "auto");
-        // Studio film is already temporally rotated so frame 0 is the owner-selected
-        // jewelry-cluster shot; do not seek (loop must return to that start).
+        // Studio film is already ordered cluster-first (product run, then bench +
+        // engraving reveal); do not seek (loop must return to the cluster start).
         tryPlay(studioVideo);
         tryPlay(ringVideo, 0);
       }
