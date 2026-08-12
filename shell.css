@@ -381,12 +381,19 @@ body.shell-body.is-locked {
 
 .tray-field select {
   cursor: pointer;
+  color-scheme: dark;
   background-image: linear-gradient(45deg, transparent 50%, var(--cream-faint) 50%),
     linear-gradient(135deg, var(--cream-faint) 50%, transparent 50%);
   background-position: calc(100% - 12px) 55%, calc(100% - 7px) 55%;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
   padding-right: 1.4rem;
+}
+
+/* Native option popup is an OS surface: cream letters need an explicit ink fill. */
+.tray-field select option {
+  color: var(--cream);
+  background-color: var(--ink);
 }
 
 .tray-field input::placeholder {

@@ -275,6 +275,28 @@ if (!searchMobile || !/grid-column\s*:\s*1\s*\/\s*-1/.test(searchMobile)) {
   fail("mobile search field must span full instrument row");
 }
 
+// --- Catalog native select: dark option panel (Windows/Chromium) ---
+// Cream option text over a white OS popup is nearly invisible.
+// Shared .tray-field select on ready.html + made.html; do not restyle the closed control.
+{
+  const catalogSelect = extractBlock(shellCss, ".tray-field select", 0);
+  if (!catalogSelect) fail("missing shared .tray-field select");
+  if (!/color-scheme\s*:\s*dark\s*;/i.test(catalogSelect)) {
+    fail("shared .tray-field select must declare color-scheme: dark for the native option panel");
+  }
+  const catalogOption = extractBlock(shellCss, ".tray-field select option", 0);
+  if (!catalogOption) fail("missing shared .tray-field select option");
+  if (!/background(?:-color)?\s*:\s*var\(--ink\)/i.test(catalogOption)) {
+    fail("catalog select option rows must have an explicit dark fill (var(--ink))");
+  }
+  if (!/color\s*:\s*var\(--cream\)/i.test(catalogOption)) {
+    fail("catalog select option rows must use explicit light text (var(--cream))");
+  }
+  if (/background(?:-color)?\s*:\s*transparent/i.test(catalogOption)) {
+    fail("catalog select option rows must not use a transparent surface");
+  }
+}
+
 // --- Blurred wallpaper filler removed on mobile for ink routes ---
 assertIncludes(shellMobile, "display: none", "mobile ground image hide for ink routes");
 if (!/\.page-services\s+\.shell-ground__image[\s\S]{0,400}filter\s*:\s*none/i.test(shellMobile)) {
