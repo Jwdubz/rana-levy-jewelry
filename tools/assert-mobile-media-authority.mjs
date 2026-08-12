@@ -7,10 +7,14 @@
  * - mobile workBridge cannot paint
  * - opening video retirement removes is-live and pauses
  * - reverse re-entry restores is-live only after playback resumes
+ * - mobile Opening: exactly one of studioVideo|ringVideo unpaused+is-live
+ * - mobile arm/init does not immediately play both opening decoders
+ * - inactive opening decoder paused + is-live removed; stale play cannot restore it
+ * - reverse Studio↔Ring transfer uses the same exclusive authored-timeline authority
  * - Hand retirement pauses handVideo and drops is-live
  * - no representative boundary can arm more than one unpaused is-live path
  * - direct mobile Opening → Hand → first Work order (no bridge / blank / filler)
- * - desktop bridge paths remain present
+ * - desktop bridge paths and desktop two-world opening handoff remain present
  * - exact Hand montage media/order/duration unchanged
  *
  * Usage: node tools/assert-mobile-media-authority.mjs
@@ -209,6 +213,158 @@ if (
   );
 }
 
+// ——— Mobile exclusive Studio|Ring opening decoder authority ———
+// Prior counterexample: both studioVideo and ringVideo stayed unpaused+is-live for
+// the entire mobile Opening (including the angled internal handoff). These checks
+// bind the exclusive lifecycle path rather than a special-case string.
+const armFn = index.match(/function\s+armVideos\s*\(\s*\)\s*\{[\s\S]*?\n      \}/);
+if (!armFn) fail("index.html must define armVideos");
+const armBody = armFn[0];
+
+// Authored timeline selects exactly one of studio|ring via MOTION.handoffStart.
+if (!/function\s+mobileOpeningDecoderAuthority\s*\(/.test(index)) {
+  fail("mobileOpeningDecoderAuthority must select exclusive studio|ring from authored timeline");
+}
+const mobileAuthFn = index.match(
+  /function\s+mobileOpeningDecoderAuthority\s*\(\s*\)\s*\{[\s\S]*?\n      \}/
+);
+if (!mobileAuthFn) fail("mobileOpeningDecoderAuthority body must be extractable");
+if (!/openingTimeline\s*\(\s*state\.visualProgress\s*\)/.test(mobileAuthFn[0])) {
+  fail("mobile opening decoder authority must use openingTimeline(state.visualProgress)");
+}
+if (!/MOTION\.handoffStart/.test(mobileAuthFn[0])) {
+  fail("mobile opening decoder authority must use MOTION.handoffStart as the transfer cue");
+}
+if (
+  !/timeline\s*>=\s*MOTION\.handoffStart\s*\?\s*["']ring["']\s*:\s*["']studio["']/.test(
+    mobileAuthFn[0]
+  )
+) {
+  fail(
+    "mobileOpeningDecoderAuthority must return exactly one of 'ring'|'studio' at handoffStart"
+  );
+}
+
+// arm/init must not immediately play both opening decoders on mobile.
+if (!/isMobileOpeningViewport\s*\(\s*\)/.test(armBody)) {
+  fail("armVideos must branch on isMobileOpeningViewport for exclusive mobile arm");
+}
+// Mobile exclusive arm: pause inactive, then tryPlay only the authoritative decoder.
+if (
+  !/want\s*===\s*["']ring["'][\s\S]{0,240}pauseOpeningDecoder\s*\(\s*studioVideo\s*\)[\s\S]{0,100}tryPlay\s*\(\s*ringVideo/.test(
+    armBody
+  )
+) {
+  fail("mobile ring-authority arm must pauseOpeningDecoder(studioVideo) then tryPlay(ringVideo)");
+}
+if (
+  !/pauseOpeningDecoder\s*\(\s*ringVideo\s*\)[\s\S]{0,100}tryPlay\s*\(\s*studioVideo\s*\)/.test(
+    armBody
+  )
+) {
+  fail("mobile studio-authority arm must pauseOpeningDecoder(ringVideo) then tryPlay(studioVideo)");
+}
+// Dual tryPlay is legal only on the desktop both-authority path (not bare mobile init).
+if (
+  !/openingDecoderAuthority\s*=\s*["']both["']\s*;\s*tryPlay\s*\(\s*studioVideo\s*\)\s*;\s*tryPlay\s*\(\s*ringVideo/.test(
+    armBody
+  )
+) {
+  fail(
+    "desktop arm may tryPlay both only under openingDecoderAuthority = 'both' (mobile must not dual-arm)"
+  );
+}
+// Studio still arms at cluster start (no seek); ring may arm at 0 only when authoritative.
+if (!/tryPlay\(\s*studioVideo\s*\)/.test(armBody)) {
+  fail("studioVideo must still arm with tryPlay(studioVideo) at the cluster start");
+}
+if (/tryPlay\(\s*studioVideo\s*,\s*[^)]+\)/.test(armBody)) {
+  fail("studioVideo must not receive an initial tryPlay seek");
+}
+
+// manageOpening mobile branch: exclusive active/inactive pair from authored want.
+if (!/mobileOpeningDecoderAuthority\s*\(\s*\)/.test(manageBody)) {
+  fail("manageOpeningVideoActivity must consult mobileOpeningDecoderAuthority on mobile");
+}
+if (
+  !/activeVideo\s*=\s*want\s*===\s*["']ring["']\s*\?\s*ringVideo\s*:\s*studioVideo/.test(
+    manageBody
+  )
+) {
+  fail("mobile manageOpening must select exactly one activeVideo (ring|studio)");
+}
+if (
+  !/inactiveVideo\s*=\s*want\s*===\s*["']ring["']\s*\?\s*studioVideo\s*:\s*ringVideo/.test(
+    manageBody
+  )
+) {
+  fail("mobile manageOpening must name the complementary inactiveVideo");
+}
+// Inactive paused + is-live removed before (or while) active resumes.
+if (!/pauseOpeningDecoder\s*\(\s*inactiveVideo\s*\)/.test(manageBody)) {
+  fail("mobile manageOpening must pauseOpeningDecoder(inactiveVideo) for exclusive authority");
+}
+if (!/playOpeningDecoder\s*\(\s*activeVideo\s*,\s*openingDecoderToken\s*\)/.test(manageBody)) {
+  fail("mobile manageOpening must playOpeningDecoder(activeVideo, openingDecoderToken)");
+}
+// Token invalidation on authority transfer and on section leave (stale play guard).
+if (!/let\s+openingDecoderToken\s*=\s*0/.test(index)) {
+  fail("openingDecoderToken must exist for causal stale-play rejection");
+}
+if (!/openingDecoderToken\s*\+=\s*1/.test(manageBody)) {
+  fail("manageOpening must bump openingDecoderToken on transfer/leave");
+}
+const playOpenFn = index.match(
+  /function\s+playOpeningDecoder\s*\(\s*video\s*,\s*token\s*,\s*startAt\s*\)\s*\{[\s\S]*?\n      \}/
+);
+if (!playOpenFn) fail("playOpeningDecoder(video, token, startAt) must be defined");
+if (!/token\s*!==\s*openingDecoderToken/.test(playOpenFn[0])) {
+  fail("playOpeningDecoder must reject stale tokens before marking is-live");
+}
+if (
+  !/\.then\s*\(\s*function\s*\(\s*\)\s*\{[\s\S]*?token\s*!==\s*openingDecoderToken[\s\S]*?classList\.add\(\s*["']is-live["']\s*\)/m.test(
+    playOpenFn[0]
+  )
+) {
+  fail(
+    "playOpeningDecoder must gate is-live add on token === openingDecoderToken after play resolves"
+  );
+}
+// Reverse transfer: authority identity change bumps token and pauses inactive first.
+if (
+  !/openingDecoderAuthority\s*!==\s*want[\s\S]{0,200}openingDecoderToken\s*\+=\s*1[\s\S]{0,120}pauseOpeningDecoder\s*\(\s*inactiveVideo\s*\)/m.test(
+    manageBody
+  )
+) {
+  fail(
+    "mobile reverse/forward transfer must bump token and pause inactive before resuming active"
+  );
+}
+
+// Desktop two-world handoff remains: non-mobile path still plays both opening videos.
+if (!/openingDecoderAuthority\s*=\s*["']both["']/.test(manageBody)) {
+  fail("desktop manageOpening path must retain dual openingDecoderAuthority = 'both'");
+}
+if (!/openingDecoderAuthority\s*=\s*["']both["']/.test(armBody)) {
+  fail("desktop armVideos path must retain openingDecoderAuthority = 'both'");
+}
+// Desktop branch still iterates openingVideos for dual play (not mobile-only exclusive).
+if (
+  !/else\s*\{[\s\S]*?openingDecoderAuthority\s*=\s*["']both["'][\s\S]*?openingVideos\.forEach/m.test(
+    manageBody
+  )
+) {
+  fail("desktop manageOpening must still forEach openingVideos for two-world handoff");
+}
+
+// Source reuse: ensureVideoSource hydrates; authority changes must not clear src.
+if (/removeAttribute\(\s*["']src["']\s*\)/.test(manageBody)) {
+  fail("manageOpening must not unload opening sources on authority/scroll changes");
+}
+if (/video\.load\s*\(\s*\)/.test(manageBody)) {
+  fail("manageOpening must not reload opening sources on authority/scroll changes");
+}
+
 // ——— Hand video leave / reverse: setVideoActive remains coherent ———
 const setVideoActiveFn = siteJs.match(
   /function\s+setVideoActive\s*\(\s*video\s*,\s*active\s*,\s*armedFlag\s*\)\s*\{[\s\S]*?\n  \}/
@@ -283,5 +439,5 @@ if (!/function\s+retireBridgeLayer\s*\(/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile media authority (no mobile bridge paint/play; honest is-live retirement; desktop bridges retained; Hand montage unchanged)"
+  "PASS: mobile media authority (exclusive mobile opening decoder; no mobile bridge paint/play; honest is-live retirement; desktop two-world handoff retained; Hand montage unchanged)"
 );

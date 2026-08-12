@@ -865,6 +865,8 @@
       const ringMedia = ringStack ? ringStack.querySelectorAll("img, video") : [];
       // One live decoder per source.
       const openingVideos = [studioVideo, ringVideo].filter(Boolean);
+      // Mobile exclusive authority: stale play() resolutions must not resurrect is-live.
+      let openingDecoderToken = 0;
       const indexPanelLinks = siteIndexPanel
         ? Array.prototype.slice.call(siteIndexPanel.querySelectorAll("a, button"))
         : [];
@@ -883,7 +885,9 @@
         finePointer: window.matchMedia("(pointer: fine)").matches,
         indexOpen: false,
         indexLastFocus: null,
-        headerYield: 0
+        headerYield: 0,
+        // Mobile: "studio" | "ring"; desktop dual handoff: "both"; retired: null.
+        openingDecoderAuthority: null
       };
 
       function clamp(v, a, b) {
@@ -1398,10 +1402,80 @@
         requestAnimationFrame(tick);
       }
 
+      function pauseOpeningDecoder(video) {
+        if (!video) return;
+        if (!video.paused) {
+          try {
+            video.pause();
+          } catch (e) {}
+        }
+        video.classList.remove("is-live");
+      }
+
+      // Causal play gate: only the token that still owns authority may mark is-live.
+      function playOpeningDecoder(video, token, startAt) {
+        if (!video) return;
+        if (mediaQuietActive() || token !== openingDecoderToken) {
+          pauseOpeningDecoder(video);
+          return;
+        }
+        try {
+          if (typeof startAt === "number" && isFinite(video.duration)) {
+            const t = Math.min(startAt, Math.max(0, video.duration - 0.05));
+            if (Math.abs(video.currentTime - t) > 0.05) {
+              video.currentTime = t;
+            }
+          }
+        } catch (e) {}
+        if (!video.paused) {
+          if (!video.classList.contains("is-live") && token === openingDecoderToken) {
+            video.classList.add("is-live");
+          }
+          return;
+        }
+        let playPromise;
+        try {
+          playPromise = video.play();
+        } catch (e) {
+          video.classList.remove("is-live");
+          return;
+        }
+        if (playPromise && typeof playPromise.then === "function") {
+          playPromise
+            .then(function () {
+              // Stale promise after authority moved: do not resurrect is-live.
+              if (token !== openingDecoderToken || mediaQuietActive()) {
+                pauseOpeningDecoder(video);
+                return;
+              }
+              if (video.paused) {
+                video.classList.remove("is-live");
+                return;
+              }
+              video.classList.add("is-live");
+            })
+            .catch(function () {
+              if (token === openingDecoderToken) {
+                video.classList.remove("is-live");
+              }
+            });
+        } else if (!video.paused && token === openingDecoderToken) {
+          video.classList.add("is-live");
+        }
+      }
+
+      // Authored Studio→Ring handoff onset (same cue the mask/render uses).
+      function mobileOpeningDecoderAuthority() {
+        const timeline = openingTimeline(state.visualProgress);
+        return timeline >= MOTION.handoffStart ? "ring" : "studio";
+      }
+
       function armVideos() {
         // Explicit quiet mode: never assign media sources; posters remain composed.
         if (mediaQuietActive()) {
           document.documentElement.classList.add("is-media-quiet");
+          openingDecoderToken += 1;
+          state.openingDecoderAuthority = null;
           openingVideos.forEach(function (el) {
             if (!el) return;
             el.removeAttribute("autoplay");
@@ -1418,41 +1492,27 @@
 
         function tryPlay(video, startAt) {
           if (!video) return;
+          const token = openingDecoderToken;
           const begin = function () {
-            if (mediaQuietActive()) {
+            if (mediaQuietActive() || token !== openingDecoderToken) {
               try {
                 video.pause();
               } catch (e) {}
               video.classList.remove("is-live");
               return;
             }
-            try {
-              if (typeof startAt === "number" && isFinite(video.duration)) {
-                const t = Math.min(startAt, Math.max(0, video.duration - 0.05));
-                if (Math.abs(video.currentTime - t) > 0.05) {
-                  video.currentTime = t;
-                }
+            // Mobile exclusive: never mark live if this decoder lost authority mid-arm.
+            if (isMobileOpeningViewport()) {
+              const want = mobileOpeningDecoderAuthority();
+              const isActive =
+                (want === "ring" && video === ringVideo) ||
+                (want === "studio" && video === studioVideo);
+              if (!isActive) {
+                pauseOpeningDecoder(video);
+                return;
               }
-            } catch (e) {}
-            const playPromise = video.play();
-            if (playPromise && typeof playPromise.then === "function") {
-              playPromise
-                .then(function () {
-                  if (mediaQuietActive()) {
-                    try {
-                      video.pause();
-                    } catch (e) {}
-                    video.classList.remove("is-live");
-                    return;
-                  }
-                  video.classList.add("is-live");
-                })
-                .catch(function () {
-                  // Keep poster visible if autoplay is blocked.
-                });
-            } else {
-              video.classList.add("is-live");
             }
+            playOpeningDecoder(video, token, startAt);
           };
 
           if (video.readyState >= 1) {
@@ -1470,12 +1530,22 @@
           video.addEventListener(
             "playing",
             function () {
-              if (mediaQuietActive()) {
+              if (mediaQuietActive() || token !== openingDecoderToken) {
                 try {
                   video.pause();
                 } catch (e) {}
                 video.classList.remove("is-live");
                 return;
+              }
+              if (isMobileOpeningViewport()) {
+                const want = mobileOpeningDecoderAuthority();
+                const isActive =
+                  (want === "ring" && video === ringVideo) ||
+                  (want === "studio" && video === studioVideo);
+                if (!isActive) {
+                  pauseOpeningDecoder(video);
+                  return;
+                }
               }
               video.classList.add("is-live");
             },
@@ -1485,17 +1555,34 @@
 
         // Opening scene media only — later duplicates hydrate from site.js.
         // Atmosphere uses lightweight poster stills; one live decoder per source.
+        // Sources hydrate once; mobile authority changes only play/pause, never unload.
         ensureVideoSource(studioVideo, "auto");
         ensureVideoSource(ringVideo, "auto");
         // Studio film is already ordered cluster-first (product run, then bench +
         // engraving reveal); do not seek (loop must return to the cluster start).
-        tryPlay(studioVideo);
-        tryPlay(ringVideo, 0);
+        if (isMobileOpeningViewport()) {
+          // Mobile: exactly one opening decoder may start unpaused/is-live.
+          const want = mobileOpeningDecoderAuthority();
+          state.openingDecoderAuthority = want;
+          if (want === "ring") {
+            pauseOpeningDecoder(studioVideo);
+            tryPlay(ringVideo, 0);
+          } else {
+            pauseOpeningDecoder(ringVideo);
+            tryPlay(studioVideo);
+          }
+        } else {
+          // Desktop: two-world angled moving handoff keeps both decoders live.
+          state.openingDecoderAuthority = "both";
+          tryPlay(studioVideo);
+          tryPlay(ringVideo, 0);
+        }
       }
 
       // Opening decoder life-cycle follows section authority, not a broad near range.
       // When Opening ceases to own the viewport: pause and remove is-live.
       // Reverse re-entry restores play and adds is-live only after playback resumes.
+      // Mobile: exclusive Studio|Ring authority from MOTION.handoffStart timeline cue.
       function manageOpeningVideoActivity() {
         if (mediaQuietActive() || !passage) return;
         const rect = passage.getBoundingClientRect();
@@ -1516,18 +1603,63 @@
           owns = rect.bottom > vh * 0.2 && rect.top < vh * 0.8;
         }
 
+        if (!owns) {
+          // Retire authority: pause AND drop is-live (not pause-only).
+          // Bump token so any in-flight play() cannot re-add is-live after leave.
+          openingDecoderToken += 1;
+          state.openingDecoderAuthority = null;
+          openingVideos.forEach(function (video) {
+            if (!video) return;
+            if (!video.paused) {
+              try {
+                video.pause();
+              } catch (e) {}
+            }
+            video.classList.remove("is-live");
+          });
+          if (studioStack) studioStack.style.willChange = "auto";
+          if (ringStack) ringStack.style.willChange = "auto";
+          return;
+        }
+
+        // Hydrate once if needed; never unload/refetch on small scroll movement.
         openingVideos.forEach(function (video) {
           if (!video) return;
-          if (owns) {
-            if (!video.getAttribute("src") && video.getAttribute("data-src")) {
-              ensureVideoSource(video, "auto");
-            }
+          if (!video.getAttribute("src") && video.getAttribute("data-src")) {
+            ensureVideoSource(video, "auto");
+          }
+        });
+
+        if (mobile) {
+          // Authored handoff onset: timeline >= MOTION.handoffStart → ring authority.
+          const want = mobileOpeningDecoderAuthority();
+          const activeVideo = want === "ring" ? ringVideo : studioVideo;
+          const inactiveVideo = want === "ring" ? studioVideo : ringVideo;
+
+          if (state.openingDecoderAuthority !== want) {
+            // Transfer once: invalidate stale promises, pause inactive first, then resume active.
+            openingDecoderToken += 1;
+            state.openingDecoderAuthority = want;
+            pauseOpeningDecoder(inactiveVideo);
+          } else {
+            // Maintain exclusivity if anything re-started the inactive decoder.
+            pauseOpeningDecoder(inactiveVideo);
+          }
+
+          // is-live only after playback actually resumes under the current token.
+          playOpeningDecoder(activeVideo, openingDecoderToken);
+        } else {
+          // Desktop two-world angled handoff: both opening decoders may advance.
+          state.openingDecoderAuthority = "both";
+          const token = openingDecoderToken;
+          openingVideos.forEach(function (video) {
+            if (!video) return;
             if (video.paused) {
               const playPromise = video.play();
               if (playPromise && typeof playPromise.then === "function") {
                 playPromise
                   .then(function () {
-                    if (mediaQuietActive() || video.paused) {
+                    if (token !== openingDecoderToken || mediaQuietActive() || video.paused) {
                       try {
                         video.pause();
                       } catch (e) {}
@@ -1538,31 +1670,21 @@
                     video.classList.add("is-live");
                   })
                   .catch(function () {
-                    video.classList.remove("is-live");
+                    if (token === openingDecoderToken) {
+                      video.classList.remove("is-live");
+                    }
                   });
-              } else if (!video.paused) {
+              } else if (!video.paused && token === openingDecoderToken) {
                 video.classList.add("is-live");
               }
-            } else if (!video.classList.contains("is-live")) {
+            } else if (!video.classList.contains("is-live") && token === openingDecoderToken) {
               video.classList.add("is-live");
             }
-          } else {
-            // Retire authority: pause AND drop is-live (not pause-only).
-            if (!video.paused) {
-              try {
-                video.pause();
-              } catch (e) {}
-            }
-            video.classList.remove("is-live");
-          }
-        });
-        if (owns) {
-          if (studioStack) studioStack.style.willChange = "transform";
-          if (ringStack) ringStack.style.willChange = "transform";
-        } else {
-          if (studioStack) studioStack.style.willChange = "auto";
-          if (ringStack) ringStack.style.willChange = "auto";
+          });
         }
+
+        if (studioStack) studioStack.style.willChange = "transform";
+        if (ringStack) ringStack.style.willChange = "transform";
       }
 
       // Initial zero-delta frame before first rAF.
