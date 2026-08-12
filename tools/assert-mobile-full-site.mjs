@@ -762,11 +762,11 @@ if (!/function\s+setupIndex\s*\(/.test(shellJs)) {
 }
 if (!/aria-current/.test(shellJs)) fail("shell.js must set aria-current");
 
-// Opening uses owner-approved jewelry-cluster temporal rotation (not pre-rotation banner).
+// Opening uses owner-approved Bench→Engraving temporal recut (not banner or prior cluster).
 assertIncludes(
   index,
-  'data-desktop-src="assets/studio-opening-cluster.mp4"',
-  "desktop studio opening-cluster asset"
+  'data-desktop-src="assets/studio-opening-bench-engraving.mp4"',
+  "desktop studio bench-engraving asset"
 );
 assertIncludes(
   index,
@@ -775,8 +775,8 @@ assertIncludes(
 );
 assertIncludes(
   index,
-  'data-mobile-src="assets/studio-opening-cluster-portrait.mp4"',
-  "mobile studio opening-cluster portrait"
+  'data-mobile-src="assets/studio-opening-bench-engraving-portrait.mp4"',
+  "mobile studio bench-engraving portrait"
 );
 assertIncludes(
   index,
@@ -785,15 +785,15 @@ assertIncludes(
 );
 assertIncludes(
   index,
-  'data-desktop-src="assets/studio-opening-cluster.jpg"',
-  "desktop studio opening-cluster still"
+  'data-desktop-src="assets/studio-opening-bench-engraving.jpg"',
+  "desktop studio bench-engraving still"
 );
 assertIncludes(
   index,
-  'data-mobile-src="assets/studio-opening-cluster-portrait.jpg"',
-  "mobile studio opening-cluster still"
+  'data-mobile-src="assets/studio-opening-bench-engraving-portrait.jpg"',
+  "mobile studio bench-engraving still"
 );
-// Opening must not retain the pre-rotation montage as film authority.
+// Opening must not retain superseded montage rotations as film authority.
 const openingWorldSlice = index.slice(
   index.indexOf('id="worldStudio"'),
   index.indexOf('id="worldRing"')
@@ -801,11 +801,16 @@ const openingWorldSlice = index.slice(
 if (/studio-banner(?:-portrait)?\.mp4/.test(openingWorldSlice)) {
   fail("opening world must not use pre-rotation studio-banner as film authority");
 }
+if (/studio-opening-cluster(?:-portrait)?\.(?:mp4|jpg)/.test(openingWorldSlice)) {
+  fail("opening world must not retain prior cluster opening as film/still authority");
+}
 if (
-  !/studio-opening-cluster\.mp4/.test(openingWorldSlice) ||
-  !/studio-opening-cluster-portrait\.mp4/.test(openingWorldSlice)
+  !/studio-opening-bench-engraving\.mp4/.test(openingWorldSlice) ||
+  !/studio-opening-bench-engraving-portrait\.mp4/.test(openingWorldSlice)
 ) {
-  fail("opening world must pin both desktop and portrait cluster opening films");
+  fail(
+    "opening world must pin both desktop and portrait bench-engraving opening films"
+  );
 }
 
 // Required routes exist.

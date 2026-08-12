@@ -181,10 +181,10 @@ if (!stylesMobileOnly) fail("could not extract styles.css mobile slice");
 
 // --- Portrait derivative assets must exist ---
 const requiredAssets = [
-  "assets/studio-opening-cluster.mp4",
-  "assets/studio-opening-cluster-portrait.mp4",
-  "assets/studio-opening-cluster.jpg",
-  "assets/studio-opening-cluster-portrait.jpg",
+  "assets/studio-opening-bench-engraving.mp4",
+  "assets/studio-opening-bench-engraving-portrait.mp4",
+  "assets/studio-opening-bench-engraving.jpg",
+  "assets/studio-opening-bench-engraving-portrait.jpg",
   "assets/ring-alexandrite-portrait.mp4",
   "assets/studio-poster-portrait.jpg",
   "assets/ring-poster-portrait.jpg",
@@ -196,14 +196,14 @@ for (const rel of requiredAssets) {
 
 // --- Markup: deterministic desktop/mobile selection attributes ---
 const requiredMarkupTokens = [
-  'data-desktop-src="assets/studio-opening-cluster.mp4"',
-  'data-mobile-src="assets/studio-opening-cluster-portrait.mp4"',
+  'data-desktop-src="assets/studio-opening-bench-engraving.mp4"',
+  'data-mobile-src="assets/studio-opening-bench-engraving-portrait.mp4"',
   'data-desktop-src="assets/ring-alexandrite.mp4"',
   'data-mobile-src="assets/ring-alexandrite-portrait.mp4"',
-  'data-mobile-poster="assets/studio-opening-cluster-portrait.jpg"',
+  'data-mobile-poster="assets/studio-opening-bench-engraving-portrait.jpg"',
   'data-mobile-poster="assets/studio-poster-portrait.jpg"',
   'data-mobile-poster="assets/ring-poster-portrait.jpg"',
-  'data-mobile-src="assets/studio-opening-cluster-portrait.jpg"',
+  'data-mobile-src="assets/studio-opening-bench-engraving-portrait.jpg"',
   'data-mobile-src="assets/ring-poster-portrait.jpg"',
   'data-desktop-src="assets/studio-hand-work-cycle.mp4"',
   'data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"',
@@ -214,33 +214,35 @@ for (const token of requiredMarkupTokens) {
   }
 }
 
-// Opening world must pin the owner-approved jewelry-cluster film/still authority
-// and must not fall back to the pre-rotation studio-banner montage order.
+// Opening world must pin the owner-approved Bench→Engraving film/still authority
+// and must not fall back to studio-banner or the prior cluster rotation.
 const studioVideoBlock = index.match(/id="studioVideo"[\s\S]*?<\/video>/);
 if (!studioVideoBlock) fail("studioVideo element must be present");
 if (
-  !/data-desktop-src="assets\/studio-opening-cluster\.mp4"/.test(studioVideoBlock[0]) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-portrait\.mp4"/.test(
+  !/data-desktop-src="assets\/studio-opening-bench-engraving\.mp4"/.test(
     studioVideoBlock[0]
   ) ||
-  !/data-desktop-poster="assets\/studio-opening-cluster\.jpg"/.test(
+  !/data-mobile-src="assets\/studio-opening-bench-engraving-portrait\.mp4"/.test(
     studioVideoBlock[0]
   ) ||
-  !/data-mobile-poster="assets\/studio-opening-cluster-portrait\.jpg"/.test(
+  !/data-desktop-poster="assets\/studio-opening-bench-engraving\.jpg"/.test(
+    studioVideoBlock[0]
+  ) ||
+  !/data-mobile-poster="assets\/studio-opening-bench-engraving-portrait\.jpg"/.test(
     studioVideoBlock[0]
   )
 ) {
   fail(
-    "studioVideo must declare owner-approved cluster opening desktop/portrait film + still posters"
+    "studioVideo must declare owner-approved bench-engraving opening desktop/portrait film + still posters"
   );
 }
 if (
-  /studio-banner\.mp4|studio-banner-portrait\.mp4|studio-poster\.jpg|studio-poster-portrait\.jpg/.test(
+  /studio-banner\.mp4|studio-banner-portrait\.mp4|studio-opening-cluster(?:-portrait)?\.(?:mp4|jpg)|studio-poster\.jpg|studio-poster-portrait\.jpg/.test(
     studioVideoBlock[0]
   )
 ) {
   fail(
-    "studioVideo must not use pre-rotation studio-banner film or hand-beat studio-poster as opening authority"
+    "studioVideo must not use studio-banner, prior cluster opening, or hand-beat studio-poster as opening authority"
   );
 }
 const studioStackBlock = index.match(
@@ -248,34 +250,34 @@ const studioStackBlock = index.match(
 );
 if (!studioStackBlock) fail("could not extract worldStudio media stack");
 if (
-  !/data-desktop-src="assets\/studio-opening-cluster\.jpg"/.test(
+  !/data-desktop-src="assets\/studio-opening-bench-engraving\.jpg"/.test(
     studioStackBlock[0]
   ) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-portrait\.jpg"/.test(
+  !/data-mobile-src="assets\/studio-opening-bench-engraving-portrait\.jpg"/.test(
     studioStackBlock[0]
   )
 ) {
   fail(
-    "worldStudio first-paint still must use owner-approved cluster opening stills"
+    "worldStudio first-paint still must use owner-approved bench-engraving opening stills"
   );
 }
 if (
-  /studio-banner\.mp4|studio-banner-portrait\.mp4|studio-opening\.jpg|studio-opening-portrait\.jpg/.test(
+  /studio-banner\.mp4|studio-banner-portrait\.mp4|studio-opening-cluster(?:-portrait)?\.(?:mp4|jpg)|studio-opening\.jpg|studio-opening-portrait\.jpg/.test(
     studioStackBlock[0]
   )
 ) {
   fail(
-    "worldStudio must not keep pre-rotation studio-banner film or old studio-opening stills as opening authority"
+    "worldStudio must not keep studio-banner, prior cluster opening, or old studio-opening stills as opening authority"
   );
 }
-// Fresh load must not seek past the selected cluster start (native loop returns to 0).
+// Fresh load must not seek past the selected bench start (native loop returns to 0).
 if (/tryPlay\(\s*studioVideo\s*,\s*[^)]+\)/.test(index)) {
   fail(
-    "studioVideo must not receive an initial tryPlay seek (rotated cluster film starts at frame 0)"
+    "studioVideo must not receive an initial tryPlay seek (bench-engraving film starts at frame 0)"
   );
 }
 if (!/tryPlay\(\s*studioVideo\s*\)/.test(index)) {
-  fail("studioVideo must arm with tryPlay(studioVideo) at the rotated start");
+  fail("studioVideo must arm with tryPlay(studioVideo) at the bench start");
 }
 
 // handVideo must stay on the single pre-hydration responsive selector (one decoder).
@@ -581,22 +583,26 @@ if (!desktopStackMedia || !/\bobject-fit:\s*cover\s*;/.test(desktopStackMedia)) 
 }
 
 // Desktop still points at owner-approved landscape/square opening assets by default.
-if (!/data-desktop-src="assets\/studio-opening-cluster\.mp4"/.test(index)) {
+if (!/data-desktop-src="assets\/studio-opening-bench-engraving\.mp4"/.test(index)) {
   fail(
-    "desktop studio asset selection must remain assets/studio-opening-cluster.mp4"
+    "desktop studio asset selection must remain assets/studio-opening-bench-engraving.mp4"
   );
 }
 if (!/data-desktop-src="assets\/ring-alexandrite\.mp4"/.test(index)) {
   fail("desktop ring asset selection must remain assets/ring-alexandrite.mp4");
 }
-// Reject pre-rotation montage as any opening authority surface.
+// Reject superseded opening films as any opening authority surface.
+const openingWorldSliceZero = index.slice(
+  index.indexOf('id="worldStudio"'),
+  index.indexOf('id="worldRing"')
+);
 if (
-  /id="studioVideo"[\s\S]*?studio-banner(?:-portrait)?\.mp4/.test(index) ||
-  /data-(?:desktop|mobile)-src="assets\/studio-banner(?:-portrait)?\.mp4"/.test(
-    index.slice(index.indexOf('id="worldStudio"'), index.indexOf('id="worldRing"'))
-  )
+  /studio-banner(?:-portrait)?\.mp4/.test(openingWorldSliceZero) ||
+  /studio-opening-cluster(?:-portrait)?\.(?:mp4|jpg)/.test(openingWorldSliceZero)
 ) {
-  fail("opening world must reject pre-rotation studio-banner as film authority");
+  fail(
+    "opening world must reject studio-banner and prior cluster opening as film/still authority"
+  );
 }
 
 const desktopLayer = extractBlock(styles, ".layer-media", 0);
@@ -628,7 +634,9 @@ if (/\.hand-bridge\s+\.layer-media\s*\{[^}]*height:\s*100vw/s.test(preStylesMobi
 // site.js must not reintroduce a second visible opening decoder path for ring/studio.
 if (
   /createElement\(\s*['"]video['"]\s*\)/.test(siteJs) &&
-  /studio-opening-cluster|studio-banner|ring-alexandrite/.test(siteJs)
+  /studio-opening-bench-engraving|studio-opening-cluster|studio-banner|ring-alexandrite/.test(
+    siteJs
+  )
 ) {
   // Allow deferred hydration of existing elements; only fail explicit clone patterns.
   if (/cloneNode|media-echo|atmosphere/.test(siteJs)) {
@@ -637,5 +645,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop overscan/assets unchanged)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop overscan/assets unchanged)"
 );
