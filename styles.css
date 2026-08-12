@@ -881,56 +881,32 @@
     background: none;
   }
 
-  .work-bridge .layer-media {
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-
-  .work-bridge .layer-media img {
-    object-fit: cover;
-    object-position: 32% 48%;
-    filter: none;
-  }
-
   /*
-    Mobile hand-bridge stays full-viewport with the opening ring so the
-    opening→Hand Turn never collapses back into a square island. Outer
-    #handBridge still owns the angled Turn mask-out into the bench.
+    Mobile media authority: one full-screen carrier at a time.
+    Opening yields directly to the Hand montage; Hand yields directly to the
+    first Selected Work still. Duplicate bridge paint (ring replay / bench
+    replay) is retired on phones only — desktop keeps angled bridge Turns.
   */
-  .hand-bridge {
-    background: #020005;
+  #handBridge,
+  .hand-bridge,
+  #workBridge,
+  .work-bridge {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 
-  .hand-bridge .layer-media {
-    inset: 0;
-    top: auto;
-    left: auto;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    z-index: 1;
-    overflow: hidden;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    outline: none;
-    background: transparent;
-    -webkit-mask-image: none;
-    mask-image: none;
+  #handBridge .layer-media,
+  #handBridge .layer-media img,
+  #handBridge .layer-media video,
+  #workBridge .layer-media,
+  #workBridge .layer-media img {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 
-  .hand-bridge .layer-media img,
-  .hand-bridge .layer-media video {
-    object-fit: cover;
-    object-position: 50% 50%;
-    filter: none;
-  }
-
-  /* Bench media stays full-frame under the ring→bench Turn. */
+  /* Bench media stays full-frame as the sole Hand paint authority. */
   .hand-bench .layer-media {
     -webkit-mask-image: none;
     mask-image: none;

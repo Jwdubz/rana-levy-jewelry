@@ -1391,6 +1391,10 @@
           window.__ranaSiteTick(dt);
         }
 
+        // After siteTick may retire Opening, re-evaluate opening decoder authority
+        // so is-live cannot lag a sticky handoff by waiting for the next scroll.
+        manageOpeningVideoActivity();
+
         requestAnimationFrame(tick);
       }
 
@@ -1489,31 +1493,70 @@
         tryPlay(ringVideo, 0);
       }
 
-      // Pause opening videos when far offscreen; restore when near.
+      // Opening decoder life-cycle follows section authority, not a broad near range.
+      // When Opening ceases to own the viewport: pause and remove is-live.
+      // Reverse re-entry restores play and adds is-live only after playback resumes.
       function manageOpeningVideoActivity() {
         if (mediaQuietActive() || !passage) return;
         const rect = passage.getBoundingClientRect();
         const vh = window.innerHeight;
-        const near = rect.bottom > -vh * 0.35 && rect.top < vh * 1.35;
+        const mobile = isMobileOpeningViewport();
+        const retired = passage.classList.contains("is-retired");
+
+        // Authority: Opening owns while not retired and its sticky still covers
+        // the viewport. The prior broad near band left studio+ring live under Hand.
+        let owns;
+        if (retired) {
+          owns = false;
+        } else if (mobile) {
+          owns = rect.bottom > vh * 0.55 && rect.top < vh * 0.45;
+        } else {
+          // Desktop may keep a slightly wider band for the angled bridge Turn,
+          // but still retires once the sticky no longer covers the viewport.
+          owns = rect.bottom > vh * 0.2 && rect.top < vh * 0.8;
+        }
+
         openingVideos.forEach(function (video) {
           if (!video) return;
-          if (near) {
+          if (owns) {
             if (!video.getAttribute("src") && video.getAttribute("data-src")) {
               ensureVideoSource(video, "auto");
             }
             if (video.paused) {
-              const p = video.play();
-              if (p && typeof p.catch === "function") p.catch(function () {});
+              const playPromise = video.play();
+              if (playPromise && typeof playPromise.then === "function") {
+                playPromise
+                  .then(function () {
+                    if (mediaQuietActive() || video.paused) {
+                      try {
+                        video.pause();
+                      } catch (e) {}
+                      video.classList.remove("is-live");
+                      return;
+                    }
+                    // is-live only after actual playback resumes.
+                    video.classList.add("is-live");
+                  })
+                  .catch(function () {
+                    video.classList.remove("is-live");
+                  });
+              } else if (!video.paused) {
+                video.classList.add("is-live");
+              }
+            } else if (!video.classList.contains("is-live")) {
+              video.classList.add("is-live");
             }
           } else {
+            // Retire authority: pause AND drop is-live (not pause-only).
             if (!video.paused) {
               try {
                 video.pause();
               } catch (e) {}
             }
+            video.classList.remove("is-live");
           }
         });
-        if (near) {
+        if (owns) {
           if (studioStack) studioStack.style.willChange = "transform";
           if (ringStack) ringStack.style.willChange = "transform";
         } else {

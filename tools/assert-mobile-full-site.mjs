@@ -522,10 +522,22 @@ if (!/work-rest-wash[\s\S]{0,120}display\s*:\s*none/i.test(stylesMobile)) {
   fail("mobile .work-rest-wash radial resting wash must be disabled");
 }
 
-// Hand-bridge still full-viewport (opening contract re-check inside full site).
-const handMediaMobile = extractBlock(styles, ".hand-bridge .layer-media", stylesMobileIdx);
-if (!handMediaMobile || !/\binset:\s*0\s*;/.test(handMediaMobile)) {
-  fail("mobile hand-bridge media parent must remain full-viewport inset:0");
+// Mobile bridges retired: direct Opening→Hand→Work authority (no duplicate paint).
+if (!/\.hand-bridge[\s\S]{0,400}visibility:\s*hidden\s*!important/i.test(stylesMobile)) {
+  fail("mobile full-site must retire .hand-bridge paint (visibility:hidden !important)");
+}
+if (!/\.work-bridge[\s\S]{0,400}visibility:\s*hidden\s*!important/i.test(stylesMobile)) {
+  fail("mobile full-site must retire .work-bridge paint (visibility:hidden !important)");
+}
+// Desktop bridge paths must remain in site.js (not deleted for the mobile fix).
+if (!/function\s+applyBridgeOut\s*\(/.test(siteJs)) {
+  fail("desktop applyBridgeOut must remain for angled bridge Turns");
+}
+if (!/function\s+armHandBridgePlayback\s*\(/.test(siteJs)) {
+  fail("desktop armHandBridgePlayback must remain");
+}
+if (!/id="handBridgeVideo"/.test(index) || !/id="workBridge"/.test(index)) {
+  fail("desktop bridge markup (#handBridgeVideo / #workBridge) must remain present");
 }
 
 // --- site.js: Hand portrait world retired; direct bench passage + opening-final exit ---
@@ -538,6 +550,18 @@ if (handPassage.status !== 0) {
   process.stdout.write(handPassage.stdout || "");
   process.stderr.write(handPassage.stderr || "");
   fail("hand direct bench passage tripwire failed");
+}
+
+// --- Mobile single media authority (no stacked bridge videos) ---
+const mediaAuthority = spawnSync(
+  process.execPath,
+  [path.join(root, "tools/assert-mobile-media-authority.mjs")],
+  { encoding: "utf8" }
+);
+if (mediaAuthority.status !== 0) {
+  process.stdout.write(mediaAuthority.stdout || "");
+  process.stderr.write(mediaAuthority.stderr || "");
+  fail("mobile media authority tripwire failed");
 }
 
 // Quiet mode helpers still present.

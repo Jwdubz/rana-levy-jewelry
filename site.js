@@ -668,9 +668,18 @@
     el.style.opacity = String(lightOpacity);
   }
 
+  // Force a bridge layer fully out of the paint path (mobile direct handoff).
+  function retireBridgeLayer(el) {
+    if (!el) return;
+    clearMask(el);
+    el.style.opacity = "0";
+    el.style.visibility = "hidden";
+  }
+
   // Outgoing bridge: fully visible at t=0, fully gone at t=1.
   // Transparent advances along the same angled edge used for incoming reveals,
   // so both worlds stay full-bleed under one feathered traveling edge.
+  // Desktop only — mobile retires bridge paint for single-authority handoffs.
   function applyBridgeOut(el, t, angle, edgeStart, edgeEnd, feather) {
     if (!el) return;
     const tt = clamp(t, 0, 1);
@@ -1118,25 +1127,30 @@
     const edges = edgeParams();
     const angleEnter = edges.angles[0];
 
-    // Opening ring already full-bleed on the bridge; bench already full-bleed under it.
-    // Angled feathered mask-out is the contract Turn — not a horizontal sticky release.
+    // Bench already full-bleed. Desktop: angled ring bridge mask-out is the Turn.
+    // Mobile: no bridge paint — Opening yields directly to this Hand montage.
     const enterT = windowProgress(p, 0.0, 0.14);
     if (handBenchLayer) {
       handBenchLayer.style.opacity = "1";
       clearMask(handBenchLayer);
     }
-    applyBridgeOut(
-      handBridge,
-      enterT,
-      angleEnter,
-      edges.edgeStart,
-      edges.edgeEnd,
-      SITE_MOTION.junctionFeather
-    );
-    if (enterT > 0 && enterT < 1) {
-      applyJunctionLight(handJunction, enterT, angleEnter);
-    } else {
+    if (mobile) {
+      retireBridgeLayer(handBridge);
       applyJunctionLight(handJunction, 0, angleEnter);
+    } else {
+      applyBridgeOut(
+        handBridge,
+        enterT,
+        angleEnter,
+        edges.edgeStart,
+        edges.edgeEnd,
+        SITE_MOTION.junctionFeather
+      );
+      if (enterT > 0 && enterT < 1) {
+        applyJunctionLight(handJunction, enterT, angleEnter);
+      } else {
+        applyJunctionLight(handJunction, 0, angleEnter);
+      }
     }
 
     // Bench/lap carrier stays exact scale 1 on phone and desktop — no lerped
@@ -1242,23 +1256,29 @@
 
   function renderWork(p) {
     if (!work) return;
+    const mobile = state.isMobile;
     const edges = edgeParams();
     const hold = SITE_MOTION.workHoldFraction;
 
-    // Hand bench still already full-bleed on the bridge; first work still under it.
+    // First work still is the base authority. Desktop: bench bridge masks out into it.
+    // Mobile: no workBridge paint — Hand yields directly to workWorld0.
     const enterT = windowProgress(p, 0.0, 0.14);
     if (workWorlds[0]) {
       workWorlds[0].style.opacity = "1";
       clearMask(workWorlds[0]);
     }
-    applyBridgeOut(
-      workBridge,
-      enterT,
-      edges.angles[2],
-      edges.edgeStart,
-      edges.edgeEnd,
-      SITE_MOTION.junctionFeather
-    );
+    if (mobile) {
+      retireBridgeLayer(workBridge);
+    } else {
+      applyBridgeOut(
+        workBridge,
+        enterT,
+        edges.angles[2],
+        edges.edgeStart,
+        edges.edgeEnd,
+        SITE_MOTION.junctionFeather
+      );
+    }
 
     // Opening thought after the entry Turn settles; rest + links late.
     const openOp = thoughtOpacity(p, 0.12, 0.2, 0.28, 0.36);
@@ -1287,7 +1307,8 @@
     let junctionT = 0;
     let junctionAngle = edges.angles[2];
 
-    if (enterT > 0 && enterT < 1) {
+    // Desktop only: entry junction rides the work bridge Turn.
+    if (!mobile && enterT > 0 && enterT < 1) {
       activeJunction = 0;
       junctionT = enterT;
       junctionAngle = edges.angles[2];
@@ -1370,53 +1391,77 @@
 
   // ——— Activity / will-change / video pause ———
 
+  function retireHandBridgeVideo() {
+    if (!handBridgeVideo) return;
+    invalidateDeferredArm(handBridgeVideo);
+    if (!handBridgeVideo.paused) {
+      try {
+        handBridgeVideo.pause();
+      } catch (e) {}
+    }
+    handBridgeVideo.classList.remove("is-live");
+    state.bridgePhaseSynced = false;
+  }
+
   function updateActivity(handP, workP, handNear) {
-    const handActive = handNear;
+    const mobile = state.isMobile;
+    // Mobile: Hand owns only after Opening has yielded (retired). That prevents
+    // handVideo from arming under a still-live opening stack.
+    const openingRetired = !!(opening && opening.classList.contains("is-retired"));
+    const handActive = mobile ? handNear && openingRetired : handNear;
     const workActive = work && sectionProximity(work).near;
 
     setWillChange(handBenchStack, "");
-    setWillChange(handBridge, handActive && handP < 0.2 ? "opacity, mask-image" : "");
+    setWillChange(
+      handBridge,
+      !mobile && handActive && handP < 0.2 ? "opacity, mask-image" : ""
+    );
     for (let i = 0; i < workStacks.length; i++) {
       setWillChange(workStacks[i], workActive ? "transform" : "");
     }
-    setWillChange(workBridge, workActive && workP < 0.2 ? "opacity, mask-image" : "");
+    setWillChange(
+      workBridge,
+      !mobile && workActive && workP < 0.2 ? "opacity, mask-image" : ""
+    );
 
     // Videos: active only near their movement; never seek from scroll.
-    // Arm bench video as soon as Hand is active so hydration overlaps the Turn.
+    // Arm bench video when Hand is the media authority.
     setVideoActive(handVideo, handActive && handP > 0 && handP < 0.95, "handVideoArmed");
 
-    // Bridge ring video: live only during the opening→hand Turn (natural loop, not scroll-seek).
-    // Phase-align once to the opening ring without changing M1's own timing.
-    // Deferred Blob path only — never the opening's direct stream helper.
-    if (handBridgeVideo && !mediaQuietActive()) {
+    // Bridge ring video: desktop only during the opening→hand Turn.
+    // Mobile never hydrates, plays, or paints the duplicate ring bridge.
+    if (mobile || mediaQuietActive()) {
+      retireHandBridgeVideo();
+      if (mediaQuietActive()) abortDeferredFetches();
+    } else if (handBridgeVideo) {
       if (handActive && handP < 0.18) {
         armHandBridgePlayback();
       } else {
-        if (handBridgeVideo._deferArming || handBridgeVideo._deferFailed) {
+        // Honest leave: pause AND drop is-live so reverse re-entry re-arms cleanly.
+        if (
+          handBridgeVideo._deferArming ||
+          handBridgeVideo._deferFailed ||
+          !handBridgeVideo.paused ||
+          handBridgeVideo.classList.contains("is-live")
+        ) {
           invalidateDeferredArm(handBridgeVideo);
-        }
-        if (!handBridgeVideo.paused) {
-          try {
-            handBridgeVideo.pause();
-          } catch (e) {}
+          if (!handBridgeVideo.paused) {
+            try {
+              handBridgeVideo.pause();
+            } catch (e) {}
+          }
+          handBridgeVideo.classList.remove("is-live");
         }
         if (handP >= 0.18) {
           state.bridgePhaseSynced = false;
         }
       }
-    } else if (handBridgeVideo && mediaQuietActive()) {
-      invalidateDeferredArm(handBridgeVideo);
-      abortDeferredFetches();
-      if (!handBridgeVideo.paused) {
-        try {
-          handBridgeVideo.pause();
-        } catch (e) {}
-      }
-      handBridgeVideo.classList.remove("is-live");
     }
   }
 
   function armHandBridgePlayback() {
+    // Desktop angled Turn only — mobile must never enter this path.
+    if (state.isMobile) return;
     if (!handBridgeVideo || mediaQuietActive()) return;
     if (
       !handBridgeVideo.paused &&

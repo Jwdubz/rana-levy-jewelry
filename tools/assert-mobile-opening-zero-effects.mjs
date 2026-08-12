@@ -509,54 +509,55 @@ if (/mobile\s*\?\s*1\.0[3-9]/i.test(fnBody) || /mobile\s*\?\s*1\.[1-9]/i.test(fn
   fail("mobile applyMediaTransforms must not keep crop-producing start scales");
 }
 
-// --- Hand bridge: full-viewport parity with opening ring ---
-const handMediaMobile = extractBlock(
-  styles,
-  ".hand-bridge .layer-media",
-  stylesMobileIdx
-);
-assertFullViewportParent(handMediaMobile, "mobile .hand-bridge .layer-media");
-
-const handMediaChildren =
-  extractBlock(
-    styles,
-    ".hand-bridge .layer-media img,\n  .hand-bridge .layer-media video",
-    stylesMobileIdx
-  ) ||
-  extractBlock(
-    styles,
-    ".hand-bridge .layer-media img, .hand-bridge .layer-media video",
-    stylesMobileIdx
-  );
-assertCoverUnfiltered(handMediaChildren, "mobile .hand-bridge .layer-media children");
-
-const ringPos = (ringMedia.match(/object-position\s*:\s*([^;]+);/) || [])[1];
-const handPos = (handMediaChildren.match(/object-position\s*:\s*([^;]+);/) || [])[1];
-if (!ringPos || !handPos) {
-  fail("ring and hand-bridge must both declare object-position");
-}
-if (ringPos.trim() !== handPos.trim()) {
+// --- Hand bridge: mobile paint retired (direct Opening→Hand authority) ---
+// Desktop keeps the angled ring bridge; phones must not paint the duplicate.
+if (
+  !/#handBridge[\s\S]{0,200}\.hand-bridge[\s\S]{0,200}#workBridge[\s\S]{0,200}\.work-bridge[\s\S]{0,320}visibility:\s*hidden\s*!important/i.test(
+    stylesMobileOnly
+  ) &&
+  !/\.hand-bridge[\s\S]{0,400}visibility:\s*hidden\s*!important/i.test(stylesMobileOnly)
+) {
   fail(
-    `hand-bridge object-position (${handPos.trim()}) must match ring (${ringPos.trim()})`
+    "mobile CSS must retire .hand-bridge paint (visibility:hidden !important) for direct Opening→Hand handoff"
+  );
+}
+if (!/\.hand-bridge[\s\S]{0,400}opacity:\s*0\s*!important/i.test(stylesMobileOnly)) {
+  fail("mobile CSS must retire .hand-bridge paint (opacity:0 !important)");
+}
+// Must not re-enable full-viewport bridge children as a painted mobile carrier.
+if (
+  /\.hand-bridge\s+\.layer-media\s*\{[^}]*inset:\s*0[^}]*width:\s*100%[^}]*height:\s*100%/i.test(
+    stylesMobileOnly
+  ) &&
+  !/#handBridge[\s\S]{0,80}\.hand-bridge[\s\S]{0,200}visibility:\s*hidden/i.test(
+    stylesMobileOnly
+  )
+) {
+  fail(
+    "mobile must not keep a painted full-viewport .hand-bridge .layer-media without retiring #handBridge"
   );
 }
 
-// Hand-bridge markup must also select portrait ring on mobile.
+// Hand-bridge markup remains for desktop; portrait ring source stays declared.
 if (
   !/id="handBridgeVideo"[\s\S]*?data-mobile-src="assets\/ring-alexandrite-portrait\.mp4"/.test(
     index
   )
 ) {
-  fail("handBridgeVideo must declare mobile portrait ring derivative");
+  fail("handBridgeVideo must declare mobile portrait ring derivative (desktop path retained)");
 }
 
-for (const token of forbiddenMaskTokens) {
-  if (handMediaMobile && handMediaMobile.includes(token)) {
-    fail(`hand-bridge mobile parent still carries vignette mask grammar: ${token}`);
-  }
-}
 if (/hand-bridge[\s\S]*mask-image\s*:\s*[^;]*radial-gradient/i.test(stylesMobileOnly)) {
   fail("hand-bridge mobile CSS must not use radial-gradient masks");
+}
+for (const token of forbiddenMaskTokens) {
+  if (stylesMobileOnly.includes(token) && /hand-bridge/.test(stylesMobileOnly)) {
+    // Only fail when the token sits inside a hand-bridge mobile rule body.
+    const hbIdx = stylesMobileOnly.indexOf(".hand-bridge");
+    if (hbIdx >= 0 && stylesMobileOnly.slice(hbIdx, hbIdx + 500).includes(token)) {
+      fail(`hand-bridge mobile parent still carries vignette mask grammar: ${token}`);
+    }
+  }
 }
 
 // --- Desktop overscan contracts unchanged ---
