@@ -633,8 +633,8 @@ if ((index.match(/id="handVideo"/g) || []).length !== 1) {
 const handWindowDecl = siteJs.match(
   /const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*(\[[^\]]+\])/
 );
-if (!handWindowDecl || handWindowDecl[1].replace(/\s+/g, "") !== "[0,2.266667]") {
-  fail("BENCH_WINDOWS.hand must be exactly [0, 2.266667] (full derived cycle)");
+if (!handWindowDecl || handWindowDecl[1].replace(/\s+/g, "") !== "[0,4.466667]") {
+  fail("BENCH_WINDOWS.hand must be exactly [0, 4.466667] (full derived cycle)");
 }
 if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.75\s*,\s*0\.95\s*\]/.test(siteJs)) {
   fail("retired BENCH_WINDOWS.hand [5.75, 0.95] must be absent from hand declaration");

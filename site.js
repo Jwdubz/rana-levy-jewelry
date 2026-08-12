@@ -32,10 +32,10 @@
     handThought0OutEnd: 0.52
   };
 
-  // Hand bench loop: full derived Lap→Engraving cycle asset
-  // (assets/studio-hand-work-cycle.mp4; loops as Lap→Engraving→Lap).
+  // Hand bench loop: full derived craft-story cycle asset
+  // (assets/studio-hand-work-cycle.mp4; Lap→Engraving→Signets→Ornate→Lap).
   const BENCH_WINDOWS = {
-    hand: [0, 2.266667]
+    hand: [0, 4.466667]
   };
 
   // Post-opening completed-state dwell: one 60svh physical plateau at each
