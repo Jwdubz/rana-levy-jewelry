@@ -1429,7 +1429,12 @@
     // Mobile: Hand owns only after Opening has yielded (retired). That prevents
     // handVideo from arming under a still-live opening stack.
     const openingRetired = !!(opening && opening.classList.contains("is-retired"));
-    const handActive = mobile ? handNear && openingRetired : handNear;
+    const handRetired = !!(hand && hand.classList.contains("is-retired"));
+    // Own the decoder for the whole Hand occupancy, including entry/exit.
+    // Retire only when Hand itself is retired (Work has taken the viewport).
+    const handActive = mobile
+      ? handNear && openingRetired && !handRetired
+      : handNear && !handRetired;
     const workActive = work && sectionProximity(work).near;
 
     setWillChange(handBenchStack, "");
@@ -1445,9 +1450,9 @@
       !mobile && workActive && workP < 0.2 ? "opacity, mask-image" : ""
     );
 
-    // Videos: active only near their movement; never seek from scroll.
-    // Arm bench video when Hand is the media authority.
-    setVideoActive(handVideo, handActive && handP > 0 && handP < 0.95, "handVideoArmed");
+    // Videos: active only while Hand owns the viewport; never seek from scroll.
+    // No choreography cutoff — that unmasked the static studio-poster mid-Hand.
+    setVideoActive(handVideo, handActive, "handVideoArmed");
 
     // Bridge ring video: desktop only during the opening→hand Turn.
     // Mobile never hydrates, plays, or paints the duplicate ring bridge.

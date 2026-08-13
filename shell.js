@@ -316,7 +316,7 @@
       mode === "made" ? "designs" : mode === "gallery" ? "works" : "pieces";
     if (visible === 0) return "No " + noun + " match.";
     if (visible === total) {
-      return visible + " " + noun + (mode === "ready" ? " · available first, then sold" : "");
+      return visible + " " + noun;
     }
     return "Showing " + visible + " of " + total + " " + noun;
   }

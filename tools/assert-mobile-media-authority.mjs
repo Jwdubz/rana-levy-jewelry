@@ -378,20 +378,24 @@ if (!/invalidateDeferredArm\s*\(\s*video\s*\)/.test(setVideoActiveFn[0])) {
 }
 // Mobile hand ownership requires opening retired (single authority).
 if (
-  !/handActive\s*=\s*mobile\s*\?\s*handNear\s*&&\s*openingRetired\s*:\s*handNear/.test(
-    siteJs
-  )
+  !/handActive\s*=\s*mobile\s*\?\s*handNear\s*&&\s*openingRetired/.test(siteJs)
 ) {
   fail(
     "mobile handActive must require openingRetired so handVideo cannot arm under a live Opening stack"
   );
 }
+if (!/!\s*handRetired/.test(siteJs)) {
+  fail("handActive must drop when Hand is retired so the decoder yields on genuine Work transfer");
+}
+if (/setVideoActive\s*\(\s*handVideo\s*,\s*[^)]*handP\s*[<>]=?\s*/.test(siteJs)) {
+  fail("handVideo must not use an artificial handP cutoff; that exposes the static poster mid-Hand");
+}
 if (
-  !/setVideoActive\s*\(\s*handVideo\s*,\s*handActive\s*&&\s*handP\s*>\s*0\s*&&\s*handP\s*<\s*0\.95\s*,\s*["']handVideoArmed["']\s*\)/.test(
+  !/setVideoActive\s*\(\s*handVideo\s*,\s*handActive\s*,\s*["']handVideoArmed["']\s*\)/.test(
     siteJs
   )
 ) {
-  fail("hand activity must still call setVideoActive(handVideo, handActive && handP > 0 && handP < 0.95, …)");
+  fail("hand activity must call setVideoActive(handVideo, handActive, 'handVideoArmed')");
 }
 
 // ——— Desktop bridge leave also drops is-live (honest shared semantics) ———

@@ -586,6 +586,28 @@ if (mediaAuthority.status !== 0) {
   fail("mobile media authority tripwire failed");
 }
 
+const handMotion = spawnSync(
+  process.execPath,
+  [path.join(root, "tools/assert-hand-motion-authority.mjs")],
+  { encoding: "utf8" }
+);
+if (handMotion.status !== 0) {
+  process.stdout.write(handMotion.stdout || "");
+  process.stderr.write(handMotion.stderr || "");
+  fail("hand motion authority tripwire failed");
+}
+
+const catalogSummary = spawnSync(
+  process.execPath,
+  [path.join(root, "tools/assert-catalog-count-summary.mjs")],
+  { encoding: "utf8" }
+);
+if (catalogSummary.status !== 0) {
+  process.stdout.write(catalogSummary.stdout || "");
+  process.stderr.write(catalogSummary.stderr || "");
+  fail("catalog count summary tripwire failed");
+}
+
 // Quiet mode helpers still present.
 if (!/function\s+quietModeActive\s*\(/.test(siteJs) && !/function quietModeActive\s*\(/.test(siteJs)) {
   fail("site.js quietModeActive must remain");
@@ -732,13 +754,16 @@ if (
     "setVideoActive must not gate leave invalidation on only _deferArming||_deferFailed (successful live leave must tear down too)"
   );
 }
-// Activity still arms hand video only inside the open beat window.
+// Activity arms hand video for the whole Hand occupancy — no mid-beat poster gate.
+if (/setVideoActive\s*\(\s*handVideo\s*,\s*[^)]*handP\s*[<>]=?\s*/.test(siteJs)) {
+  fail("handVideo must not use an artificial handP cutoff; that exposes the static poster mid-Hand");
+}
 if (
-  !/setVideoActive\s*\(\s*handVideo\s*,\s*handActive\s*&&\s*handP\s*>\s*0\s*&&\s*handP\s*<\s*0\.95\s*,\s*["']handVideoArmed["']\s*\)/.test(
+  !/setVideoActive\s*\(\s*handVideo\s*,\s*handActive\s*,\s*["']handVideoArmed["']\s*\)/.test(
     siteJs
   )
 ) {
-  fail("hand activity must call setVideoActive(handVideo, handActive && handP > 0 && handP < 0.95, 'handVideoArmed')");
+  fail("hand activity must call setVideoActive(handVideo, handActive, 'handVideoArmed')");
 }
 // armDeferredPlayback remains the sole hydrate→seek→play path (no scroll-seeking).
 if (!/function\s+armDeferredPlayback\s*\(\s*video\s*,\s*startAt\s*\)/.test(siteJs)) {
