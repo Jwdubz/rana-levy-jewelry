@@ -3,12 +3,15 @@
  * One continuous single-finger vertical gesture that begins at authored
  * rest N may finish only at N-1, N, or N+1. Native touch momentum does
  * not own passage distance. The first-axis latch may hold native scroll
- * during contact; completed net motion owns the lift. A second contact
- * interrupts ownership but keeps the origin. Destinations are the
- * Opening terminal hold, BEAT_DWELL Hand/Work plateaus, and the Work
- * terminal — inverted from the existing remap mathematics, then snapped
- * to reachable whole CSS pixels. Quiet and reduced-motion stay native.
- * Desktop stays unbound. Not CSS scroll-snap.
+ * during contact; completed net motion owns the lift. While attached,
+ * html and body use touch-action: pan-x pinch-zoom so vertical page
+ * panning never enters the compositor momentum pipeline; detach restores
+ * the exact prior inline values. A second contact interrupts ownership
+ * but keeps the origin. Destinations are the Opening terminal hold,
+ * BEAT_DWELL Hand/Work plateaus, and the Work terminal — inverted from
+ * the existing remap mathematics, then snapped to reachable whole CSS
+ * pixels. Quiet and reduced-motion stay native. Desktop stays unbound.
+ * Not CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
@@ -29,6 +32,7 @@
   var DIRECTION_BOUND = 2.35;
   var OPENING_HOLD_KEEP = 0.88;
   var SWIPE_THRESHOLD_PX = 10;
+  var TOUCH_ACTION_POLICY = "pan-x pinch-zoom";
 
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
@@ -274,7 +278,8 @@
     chooseBeatDestination: chooseBeatDestination,
     chooseAdjacentDestination: chooseAdjacentDestination,
     mergeRests: mergeRests,
-    aimAtRest: aimAtRest
+    aimAtRest: aimAtRest,
+    TOUCH_ACTION_POLICY: TOUCH_ACTION_POLICY
   };
 
   var authoredSvhPxCache = 0;
@@ -296,6 +301,9 @@
   var gesture = null;
   var mediaQuery = null;
   var reduceQuery = null;
+  var priorRootTouchAction = "";
+  var priorBodyTouchAction = "";
+  var touchActionOwned = false;
 
   function isMobileViewport() {
     try {
@@ -334,6 +342,28 @@
 
   function shouldCaptureTouch() {
     return live() && !quietModeActive() && !prefersReducedMotion();
+  }
+
+  function applyDocumentTouchAction() {
+    if (touchActionOwned) return;
+    var root = typeof document !== "undefined" ? document.documentElement : null;
+    var body = typeof document !== "undefined" ? document.body : null;
+    priorRootTouchAction = root && root.style ? root.style.touchAction : "";
+    priorBodyTouchAction = body && body.style ? body.style.touchAction : "";
+    if (root && root.style) root.style.touchAction = TOUCH_ACTION_POLICY;
+    if (body && body.style) body.style.touchAction = TOUCH_ACTION_POLICY;
+    touchActionOwned = true;
+  }
+
+  function restoreDocumentTouchAction() {
+    if (!touchActionOwned) return;
+    var root = typeof document !== "undefined" ? document.documentElement : null;
+    var body = typeof document !== "undefined" ? document.body : null;
+    if (root && root.style) root.style.touchAction = priorRootTouchAction;
+    if (body && body.style) body.style.touchAction = priorBodyTouchAction;
+    priorRootTouchAction = "";
+    priorBodyTouchAction = "";
+    touchActionOwned = false;
   }
 
   function authoredSvhPx() {
@@ -781,6 +811,7 @@
 
   function attach() {
     if (bound) return;
+    if (!isMobileViewport() || quietModeActive() || prefersReducedMotion()) return;
     opening = document.getElementById("opening");
     hand = document.getElementById("hand");
     work = document.getElementById("work");
@@ -794,6 +825,7 @@
     direction = 0;
     lastY = currentScrollY();
     authoredSvhPxCache = 0;
+    applyDocumentTouchAction();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -835,6 +867,7 @@
     window.removeEventListener("hashchange", onHashOrNav);
     window.removeEventListener("popstate", onHashOrNav);
     document.removeEventListener("click", onActivate, true);
+    restoreDocumentTouchAction();
     bound = false;
     armed = false;
     suppress = false;
@@ -876,6 +909,9 @@
   api.boot = boot;
   api.collectRests = collectRests;
   api.cancelSettle = cancelSettle;
+  api.attach = attach;
+  api.detach = detach;
+  api.onBreakpointChange = onBreakpointChange;
 
   if (typeof window !== "undefined") {
     window.__ranaMobileBeatSettle = api;

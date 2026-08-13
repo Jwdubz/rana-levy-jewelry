@@ -3,9 +3,14 @@
  * Source + math assertion: mobile one-gesture / one-adjacent-beat touch lock.
  *
  * Locks the owner correction that native touch momentum must never own
- * passage distance. A continuous single-finger vertical gesture that
+ * passage distance. While the controller is attached, html and body use
+ * touch-action: pan-x pinch-zoom so vertical travel cannot enter the
+ * compositor pipeline. A continuous single-finger vertical gesture that
  * begins at authored rest N may finish only at N-1, N, or N+1:
  * - helper is homepage-only, gated to max-width 700px
+ * - attached controller applies touch-action: pan-x pinch-zoom on html+body
+ * - detach restores the exact prior inline touch-action values
+ * - quiet, reduced-motion, and desktop never leave that policy applied
  * - touchmove is non-passive; the vertical path calls preventDefault()
  * - completed net motion, not the first-axis latch, owns the lift
  * - a second contact retains the origin and cannot escape more than ±1 rest
@@ -107,10 +112,12 @@ if (!/onBreakpointChange/.test(helper)) {
 }
 
 const attachFn = extractFn(helper, "attach");
+const detachFn = extractFn(helper, "detach");
 const bootFn = extractFn(helper, "boot");
 const maybeFn = extractFn(helper, "maybeSettle");
 const startFn = extractFn(helper, "startSettle");
 if (!attachFn) fail("could not isolate attach");
+if (!detachFn) fail("could not isolate detach");
 if (!maybeFn) fail("could not isolate maybeSettle");
 if (!startFn) fail("could not isolate startSettle");
 if (/scrollTo\(/.test(attachFn) || /scrollTo\(/.test(bootFn)) {
@@ -138,6 +145,68 @@ const bpFn = extractFn(helper, "onBreakpointChange");
 if (!bpFn) fail("could not isolate onBreakpointChange");
 if (!/quietModeActive\(\)/.test(bpFn) || !/prefersReducedMotion\(\)/.test(bpFn)) {
   fail("quiet mode and reduced-motion must prevent touch intercept attach, not only post-momentum settle");
+}
+if (!/isMobileViewport\(\)/.test(bpFn)) {
+  fail("desktop above 700px must not attach the touch controller or alter touch-action");
+}
+if (!/else\s+detach\(\)/.test(bpFn) && !/else\s*\{\s*detach\(\)/.test(bpFn)) {
+  fail("leaving the mobile normal-motion homepage must detach and restore prior touch-action");
+}
+
+// ——— Document touch-action policy: keep vertical travel off the compositor ———
+const TOUCH_ACTION_POLICY = "pan-x pinch-zoom";
+const applyTouchFn = extractFn(helper, "applyDocumentTouchAction");
+const restoreTouchFn = extractFn(helper, "restoreDocumentTouchAction");
+if (!applyTouchFn) fail("could not isolate applyDocumentTouchAction");
+if (!restoreTouchFn) fail("could not isolate restoreDocumentTouchAction");
+if (!/applyDocumentTouchAction\s*\(/.test(attachFn)) {
+  fail("attach must apply the document touch-action policy before any visitor gesture");
+}
+if (!/restoreDocumentTouchAction\s*\(/.test(detachFn)) {
+  fail("every detach path must restore the exact prior inline touch-action values");
+}
+const applyAt = attachFn.indexOf("applyDocumentTouchAction");
+const listenAt = attachFn.indexOf("addEventListener");
+if (applyAt < 0 || listenAt < 0 || applyAt > listenAt) {
+  fail("touch-action policy must be applied before listeners so it is in effect before any visitor gesture");
+}
+if (!/isMobileViewport\(\)/.test(attachFn) || !/quietModeActive\(\)/.test(attachFn) || !/prefersReducedMotion\(\)/.test(attachFn)) {
+  fail("attach must refuse desktop, quiet, and reduced-motion so they never alter touch-action");
+}
+if (!/TOUCH_ACTION_POLICY\s*=\s*"pan-x pinch-zoom"/.test(helper)) {
+  fail("TOUCH_ACTION_POLICY must be exactly pan-x pinch-zoom");
+}
+if (!/style\.touchAction\s*=\s*TOUCH_ACTION_POLICY/.test(applyTouchFn)) {
+  fail("apply must assign the exact pan-x pinch-zoom policy to style.touchAction");
+}
+if (!/documentElement/.test(applyTouchFn) || !/\.body\b/.test(applyTouchFn)) {
+  fail("touch-action policy must target both documentElement and body");
+}
+if (!/style\.touchAction/.test(applyTouchFn) || !/style\.touchAction/.test(restoreTouchFn)) {
+  fail("policy must snapshot and restore via each element's style.touchAction");
+}
+const firstTouchRead = applyTouchFn.indexOf("style.touchAction");
+const policyAssign = applyTouchFn.search(/style\.touchAction\s*=\s*TOUCH_ACTION_POLICY/);
+if (firstTouchRead < 0 || policyAssign < 0 || firstTouchRead > policyAssign) {
+  fail("must snapshot each prior inline touch-action before applying the policy");
+}
+if ((applyTouchFn.match(/style\.touchAction/g) || []).length < 4) {
+  fail("must snapshot and assign style.touchAction on both documentElement and body");
+}
+if ((restoreTouchFn.match(/style\.touchAction/g) || []).length < 2) {
+  fail("detach must restore style.touchAction on both documentElement and body");
+}
+if (/touch-action\s*:\s*none\b/.test(helper) || /touchAction\s*=\s*["']none["']/.test(helper)) {
+  fail("must not use touch-action:none");
+}
+if (/touch-action\s*:\s*pan-y\b/.test(helper) || /touchAction\s*=\s*["']pan-y["']/.test(helper)) {
+  fail("must not use touch-action:pan-y; vertical document travel is controller-owned");
+}
+if (/overflow\s*=\s*["']hidden["']/.test(attachFn) || /overflow\s*=\s*["']hidden["']/.test(applyTouchFn)) {
+  fail("must not use overflow:hidden as a standing state");
+}
+if (/preventDefault\s*\(/.test(attachFn) || /preventDefault\s*\(/.test(applyTouchFn)) {
+  fail("touch-action policy must not preventDefault on attach");
 }
 
 const touchStartFn = extractFn(helper, "onTouchStart");
@@ -822,6 +891,15 @@ if (!/cancelGesture|gesture = null/.test(resizeFn) || !/cancelGesture|gesture = 
 if (typeof settle.completedVerticalIntent !== "function") {
   fail("helper must export completedVerticalIntent so lift authority is executable");
 }
+if (settle.TOUCH_ACTION_POLICY !== TOUCH_ACTION_POLICY) {
+  fail("exported TOUCH_ACTION_POLICY must be exactly " + TOUCH_ACTION_POLICY);
+}
+if (typeof settle.attach !== "function" || typeof settle.detach !== "function") {
+  fail("helper must export attach and detach so the touch-action policy is executable");
+}
+if (typeof settle.onBreakpointChange !== "function") {
+  fail("helper must export onBreakpointChange so breakpoint and reduced-motion restore is executable");
+}
 
 if (/axis\s*!==\s*["']vertical["']/.test(touchEndFn) || /axis\s*===\s*["']vertical["']/.test(touchEndFn)) {
   fail("touchend must not treat the initial axis latch as the settle authority");
@@ -996,6 +1074,268 @@ expectLift(
   "interrupted multi-touch whose net motion stays horizontal must remain native"
 );
 
+function installHomepageHarness(options) {
+  const opts = options || {};
+  const state = {
+    width: opts.width == null ? 375 : opts.width,
+    quiet: !!opts.quiet,
+    reduced: !!opts.reduced
+  };
+  const root = {
+    style: {
+      touchAction: opts.rootTouchAction == null ? "" : opts.rootTouchAction,
+      overflow: opts.rootOverflow == null ? "" : opts.rootOverflow
+    },
+    classList: {
+      contains: (name) => state.quiet && name === "is-quiet"
+    },
+    offsetHeight: 1
+  };
+  const body = {
+    style: {
+      touchAction: opts.bodyTouchAction == null ? "" : opts.bodyTouchAction,
+      overflow: opts.bodyOverflow == null ? "" : opts.bodyOverflow
+    },
+    offsetHeight: 1
+  };
+  const sections = opts.missingSections
+    ? {}
+    : {
+        opening: { id: "opening" },
+        hand: { id: "hand" },
+        work: { id: "work" }
+      };
+  const matchMedia = (query) => {
+    const q = String(query);
+    let matches = false;
+    if (q.indexOf("max-width") >= 0) matches = state.width <= 700;
+    if (q.indexOf("prefers-reduced-motion") >= 0) matches = state.reduced;
+    return {
+      matches,
+      addEventListener() {},
+      addListener() {},
+      removeEventListener() {},
+      removeListener() {}
+    };
+  };
+  global.window = {
+    matchMedia,
+    addEventListener() {},
+    removeEventListener() {},
+    scrollY: 0,
+    pageYOffset: 0,
+    innerHeight: 812,
+    scrollTo() {},
+    __ranaQuietModeActive: state.quiet ? () => true : undefined
+  };
+  global.document = {
+    documentElement: root,
+    body,
+    getElementById: (id) => sections[id] || null,
+    addEventListener() {},
+    removeEventListener() {},
+    hidden: false
+  };
+  global.window.document = global.document;
+  global.location = { search: state.quiet ? "?motion=quiet" : "" };
+  return { root, body, state };
+}
+
+function uninstallHomepageHarness() {
+  try {
+    settle.detach();
+  } catch (err) {}
+  delete global.window;
+  delete global.document;
+  delete global.location;
+}
+
+function expectTouchAction(root, body, rootValue, bodyValue, msg) {
+  if (root.style.touchAction !== rootValue || body.style.touchAction !== bodyValue) {
+    fail(
+      msg +
+        " (got root=" +
+        JSON.stringify(root.style.touchAction) +
+        " body=" +
+        JSON.stringify(body.style.touchAction) +
+        ", want root=" +
+        JSON.stringify(rootValue) +
+        " body=" +
+        JSON.stringify(bodyValue) +
+        ")"
+    );
+  }
+}
+
+{
+  const priorPairs = [
+    { root: "", body: "" },
+    { root: "auto", body: "manipulation" },
+    { root: "manipulation", body: "pan-y" },
+    { root: "pan-y", body: "none" },
+    { root: "none", body: "pan-x pinch-zoom" },
+    { root: "pan-x pinch-zoom", body: "" }
+  ];
+  priorPairs.forEach((prior) => {
+    const { root, body } = installHomepageHarness({
+      width: 375,
+      rootTouchAction: prior.root,
+      bodyTouchAction: prior.body,
+      rootOverflow: "",
+      bodyOverflow: ""
+    });
+    settle.attach();
+    expectTouchAction(
+      root,
+      body,
+      TOUCH_ACTION_POLICY,
+      TOUCH_ACTION_POLICY,
+      "attach must apply pan-x pinch-zoom to both root and body (prior " +
+        JSON.stringify(prior) +
+        ")"
+    );
+    if (root.style.overflow !== "" || body.style.overflow !== "") {
+      fail("attach must not leave overflow locked as a standing state");
+    }
+    settle.attach();
+    expectTouchAction(
+      root,
+      body,
+      TOUCH_ACTION_POLICY,
+      TOUCH_ACTION_POLICY,
+      "a second attach must not change the already-applied policy"
+    );
+    settle.detach();
+    expectTouchAction(
+      root,
+      body,
+      prior.root,
+      prior.body,
+      "detach must restore the exact prior inline touch-action values"
+    );
+    settle.detach();
+    expectTouchAction(
+      root,
+      body,
+      prior.root,
+      prior.body,
+      "a second detach must not invent or clear restored touch-action values"
+    );
+    uninstallHomepageHarness();
+  });
+}
+
+{
+  const refused = [
+    { width: 701, quiet: false, reduced: false, label: "desktop above 700px" },
+    { width: 1024, quiet: false, reduced: false, label: "desktop 1024px" },
+    { width: 375, quiet: true, reduced: false, label: "quiet mode" },
+    { width: 375, quiet: false, reduced: true, label: "prefers-reduced-motion" },
+    { width: 320, quiet: true, reduced: true, label: "quiet + reduced-motion" }
+  ];
+  refused.forEach((item) => {
+    const { root, body } = installHomepageHarness({
+      width: item.width,
+      quiet: item.quiet,
+      reduced: item.reduced,
+      rootTouchAction: "manipulation",
+      bodyTouchAction: "auto"
+    });
+    settle.attach();
+    expectTouchAction(
+      root,
+      body,
+      "manipulation",
+      "auto",
+      item.label + " must not attach the controller or alter touch-action"
+    );
+    settle.detach();
+    expectTouchAction(
+      root,
+      body,
+      "manipulation",
+      "auto",
+      item.label + " detach must not invent a touch-action restore when attach never owned the style"
+    );
+    uninstallHomepageHarness();
+  });
+}
+
+{
+  const { root, body } = installHomepageHarness({
+    width: 375,
+    missingSections: true,
+    rootTouchAction: "auto",
+    bodyTouchAction: "manipulation"
+  });
+  settle.attach();
+  expectTouchAction(
+    root,
+    body,
+    "auto",
+    "manipulation",
+    "a non-homepage document must not receive the touch-action policy"
+  );
+  uninstallHomepageHarness();
+}
+
+{
+  const { root, body, state } = installHomepageHarness({
+    width: 375,
+    rootTouchAction: "manipulation",
+    bodyTouchAction: "pan-y"
+  });
+  settle.attach();
+  expectTouchAction(root, body, TOUCH_ACTION_POLICY, TOUCH_ACTION_POLICY, "mobile normal-motion attach applies the policy");
+  state.width = 800;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    "manipulation",
+    "pan-y",
+    "crossing above 700px must restore the exact prior inline touch-action values"
+  );
+  state.width = 375;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "returning to the mobile normal-motion homepage must re-apply the policy"
+  );
+  state.reduced = true;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    "manipulation",
+    "pan-y",
+    "crossing to prefers-reduced-motion must restore the exact prior inline touch-action values"
+  );
+  state.reduced = false;
+  state.quiet = true;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    "manipulation",
+    "pan-y",
+    "quiet mode after a restore must not re-apply the touch-action policy"
+  );
+  state.quiet = false;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "leaving quiet for mobile normal-motion must apply the policy again"
+  );
+  uninstallHomepageHarness();
+}
+
 console.log(
-  "PASS: mobile one-adjacent-beat touch lock (non-passive preventDefault; completed-net lift; second-contact retains origin; quiet/reduced native; ±1 rest helper; reachable invert; no CSS scroll-snap)"
+  "PASS: mobile one-adjacent-beat touch lock (document pan-x pinch-zoom while attached; completed-net lift; second-contact retains origin; quiet/reduced/desktop restore; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );
