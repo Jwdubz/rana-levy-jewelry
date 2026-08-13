@@ -19,11 +19,13 @@
  * - attached controller locks body overflow-y so native vertical overflow is unavailable
  * - programmatic settle still moves the document while that body lock is active
  * - detach restores the exact prior inline touch-action and overflow values
- * - quiet, reduced-motion, and desktop never leave that policy applied
+ * - quiet mode and desktop never leave that policy applied
+ * - prefers-reduced-motion must still attach, lock body overflow, and own
+ *   one-gesture adjacency; it may refuse idle settle animation only
  * - touchmove is non-passive; the vertical path calls preventDefault()
  * - completed net motion, not the first-axis latch, owns the lift
  * - a second contact retains the origin and cannot escape more than ±1 rest
- * - quiet mode and prefers-reduced-motion cannot intercept touch
+ * - quiet mode cannot intercept touch; reduced-motion still must
  * - destinations invert OPENING_SPAN final rest, BEAT_DWELL plateaus, terminal
  * - runtime rests/targets are reachable whole CSS pixels (operational ranges)
  * - an exported adjacent-destination helper cannot emit more than ±1 rest
@@ -136,7 +138,8 @@ if (!/armed = false/.test(attachFn)) {
   fail("attach must leave settle unarmed until a real user gesture");
 }
 
-// Quiet + reduced-motion are explicit no-animate gates.
+// Quiet is an attach-killing native gate. Reduced-motion may refuse idle
+// settle animation but must not detach or refuse one-gesture ownership.
 if (!/function\s+quietModeActive\s*\(/.test(helper)) {
   fail("helper must honor explicit quiet mode");
 }
@@ -150,10 +153,22 @@ if (!/quietModeActive\(\)\s*\|\|\s*prefersReducedMotion\(\)/.test(maybeFn)) {
   fail("maybeSettle must refuse quiet mode and reduced-motion before scrolling");
 }
 
+const captureFn = extractFn(helper, "shouldCaptureTouch");
+if (!captureFn) fail("could not isolate shouldCaptureTouch");
+if (!/live\(\)/.test(captureFn) || !/quietModeActive\(\)/.test(captureFn)) {
+  fail("shouldCaptureTouch must still require a live mobile homepage and refuse quiet mode");
+}
+if (/prefersReducedMotion\(\)/.test(captureFn)) {
+  fail("shouldCaptureTouch must not refuse prefers-reduced-motion; reduce must not disable adjacency ownership");
+}
+
 const bpFn = extractFn(helper, "onBreakpointChange");
 if (!bpFn) fail("could not isolate onBreakpointChange");
-if (!/quietModeActive\(\)/.test(bpFn) || !/prefersReducedMotion\(\)/.test(bpFn)) {
-  fail("quiet mode and reduced-motion must prevent touch intercept attach, not only post-momentum settle");
+if (!/quietModeActive\(\)/.test(bpFn)) {
+  fail("quiet mode must prevent touch intercept attach, not only post-momentum settle");
+}
+if (/prefersReducedMotion\(\)/.test(bpFn)) {
+  fail("onBreakpointChange must not detach or refuse attach for prefers-reduced-motion");
 }
 if (!/isMobileViewport\(\)/.test(bpFn)) {
   fail("desktop above 700px must not attach the touch controller or alter touch-action");
@@ -179,8 +194,11 @@ const listenAt = attachFn.indexOf("addEventListener");
 if (applyAt < 0 || listenAt < 0 || applyAt > listenAt) {
   fail("touch-action policy must be applied before listeners so it is in effect before any visitor gesture");
 }
-if (!/isMobileViewport\(\)/.test(attachFn) || !/quietModeActive\(\)/.test(attachFn) || !/prefersReducedMotion\(\)/.test(attachFn)) {
-  fail("attach must refuse desktop, quiet, and reduced-motion so they never alter touch-action");
+if (!/isMobileViewport\(\)/.test(attachFn) || !/quietModeActive\(\)/.test(attachFn)) {
+  fail("attach must refuse desktop and quiet so they never alter touch-action");
+}
+if (/prefersReducedMotion\(\)/.test(attachFn)) {
+  fail("attach must not refuse prefers-reduced-motion; OS reduce must not disable adjacency ownership");
 }
 if (!/TOUCH_ACTION_POLICY\s*=\s*"pan-x pinch-zoom"/.test(helper)) {
   fail("TOUCH_ACTION_POLICY must be exactly pan-x pinch-zoom");
@@ -283,7 +301,7 @@ if (!/preventDefault\s*\(/.test(touchMoveFn)) {
 const touchMoveGate = touchMoveFn.search(/shouldCaptureTouch\(|quietModeActive\(|prefersReducedMotion\(/);
 const touchMovePrevent = touchMoveFn.indexOf("preventDefault");
 if (touchMoveGate < 0 || touchMovePrevent < 0 || touchMoveGate > touchMovePrevent) {
-  fail("quiet and reduced-motion paths must refuse intercept before preventDefault");
+  fail("quiet paths must refuse intercept before preventDefault");
 }
 if (!/classifyTouchIntent|vertical/.test(touchMoveFn)) {
   fail("touchmove must distinguish vertical intent before locking native scroll");
@@ -291,8 +309,8 @@ if (!/classifyTouchIntent|vertical/.test(touchMoveFn)) {
 if (/preventDefault\s*\(/.test(touchStartFn)) {
   fail("touchstart must not preventDefault; taps and links must stay native");
 }
-if (!/shouldCaptureTouch\(|quietModeActive\(|prefersReducedMotion\(/.test(touchStartFn)) {
-  fail("touchstart must not snapshot or lock when quiet or reduced-motion");
+if (!/shouldCaptureTouch\(|quietModeActive\(/.test(touchStartFn)) {
+  fail("touchstart must not snapshot or lock when quiet");
 }
 
 // No new visitor-facing chrome.
@@ -981,7 +999,10 @@ if (typeof settle.attach !== "function" || typeof settle.detach !== "function") 
   fail("helper must export attach and detach so the touch-action policy is executable");
 }
 if (typeof settle.onBreakpointChange !== "function") {
-  fail("helper must export onBreakpointChange so breakpoint and reduced-motion restore is executable");
+  fail("helper must export onBreakpointChange so breakpoint and quiet restore is executable");
+}
+if (typeof settle.boot !== "function") {
+  fail("helper must export boot so cold-start reduced-motion attach is executable");
 }
 
 if (/axis\s*!==\s*["']vertical["']/.test(touchEndFn) || /axis\s*===\s*["']vertical["']/.test(touchEndFn)) {
@@ -1500,8 +1521,8 @@ function expectOverflowRestore(root, body, prior, msg) {
   const refused = [
     { width: 701, quiet: false, reduced: false, label: "desktop above 700px" },
     { width: 1024, quiet: false, reduced: false, label: "desktop 1024px" },
+    { width: 701, quiet: false, reduced: true, label: "desktop + prefers-reduced-motion" },
     { width: 375, quiet: true, reduced: false, label: "quiet mode" },
-    { width: 375, quiet: false, reduced: true, label: "prefers-reduced-motion" },
     { width: 320, quiet: true, reduced: true, label: "quiet + reduced-motion" }
   ];
   refused.forEach((item) => {
@@ -1604,17 +1625,36 @@ function expectOverflowRestore(root, body, prior, msg) {
   expectTouchAction(
     root,
     body,
-    "manipulation",
-    "pan-y",
-    "crossing to prefers-reduced-motion must restore the exact prior inline touch-action values"
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "crossing to prefers-reduced-motion must retain the attached touch-action policy"
   );
-  expectOverflowRestore(
+  expectRootOverflowUnchanged(
+    root,
+    prior,
+    "crossing to prefers-reduced-motion must not mutate root overflow or detach"
+  );
+  expectVerticalOverflowLock(
     root,
     body,
-    prior,
-    "crossing to prefers-reduced-motion must restore the exact prior inline overflow values"
+    true,
+    "crossing to prefers-reduced-motion must retain/reapply the body-only vertical lock"
   );
   state.reduced = false;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "leaving prefers-reduced-motion for mobile normal mode must remain attached"
+  );
+  expectVerticalOverflowLock(
+    root,
+    body,
+    true,
+    "leaving prefers-reduced-motion for mobile normal mode must keep the body lock"
+  );
   state.quiet = true;
   settle.onBreakpointChange();
   expectTouchAction(
@@ -1948,6 +1988,201 @@ if (
   uninstallHomepageHarness();
 }
 
+function emitVerticalSwipe(emit, startY, endY) {
+  emit("window", "touchstart", {
+    touches: [{ identifier: 1, clientX: 180, clientY: startY }],
+    changedTouches: [{ identifier: 1, clientX: 180, clientY: startY }],
+    cancelable: true,
+    preventDefault() {
+      this.prevented = true;
+    }
+  });
+  emit("window", "touchmove", {
+    touches: [{ identifier: 1, clientX: 176, clientY: endY }],
+    changedTouches: [{ identifier: 1, clientX: 176, clientY: endY }],
+    cancelable: true,
+    preventDefault() {
+      this.prevented = true;
+    }
+  });
+  emit("window", "touchend", {
+    touches: [],
+    changedTouches: [{ identifier: 1, clientX: 176, clientY: endY }],
+    cancelable: true,
+    preventDefault() {
+      this.prevented = true;
+    }
+  });
+}
+
+{
+  const prior = {
+    rootOverflow: "",
+    rootOverflowX: "",
+    rootOverflowY: "",
+    bodyOverflow: "",
+    bodyOverflowX: "",
+    bodyOverflowY: ""
+  };
+  const { root, body, emit } = installHomepageHarness({
+    width: 375,
+    innerHeight: 700,
+    geometry: true,
+    reduced: true,
+    rootTouchAction: "",
+    bodyTouchAction: ""
+  });
+  settle.boot();
+  expectTouchAction(
+    root,
+    body,
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "cold boot at <=700 with reduce=true must attach and apply pan-x pinch-zoom"
+  );
+  expectRootOverflowUnchanged(
+    root,
+    prior,
+    "cold boot at <=700 with reduce=true must leave root overflow untouched"
+  );
+  expectVerticalOverflowLock(
+    root,
+    body,
+    true,
+    "cold boot at <=700 with reduce=true must apply the body-only vertical lock"
+  );
+  const rests = settle.collectRests();
+  if (!rests || rests.length < 3) {
+    fail("cold boot at <=700 with reduce=true must expose authored rests (got " + JSON.stringify(rests) + ")");
+  }
+  const last = rests[rests.length - 1];
+  window.scrollTo(0, rests[0].start);
+  emitVerticalSwipe(emit, 620, 40);
+  const wantForward = settle.chooseAdjacentDestination(0, -580, rests);
+  if (!wantForward || wantForward.index !== 1 || wantForward.y == null) {
+    fail("reduce=true forward swipe must have an adjacent composed destination for rest 1");
+  }
+  if (window.scrollY !== wantForward.y) {
+    fail(
+      "a long vertical gesture in reduce=true must resolve exactly one adjacent rest forward (got y=" +
+        window.scrollY +
+        ", want " +
+        wantForward.y +
+        "; last rest is " +
+        last.start +
+        ")"
+    );
+  }
+  if (Math.abs(window.scrollY - last.start) < 1) {
+    fail("a long vertical gesture in reduce=true must not coast to the terminal rest");
+  }
+  const forwardY = window.scrollY;
+  emit("window", "scroll", {});
+  if (window.scrollY !== forwardY) {
+    fail("after dwell, reduce=true must stay at the adjacent forward rest (got y=" + window.scrollY + ", want " + forwardY + ")");
+  }
+  emitVerticalSwipe(emit, 40, 620);
+  const wantReverse = settle.chooseAdjacentDestination(1, 580, rests);
+  if (!wantReverse || wantReverse.index !== 0 || wantReverse.y == null) {
+    fail("reduce=true reverse swipe must have an adjacent composed destination for rest 0");
+  }
+  if (window.scrollY !== wantReverse.y) {
+    fail(
+      "a long vertical gesture in reduce=true must resolve exactly one adjacent rest reverse (got y=" +
+        window.scrollY +
+        ", want " +
+        wantReverse.y +
+        ")"
+    );
+  }
+  const reverseY = window.scrollY;
+  emit("window", "scroll", {});
+  if (window.scrollY !== reverseY) {
+    fail("after dwell, reduce=true must stay at the adjacent reverse rest (got y=" + window.scrollY + ", want " + reverseY + ")");
+  }
+  expectRootOverflowUnchanged(
+    root,
+    prior,
+    "reduce=true gesture ownership must not invent a root overflow lock"
+  );
+  expectVerticalOverflowLock(
+    root,
+    body,
+    true,
+    "reduce=true gesture ownership must keep the body-only vertical lock"
+  );
+  uninstallHomepageHarness();
+}
+
+{
+  const prior = {
+    rootOverflow: "",
+    bodyOverflow: "",
+    rootOverflowX: "",
+    bodyOverflowX: "",
+    rootOverflowY: "auto",
+    bodyOverflowY: "scroll"
+  };
+  const { root, body, state } = installHomepageHarness({
+    width: 375,
+    reduced: false,
+    rootTouchAction: "manipulation",
+    bodyTouchAction: "pan-y",
+    rootOverflowY: "auto",
+    bodyOverflowY: "scroll"
+  });
+  settle.attach();
+  expectVerticalOverflowLock(root, body, true, "normal-mode attach must lock before a reduce toggle");
+  state.reduced = true;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "toggling normal -> reduce while attached must not detach touch-action"
+  );
+  expectRootOverflowUnchanged(root, prior, "toggling normal -> reduce must leave root overflow untouched");
+  expectVerticalOverflowLock(
+    root,
+    body,
+    true,
+    "toggling normal -> reduce while attached must retain/reapply the body-only lock"
+  );
+  uninstallHomepageHarness();
+}
+
+{
+  const prior = {
+    rootOverflow: "",
+    bodyOverflow: "",
+    rootOverflowX: "",
+    bodyOverflowX: "",
+    rootOverflowY: "",
+    bodyOverflowY: ""
+  };
+  const { root, body, state } = installHomepageHarness({
+    width: 375,
+    reduced: true,
+    rootTouchAction: "",
+    bodyTouchAction: ""
+  });
+  settle.boot();
+  expectVerticalOverflowLock(root, body, true, "reduce=true cold attach must own the lock before toggling normal");
+  state.reduced = false;
+  settle.onBreakpointChange();
+  expectTouchAction(
+    root,
+    body,
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "toggling reduce -> normal must remain attached"
+  );
+  expectRootOverflowUnchanged(root, prior, "toggling reduce -> normal must leave root overflow untouched");
+  expectVerticalOverflowLock(root, body, true, "toggling reduce -> normal must remain locked");
+  uninstallHomepageHarness();
+}
+
 console.log(
-  "PASS: mobile one-adjacent-beat touch lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; quiet/reduced/desktop restore; ±1 rest helper; reachable invert; no CSS scroll-snap)"
+  "PASS: mobile one-adjacent-beat touch lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; reduce keeps adjacency ownership; quiet/desktop restore; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );

@@ -18,8 +18,9 @@
  * mathematics, then snapped to reachable whole CSS pixels. Adjacent
  * gesture landings aim at the composed plateau center so the damped
  * visual clock stays inside the hold, not on a black leading edge.
- * Quiet and reduced-motion stay native. Desktop stays unbound. Not
- * CSS scroll-snap.
+ * Quiet stays native. Reduced-motion may quiet idle settle animation
+ * but never disables one-gesture adjacency ownership. Desktop stays
+ * unbound. Not CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
@@ -383,7 +384,7 @@
   }
 
   function shouldCaptureTouch() {
-    return live() && !quietModeActive() && !prefersReducedMotion();
+    return live() && !quietModeActive();
   }
 
   function isNativeVerticalDocumentScrollLocked() {
@@ -904,7 +905,7 @@
 
   function attach() {
     if (bound) return;
-    if (!isMobileViewport() || quietModeActive() || prefersReducedMotion()) return;
+    if (!isMobileViewport() || quietModeActive()) return;
     opening = document.getElementById("opening");
     hand = document.getElementById("hand");
     work = document.getElementById("work");
@@ -971,7 +972,7 @@
   }
 
   function onBreakpointChange() {
-    if (isMobileViewport() && !quietModeActive() && !prefersReducedMotion()) attach();
+    if (isMobileViewport() && !quietModeActive()) attach();
     else detach();
   }
 
