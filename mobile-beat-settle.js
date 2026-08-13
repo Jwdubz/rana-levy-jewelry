@@ -4,11 +4,15 @@
  * rest N may finish only at N-1, N, or N+1. Native touch momentum does
  * not own passage distance. The first-axis latch may hold native scroll
  * during contact; completed net motion owns the lift. While attached,
- * html and body keep touch-action: pan-x pinch-zoom and a standing
- * overflow-y:hidden vertical lock so the document is not a native
- * vertical scroller; only controller scrollTo may move the passage.
- * Detach restores the exact prior inline touch-action and overflow
- * values. A second contact interrupts ownership but keeps the origin.
+ * html and body keep touch-action: pan-x pinch-zoom. Body keeps a
+ * standing overflow-y:hidden vertical lock so the document is not a
+ * native vertical scroller (when root overflow-y stays visible, the
+ * viewport takes body's overflow-y). Root overflow is left exactly as
+ * authored so sticky scenes keep the viewport containing block; root
+ * overflow-y hidden|clip unpins them. Only controller scrollTo may
+ * move the passage. Detach restores the exact prior inline
+ * touch-action and overflow values. A second contact interrupts
+ * ownership but keeps the origin.
  * Destinations are the Opening terminal hold, BEAT_DWELL Hand/Work
  * plateaus, and the Work terminal — inverted from the existing remap
  * mathematics, then snapped to reachable whole CSS pixels. Adjacent
@@ -310,7 +314,8 @@
     TOUCH_ACTION_POLICY: TOUCH_ACTION_POLICY,
     VERTICAL_OVERFLOW_LOCK: VERTICAL_OVERFLOW_LOCK,
     nativeVerticalOverflowLocked: nativeVerticalOverflowLocked,
-    isNativeVerticalDocumentScrollLocked: isNativeVerticalDocumentScrollLocked
+    isNativeVerticalDocumentScrollLocked: isNativeVerticalDocumentScrollLocked,
+    rootOverflowPreservesStickyContainingBlock: rootOverflowPreservesStickyContainingBlock
   };
 
   var authoredSvhPxCache = 0;
@@ -383,12 +388,14 @@
 
   function isNativeVerticalDocumentScrollLocked() {
     if (!documentLockOwned) return false;
-    var root = typeof document !== "undefined" ? document.documentElement : null;
     var body = typeof document !== "undefined" ? document.body : null;
-    return (
-      nativeVerticalOverflowLocked(root && root.style) &&
-      nativeVerticalOverflowLocked(body && body.style)
-    );
+    return nativeVerticalOverflowLocked(body && body.style);
+  }
+
+  // Root overflow-y hidden|clip makes html the sticky scrollport and
+  // leaves composed scenes at their static position.
+  function rootOverflowPreservesStickyContainingBlock(style) {
+    return !nativeVerticalOverflowLocked(style);
   }
 
   function snapshotInlineOverflow(style) {
@@ -425,7 +432,6 @@
     priorBodyOverflowY = bodyOverflow.overflowY;
     if (root && root.style) {
       root.style.touchAction = TOUCH_ACTION_POLICY;
-      root.style.overflowY = VERTICAL_OVERFLOW_LOCK;
     }
     if (body && body.style) {
       body.style.touchAction = TOUCH_ACTION_POLICY;

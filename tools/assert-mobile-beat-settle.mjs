@@ -4,15 +4,20 @@
  *
  * Locks the owner correction that native touch momentum must never own
  * passage distance. While the controller is attached, html and body use
- * touch-action: pan-x pinch-zoom and a standing overflow-y:hidden lock so
- * the document is not a native vertical scroller. Programmatic scrollTo
- * still authors beat movement. A continuous single-finger vertical
- * gesture that begins at authored rest N may finish only at N-1, N, or
- * N+1:
+ * touch-action: pan-x pinch-zoom. Body keeps a standing overflow-y:hidden
+ * lock so the document is not a native vertical scroller (HTML overflow
+ * propagation: when root overflow-y stays visible, the viewport takes
+ * body's overflow-y). Root overflow stays exactly its prior value so
+ * sticky scenes keep the viewport containing block — root overflow-y
+ * hidden|clip unpins them (1babfa5 probe: hand-0 y=2126, #handScene
+ * top=-446 / black half-height viewport). Programmatic scrollTo still
+ * authors beat movement. A continuous single-finger vertical gesture
+ * that begins at authored rest N may finish only at N-1, N, or N+1:
  * - helper is homepage-only, gated to max-width 700px
  * - attached controller applies touch-action: pan-x pinch-zoom on html+body
- * - attached controller leaves native vertical document overflow unavailable
- * - programmatic settle still moves the document while that lock is active
+ * - attached controller must not mutate root overflow/overflowY
+ * - attached controller locks body overflow-y so native vertical overflow is unavailable
+ * - programmatic settle still moves the document while that body lock is active
  * - detach restores the exact prior inline touch-action and overflow values
  * - quiet, reduced-motion, and desktop never leave that policy applied
  * - touchmove is non-passive; the vertical path calls preventDefault()
@@ -211,6 +216,47 @@ if (/overflow\s*=\s*["']hidden["']/.test(attachFn)) {
 }
 if (/preventDefault\s*\(/.test(attachFn) || /preventDefault\s*\(/.test(applyTouchFn)) {
   fail("touch-action policy must not preventDefault on attach");
+}
+
+function extractIfStyleBlock(src, name) {
+  const re = new RegExp("if\\s*\\(\\s*" + name + "\\s*&&\\s*" + name + "\\.style\\s*\\)\\s*\\{");
+  const match = re.exec(src);
+  if (!match) return "";
+  let depth = 0;
+  const start = src.indexOf("{", match.index);
+  if (start < 0) return "";
+  for (let j = start; j < src.length; j++) {
+    if (src[j] === "{") depth++;
+    else if (src[j] === "}") {
+      depth--;
+      if (depth === 0) return src.slice(start, j + 1);
+    }
+  }
+  return "";
+}
+
+const applyRootStyleBlock = extractIfStyleBlock(applyTouchFn, "root");
+const applyBodyStyleBlock = extractIfStyleBlock(applyTouchFn, "body");
+if (!applyRootStyleBlock) fail("apply must still target documentElement for touch-action");
+if (!applyBodyStyleBlock) fail("apply must still target body for touch-action and the vertical lock");
+if (/overflowY\s*=/.test(applyRootStyleBlock) || /overflow\s*=/.test(applyRootStyleBlock)) {
+  fail(
+    "apply must not assign overflow or overflowY on documentElement; root overflow-y hidden|clip unpins sticky full-viewport scenes (1babfa5 probe: hand-0 y=2126, #handScene top=-446)"
+  );
+}
+if (!/style\.overflowY\s*=\s*(?:VERTICAL_OVERFLOW_LOCK|["']hidden["']|["']clip["'])/.test(applyBodyStyleBlock)) {
+  fail("apply must assign overflowY hidden|clip on body as the standing native vertical lock");
+}
+if ((applyTouchFn.match(/style\.overflowY\s*=\s*(?:VERTICAL_OVERFLOW_LOCK|["']hidden["']|["']clip["'])/g) || []).length !== 1) {
+  fail("overflowY lock must be assigned once, on body only");
+}
+const lockPredFn = extractFn(helper, "isNativeVerticalDocumentScrollLocked");
+if (!lockPredFn) fail("could not isolate isNativeVerticalDocumentScrollLocked");
+if (/nativeVerticalOverflowLocked\(\s*root/.test(lockPredFn)) {
+  fail("isNativeVerticalDocumentScrollLocked must not require root overflow; root hidden|clip unpins sticky scenes");
+}
+if (!/nativeVerticalOverflowLocked\(\s*body/.test(lockPredFn)) {
+  fail("isNativeVerticalDocumentScrollLocked must follow the body overflow lock");
 }
 
 const touchStartFn = extractFn(helper, "onTouchStart");
@@ -919,6 +965,18 @@ if (typeof settle.nativeVerticalOverflowLocked === "function") {
     fail("nativeVerticalOverflowLocked must treat overflowY auto as native-momentum-available");
   }
 }
+if (typeof settle.rootOverflowPreservesStickyContainingBlock !== "function") {
+  fail("helper must export rootOverflowPreservesStickyContainingBlock so root overflow ownership is executable");
+}
+if (settle.rootOverflowPreservesStickyContainingBlock({ overflowY: "" }) !== true) {
+  fail("empty root overflowY must preserve the sticky containing relationship");
+}
+if (settle.rootOverflowPreservesStickyContainingBlock({ overflowY: "hidden" }) !== false) {
+  fail("root overflowY hidden must not preserve the sticky containing relationship");
+}
+if (settle.rootOverflowPreservesStickyContainingBlock({ overflowY: "clip" }) !== false) {
+  fail("root overflowY clip must not preserve the sticky containing relationship");
+}
 if (typeof settle.attach !== "function" || typeof settle.detach !== "function") {
   fail("helper must export attach and detach so the touch-action policy is executable");
 }
@@ -1281,14 +1339,10 @@ function expectVerticalOverflowLock(root, body, locked, msg) {
   const rootAvailable = inlineVerticalOverflowAvailable(root.style);
   const bodyAvailable = inlineVerticalOverflowAvailable(body.style);
   if (locked) {
-    if (rootAvailable || bodyAvailable) {
+    if (bodyAvailable) {
       fail(
         msg +
-          " — attached controller left native vertical document overflow available (root overflowY=" +
-          JSON.stringify(root.style.overflowY) +
-          " overflow=" +
-          JSON.stringify(root.style.overflow) +
-          " body overflowY=" +
+          " — attached controller left body native vertical overflow available (body overflowY=" +
           JSON.stringify(body.style.overflowY) +
           " overflow=" +
           JSON.stringify(body.style.overflow) +
@@ -1296,7 +1350,7 @@ function expectVerticalOverflowLock(root, body, locked, msg) {
       );
     }
     if (typeof settle.isNativeVerticalDocumentScrollLocked === "function" && !settle.isNativeVerticalDocumentScrollLocked()) {
-      fail(msg + " — isNativeVerticalDocumentScrollLocked() must be true while attached");
+      fail(msg + " — isNativeVerticalDocumentScrollLocked() must be true from the body lock while attached");
     }
   } else if (!rootAvailable || !bodyAvailable) {
     fail(
@@ -1308,6 +1362,28 @@ function expectVerticalOverflowLock(root, body, locked, msg) {
         ")"
     );
   }
+}
+
+function expectRootOverflowUnchanged(root, prior, msg) {
+  const want = {
+    overflow: prior.rootOverflow == null ? "" : prior.rootOverflow,
+    overflowX: prior.rootOverflowX == null ? "" : prior.rootOverflowX,
+    overflowY: prior.rootOverflowY == null ? "" : prior.rootOverflowY
+  };
+  ["overflow", "overflowX", "overflowY"].forEach((name) => {
+    if (root.style[name] !== want[name]) {
+      fail(
+        msg +
+          " — controller attach must not mutate root " +
+          name +
+          " (got " +
+          JSON.stringify(root.style[name]) +
+          ", want " +
+          JSON.stringify(want[name]) +
+          "; root overflow-y hidden|clip unpins sticky scenes)"
+      );
+    }
+  });
 }
 
 function expectOverflowRestore(root, body, prior, msg) {
@@ -1367,13 +1443,16 @@ function expectOverflowRestore(root, body, prior, msg) {
         JSON.stringify(prior) +
         ")"
     );
+    expectRootOverflowUnchanged(
+      root,
+      prior,
+      "attach must leave root overflow exactly as authored (prior " + JSON.stringify(prior) + ")"
+    );
     expectVerticalOverflowLock(
       root,
       body,
       true,
-      "attach must make native vertical document overflow unavailable (prior " +
-        JSON.stringify(prior) +
-        ")"
+      "attach must lock body native vertical overflow (prior " + JSON.stringify(prior) + ")"
     );
     if (root.style.overflow !== prior.rootOverflow || body.style.overflow !== prior.bodyOverflow) {
       fail("vertical lock must not clobber the overflow shorthand (prior " + JSON.stringify(prior) + ")");
@@ -1497,7 +1576,8 @@ function expectOverflowRestore(root, body, prior, msg) {
   };
   settle.attach();
   expectTouchAction(root, body, TOUCH_ACTION_POLICY, TOUCH_ACTION_POLICY, "mobile normal-motion attach applies the policy");
-  expectVerticalOverflowLock(root, body, true, "mobile normal-motion attach must lock native vertical document overflow");
+  expectRootOverflowUnchanged(root, prior, "mobile normal-motion attach must not mutate root overflow");
+  expectVerticalOverflowLock(root, body, true, "mobile normal-motion attach must lock body native vertical overflow");
   state.width = 800;
   settle.onBreakpointChange();
   expectTouchAction(
@@ -1517,7 +1597,8 @@ function expectOverflowRestore(root, body, prior, msg) {
     TOUCH_ACTION_POLICY,
     "returning to the mobile normal-motion homepage must re-apply the policy"
   );
-  expectVerticalOverflowLock(root, body, true, "returning to the mobile normal-motion homepage must re-lock vertical overflow");
+  expectRootOverflowUnchanged(root, prior, "returning to the mobile normal-motion homepage must not mutate root overflow");
+  expectVerticalOverflowLock(root, body, true, "returning to the mobile normal-motion homepage must re-lock body vertical overflow");
   state.reduced = true;
   settle.onBreakpointChange();
   expectTouchAction(
@@ -1553,18 +1634,32 @@ function expectOverflowRestore(root, body, prior, msg) {
     TOUCH_ACTION_POLICY,
     "leaving quiet for mobile normal-motion must apply the policy again"
   );
-  expectVerticalOverflowLock(root, body, true, "leaving quiet for mobile normal-motion must lock vertical overflow again");
+  expectRootOverflowUnchanged(root, prior, "leaving quiet for mobile normal-motion must not mutate root overflow");
+  expectVerticalOverflowLock(root, body, true, "leaving quiet for mobile normal-motion must lock body vertical overflow again");
   uninstallHomepageHarness();
 }
 
 {
   const { root, body } = installHomepageHarness({ width: 375 });
+  const programmaticPrior = {
+    rootOverflow: "",
+    bodyOverflow: "",
+    rootOverflowX: "",
+    bodyOverflowX: "",
+    rootOverflowY: "",
+    bodyOverflowY: ""
+  };
   settle.attach();
+  expectRootOverflowUnchanged(
+    root,
+    programmaticPrior,
+    "programmatic settle attach must not mutate root overflow"
+  );
   expectVerticalOverflowLock(
     root,
     body,
     true,
-    "programmatic settle must run while native vertical document overflow is locked"
+    "programmatic settle must run while body native vertical overflow is locked"
   );
   window.scrollTo(0, 1400);
   if (window.scrollY !== 1400) {
@@ -1600,11 +1695,16 @@ function expectOverflowRestore(root, body, prior, msg) {
     geometry: true
   });
   settle.attach();
+  expectRootOverflowUnchanged(
+    root,
+    { rootOverflow: "", rootOverflowX: "", rootOverflowY: "" },
+    "geometry homepage attach must not mutate root overflow"
+  );
   expectVerticalOverflowLock(
     root,
     body,
     true,
-    "geometry homepage attach must lock native vertical document overflow before any gesture"
+    "geometry homepage attach must lock body native vertical overflow before any gesture"
   );
   const rests = settle.collectRests();
   if (!rests || rests.length < 3) {
@@ -1667,17 +1767,20 @@ function expectOverflowRestore(root, body, prior, msg) {
   uninstallHomepageHarness();
 }
 
-if (!/style\.overflowY\s*=\s*(?:VERTICAL_OVERFLOW_LOCK|["']hidden["'])/.test(applyTouchFn)) {
-  fail("apply must assign overflowY hidden as the standing vertical lock");
+if (!/style\.overflowY\s*=\s*(?:VERTICAL_OVERFLOW_LOCK|["']hidden["']|["']clip["'])/.test(applyTouchFn)) {
+  fail("apply must assign overflowY hidden|clip as the standing body vertical lock");
 }
-if ((applyTouchFn.match(/style\.overflowY\s*=\s*(?:VERTICAL_OVERFLOW_LOCK|["']hidden["'])/g) || []).length < 2) {
-  fail("overflowY lock must be assigned on both documentElement and body");
+if ((applyTouchFn.match(/style\.overflowY\s*=\s*(?:VERTICAL_OVERFLOW_LOCK|["']hidden["']|["']clip["'])/g) || []).length !== 1) {
+  fail("overflowY lock must be assigned once, on body only");
 }
 if (!/overflowY/.test(applyTouchFn) || applyTouchFn.search(/overflowY/) > applyTouchFn.search(/style\.overflowY\s*=/)) {
-  fail("must snapshot prior inline overflowY before applying the vertical lock");
+  fail("must snapshot prior inline overflowY before applying the body vertical lock");
 }
 if (!/overflowY/.test(restoreTouchFn)) {
   fail("detach must restore the exact prior inline overflowY values");
+}
+if (!/documentElement/.test(restoreTouchFn) || !/\.body\b/.test(restoreTouchFn)) {
+  fail("detach must still restore root and body overflow snapshots even though only body is locked");
 }
 const stopFn = extractFn(helper, "stopNativeMomentum");
 if (!stopFn) fail("could not isolate stopNativeMomentum");
@@ -1688,6 +1791,163 @@ if (!/scrollTo\(/.test(stopFn)) {
   fail("stopNativeMomentum must still programmatically scroll while the standing lock is active");
 }
 
+// ——— Root overflow ownership + sticky containing-block compatibility ———
+// CSS Overflow 3 / CSS2.1 11.1.1: if the root's overflow-y is visible
+// (empty inline on this homepage), the viewport's used overflow-y is
+// taken from the body. Body overflow-y hidden|clip is therefore the
+// document native vertical scroller lock — Samsung Internet's document
+// momentum surface — without making html itself a scroll container.
+// CSS Positioned Layout: sticky is contained by the nearest ancestor
+// scroll container. Root overflow-y hidden|clip makes html that
+// scrollport and, in the 1babfa5 Chromium probe, leaves the scene at
+// its static position (hand-0 y=2126, #handScene top=-446, bottom=254).
+// Body hidden|clip with root untouched kept top=0, bottom=700.
+function effectiveInlineOverflowY(style) {
+  if (!style) return "";
+  if (style.overflowY) return style.overflowY;
+  if (!style.overflow) return "";
+  const parts = String(style.overflow).trim().split(/\s+/);
+  return parts.length > 1 ? parts[1] : parts[0];
+}
+
+function viewportNativeVerticalScrollAvailable(rootStyle, bodyStyle) {
+  const rootY = effectiveInlineOverflowY(rootStyle);
+  if (rootY === "hidden" || rootY === "clip") return false;
+  if (rootY === "auto" || rootY === "scroll") return true;
+  const bodyY = effectiveInlineOverflowY(bodyStyle);
+  if (bodyY === "hidden" || bodyY === "clip") return false;
+  return true;
+}
+
+function stickySceneViewportRect(scrollY, sectionDocumentTop, viewportHeight, rootStyle) {
+  const staticTop = sectionDocumentTop - scrollY;
+  const rootY = effectiveInlineOverflowY(rootStyle);
+  if (rootY === "hidden" || rootY === "clip") {
+    return { top: staticTop, bottom: staticTop + viewportHeight, height: viewportHeight, pinned: false };
+  }
+  return { top: 0, bottom: viewportHeight, height: viewportHeight, pinned: true };
+}
+
+const STICKY_PROBE = {
+  y: 2126,
+  viewport: 700,
+  handSectionTop: 1680,
+  broken: { top: -446, bottom: 254, height: 700 },
+  pinned: { top: 0, bottom: 700, height: 700 }
+};
+
+const brokenProbe = stickySceneViewportRect(
+  STICKY_PROBE.y,
+  STICKY_PROBE.handSectionTop,
+  STICKY_PROBE.viewport,
+  { overflowY: "hidden" }
+);
+if (
+  brokenProbe.top !== STICKY_PROBE.broken.top ||
+  brokenProbe.bottom !== STICKY_PROBE.broken.bottom ||
+  brokenProbe.pinned !== false
+) {
+  fail(
+    "root overflow-y hidden must encode the 1babfa5 unpinned sticky geometry (got " +
+      JSON.stringify(brokenProbe) +
+      ")"
+  );
+}
+const brokenClip = stickySceneViewportRect(
+  STICKY_PROBE.y,
+  STICKY_PROBE.handSectionTop,
+  STICKY_PROBE.viewport,
+  { overflowY: "clip" }
+);
+if (brokenClip.pinned !== false || brokenClip.top !== STICKY_PROBE.broken.top) {
+  fail("root overflow-y clip must be in the same sticky-breaking set as hidden");
+}
+const bodyOnlyPinned = stickySceneViewportRect(
+  STICKY_PROBE.y,
+  STICKY_PROBE.handSectionTop,
+  STICKY_PROBE.viewport,
+  { overflowY: "" }
+);
+if (
+  bodyOnlyPinned.top !== STICKY_PROBE.pinned.top ||
+  bodyOnlyPinned.bottom !== STICKY_PROBE.pinned.bottom ||
+  bodyOnlyPinned.pinned !== true
+) {
+  fail("untouched root overflow must keep the normal sticky viewport pin (top=0, bottom=700)");
+}
+
+{
+  const { root, body } = installHomepageHarness({ width: 360, innerHeight: 700, geometry: true });
+  settle.attach();
+  expectRootOverflowUnchanged(
+    root,
+    { rootOverflow: "", rootOverflowX: "", rootOverflowY: "" },
+    "sticky-geometry attach must not mutate root overflow/overflowY"
+  );
+  expectVerticalOverflowLock(
+    root,
+    body,
+    true,
+    "sticky-geometry attach must lock the body's native vertical overflow"
+  );
+  if (viewportNativeVerticalScrollAvailable(root.style, body.style)) {
+    fail(
+      "body overflow-y lock must make viewport native vertical scroll unavailable via HTML overflow propagation (root overflowY=" +
+        JSON.stringify(root.style.overflowY) +
+        " body overflowY=" +
+        JSON.stringify(body.style.overflowY) +
+        ")"
+    );
+  }
+  if (typeof settle.rootOverflowPreservesStickyContainingBlock === "function") {
+    if (settle.rootOverflowPreservesStickyContainingBlock(root.style) !== true) {
+      fail("attached root overflow must preserve the sticky containing relationship");
+    }
+    if (settle.rootOverflowPreservesStickyContainingBlock({ overflowY: "hidden" }) !== false) {
+      fail("rootOverflowPreservesStickyContainingBlock must reject overflowY hidden");
+    }
+    if (settle.rootOverflowPreservesStickyContainingBlock({ overflowY: "clip" }) !== false) {
+      fail("rootOverflowPreservesStickyContainingBlock must reject overflowY clip");
+    }
+  }
+  const liveRect = stickySceneViewportRect(
+    STICKY_PROBE.y,
+    STICKY_PROBE.handSectionTop,
+    STICKY_PROBE.viewport,
+    root.style
+  );
+  if (!liveRect.pinned || liveRect.top !== 0 || liveRect.bottom !== 700) {
+    fail(
+      "attached root overflow must leave the normal sticky containing relationship available (predicted handScene " +
+        JSON.stringify(liveRect) +
+        ", want top=0 bottom=700; 1babfa5 measured top=-446 bottom=254)"
+    );
+  }
+  window.scrollTo(0, STICKY_PROBE.y);
+  if (window.scrollY !== STICKY_PROBE.y) {
+    fail("programmatic scrollTo must still reach a composed rest while the body lock is active");
+  }
+  expectRootOverflowUnchanged(
+    root,
+    { rootOverflow: "", rootOverflowX: "", rootOverflowY: "" },
+    "programmatic scrollTo must not invent a root overflow lock"
+  );
+  expectVerticalOverflowLock(
+    root,
+    body,
+    true,
+    "programmatic scrollTo must keep the body native vertical lock"
+  );
+  settle.detach();
+  expectOverflowRestore(
+    root,
+    body,
+    { rootOverflow: "", bodyOverflow: "", rootOverflowX: "", bodyOverflowX: "", rootOverflowY: "", bodyOverflowY: "" },
+    "sticky-geometry detach must restore the exact prior inline overflow values"
+  );
+  uninstallHomepageHarness();
+}
+
 console.log(
-  "PASS: mobile one-adjacent-beat touch lock (standing overflow-y lock while attached; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; quiet/reduced/desktop restore; ±1 rest helper; reachable invert; no CSS scroll-snap)"
+  "PASS: mobile one-adjacent-beat touch lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; quiet/reduced/desktop restore; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );
