@@ -2,11 +2,13 @@
  *
  * One continuous single-finger vertical gesture that begins at authored
  * rest N may finish only at N-1, N, or N+1. Native touch momentum does
- * not own passage distance. Destinations are the Opening terminal hold,
- * BEAT_DWELL Hand/Work plateaus, and the Work terminal — inverted from
- * the existing remap mathematics, then snapped to reachable whole CSS
- * pixels. Quiet and reduced-motion stay native. Desktop stays unbound.
- * Not CSS scroll-snap.
+ * not own passage distance. The first-axis latch may hold native scroll
+ * during contact; completed net motion owns the lift. A second contact
+ * interrupts ownership but keeps the origin. Destinations are the
+ * Opening terminal hold, BEAT_DWELL Hand/Work plateaus, and the Work
+ * terminal — inverted from the existing remap mathematics, then snapped
+ * to reachable whole CSS pixels. Quiet and reduced-motion stay native.
+ * Desktop stays unbound. Not CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
@@ -202,6 +204,10 @@
     return "horizontal";
   }
 
+  function completedVerticalIntent(dx, dy, thresholdPx) {
+    return classifyTouchIntent(dx, dy, thresholdPx) === "vertical";
+  }
+
   // Pure adjacent-destination: finger deltaY > 0 is swipe down / reverse.
   // Never more than one rest away, regardless of swipe length.
   function chooseAdjacentDestination(originIndex, swipeDeltaY, rests, options) {
@@ -264,6 +270,7 @@
     operationalRests: operationalRests,
     restIndexForY: restIndexForY,
     classifyTouchIntent: classifyTouchIntent,
+    completedVerticalIntent: completedVerticalIntent,
     chooseBeatDestination: chooseBeatDestination,
     chooseAdjacentDestination: chooseAdjacentDestination,
     mergeRests: mergeRests,
@@ -483,6 +490,35 @@
     gesture = null;
   }
 
+  function matchingTouch(list, id) {
+    if (!list) return null;
+    var i;
+    var touch;
+    for (i = 0; i < list.length; i++) {
+      touch = list[i];
+      if (touch && touch.identifier === id) return touch;
+    }
+    return null;
+  }
+
+  function notePrimaryTouch(event, useChanged) {
+    if (!gesture || !event) return;
+    var touch = matchingTouch(event.touches, gesture.identifier);
+    if (!touch && useChanged) {
+      touch = matchingTouch(event.changedTouches, gesture.identifier);
+    }
+    if (touch) {
+      gesture.lastX = touch.clientX;
+      gesture.lastY = touch.clientY;
+    }
+  }
+
+  function interruptGesture() {
+    if (!gesture) return;
+    gesture.interrupted = true;
+    gesture.locked = false;
+  }
+
   function finishSettle() {
     settling = false;
     raf = 0;
@@ -559,7 +595,13 @@
     clearIdle();
     armed = false;
     fingerDown = true;
-    cancelGesture();
+    if (gesture) {
+      if (event && event.touches && event.touches.length > 1) {
+        interruptGesture();
+        return;
+      }
+      cancelGesture();
+    }
     if (!shouldCaptureTouch()) return;
     if (!event || !event.touches || event.touches.length !== 1) return;
     var touch = event.touches[0];
@@ -567,6 +609,7 @@
     var rests = collectRests();
     if (!rests.length) return;
     gesture = {
+      identifier: touch.identifier,
       startX: touch.clientX,
       startY: touch.clientY,
       lastX: touch.clientX,
@@ -574,7 +617,8 @@
       originY: y,
       originIndex: restIndexForY(y, rests),
       axis: null,
-      locked: false
+      locked: false,
+      interrupted: false
     };
   }
 
@@ -584,15 +628,14 @@
     fingerDown = true;
     clearIdle();
     if (!shouldCaptureTouch() || !gesture) return;
-    if (!event || !event.touches || event.touches.length !== 1) {
-      cancelGesture();
-      return;
+    if (!event || !event.touches || !event.touches.length) return;
+    if (event.touches.length !== 1) {
+      interruptGesture();
     }
-    var touch = event.touches[0];
-    var dx = touch.clientX - gesture.startX;
-    var dy = touch.clientY - gesture.startY;
-    gesture.lastX = touch.clientX;
-    gesture.lastY = touch.clientY;
+    notePrimaryTouch(event, false);
+    if (gesture.interrupted) return;
+    var dx = gesture.lastX - gesture.startX;
+    var dy = gesture.lastY - gesture.startY;
     if (gesture.axis !== "vertical" && gesture.axis !== "horizontal") {
       gesture.axis = classifyTouchIntent(dx, dy);
       if (gesture.axis === "vertical") {
@@ -608,20 +651,23 @@
 
   function onTouchEnd(event) {
     if (!live()) return;
-    fingerDown = false;
-    if (!gesture) return;
     if (event && event.touches && event.touches.length > 0) {
+      fingerDown = true;
+      interruptGesture();
+      notePrimaryTouch(event, true);
       cancelSettle();
       clearIdle();
-      cancelGesture();
       return;
     }
+    fingerDown = false;
+    if (!gesture) return;
+    notePrimaryTouch(event, true);
+    var dx = gesture.lastX - gesture.startX;
     var dy = gesture.lastY - gesture.startY;
-    var axis = gesture.axis;
     var originIndex = gesture.originIndex;
     var originY = gesture.originY;
     gesture = null;
-    if (axis !== "vertical" || !shouldCaptureTouch()) return;
+    if (!shouldCaptureTouch() || !completedVerticalIntent(dx, dy)) return;
     if (event && event.cancelable) event.preventDefault();
     stopNativeMomentum(originY);
     var dest = chooseAdjacentDestination(originIndex, dy, collectRests());

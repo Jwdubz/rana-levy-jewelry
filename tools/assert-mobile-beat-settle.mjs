@@ -7,6 +7,8 @@
  * begins at authored rest N may finish only at N-1, N, or N+1:
  * - helper is homepage-only, gated to max-width 700px
  * - touchmove is non-passive; the vertical path calls preventDefault()
+ * - completed net motion, not the first-axis latch, owns the lift
+ * - a second contact retains the origin and cannot escape more than ±1 rest
  * - quiet mode and prefers-reduced-motion cannot intercept touch
  * - destinations invert OPENING_SPAN final rest, BEAT_DWELL plateaus, terminal
  * - runtime rests/targets are reachable whole CSS pixels (operational ranges)
@@ -816,6 +818,184 @@ if (!/cancelGesture|gesture = null/.test(resizeFn) || !/cancelGesture|gesture = 
   fail("resize, pagehide, and navigation must drop gesture ownership without a queued movement");
 }
 
+// ——— Completed net motion owns the lift; the first-axis latch does not ———
+if (typeof settle.completedVerticalIntent !== "function") {
+  fail("helper must export completedVerticalIntent so lift authority is executable");
+}
+
+if (/axis\s*!==\s*["']vertical["']/.test(touchEndFn) || /axis\s*===\s*["']vertical["']/.test(touchEndFn)) {
+  fail("touchend must not treat the initial axis latch as the settle authority");
+}
+if (!/lastX\s*-\s*gesture\.startX/.test(touchEndFn) || !/lastY\s*-\s*gesture\.startY/.test(touchEndFn)) {
+  fail("touchend must compute net dx and dy from the retained start and last coordinates");
+}
+if (!/completedVerticalIntent\s*\(\s*dx\s*,\s*dy/.test(touchEndFn)) {
+  fail("touchend must classify the completed net motion, not the first delivered move");
+}
+if (!/originIndex/.test(touchEndFn) || !/stopNativeMomentum\(\s*originY\s*\)/.test(touchEndFn)) {
+  fail("before settling, touchend must restore the snapshotted origin and kill native momentum");
+}
+if (/chooseAdjacentDestination\([^)]*(?:currentScrollY|scrollY)/.test(touchEndFn)) {
+  fail("touchend must never derive the destination from the scrolled position");
+}
+
+function liftFromNet(origin, dx, dy) {
+  if (!settle.completedVerticalIntent(dx, dy)) {
+    return { index: origin, y: null, native: true };
+  }
+  const dest = settle.chooseAdjacentDestination(origin, dy, rests);
+  return { index: dest.index, y: dest.y, native: false };
+}
+
+function expectLift(origin, dx, dy, wantIndex, wantY, native, msg) {
+  const got = liftFromNet(origin, dx, dy);
+  if (got.native !== native || got.index !== wantIndex || got.y !== wantY) {
+    fail(
+      msg +
+        " (origin=" +
+        origin +
+        " dx=" +
+        dx +
+        " dy=" +
+        dy +
+        " got " +
+        JSON.stringify(got) +
+        ", want {index:" +
+        wantIndex +
+        ", y:" +
+        wantY +
+        ", native:" +
+        native +
+        "})"
+    );
+  }
+}
+
+// Observed Chromium escape: first delivered move (dx=20, dy=-3) latched
+// horizontal; completed motion was ~20px lateral and hundreds vertical.
+expectLift(
+  0,
+  20,
+  -670,
+  1,
+  1000,
+  false,
+  "horizontally latched + net-vertical completed motion must use the adjacent path"
+);
+expectLift(
+  0,
+  30,
+  -670,
+  1,
+  1000,
+  false,
+  "a 30px lateral lead with net-vertical completion must still take the adjacent path"
+);
+expectLift(
+  0,
+  45,
+  -670,
+  1,
+  1000,
+  false,
+  "a 45px lateral lead with net-vertical completion must still take the adjacent path"
+);
+expectLift(0, 80, -4, 0, null, true, "genuinely horizontal net motion must remain native and must not advance a beat");
+expectLift(0, 80, -30, 0, null, true, "horizontal-dominant completed motion must remain native");
+expectLift(2, 3, -3, 2, null, true, "a tap/below-threshold gesture must stay put");
+expectLift(2, threshold - 1, -(threshold - 1), 2, null, true, "below-threshold diagonal travel must stay put");
+
+expectLift(1, 20, -50, 2, 2000, false, "diagonal forward must use the same adjacent start as a straight swipe");
+expectLift(1, 20, 50, 0, 0, false, "diagonal reverse must use the same adjacent end as a straight swipe");
+expectLift(1, -20, -50, 2, 2000, false, "diagonal forward must be symmetric in lateral sign");
+expectLift(1, -20, 50, 0, 0, false, "diagonal reverse must be symmetric in lateral sign");
+expectLift(2, 20, 50, 1, 1400, false, "diagonal reverse from hand-0 must target opening-final's end");
+expectLift(2, 20, -50, 3, 3000, false, "diagonal forward from hand-0 must target hand-1 start");
+
+if (settle.completedVerticalIntent(20, -3, threshold) !== false) {
+  fail("the observed first delivered lead (20, -3) must remain a horizontal latch during contact");
+}
+if (settle.completedVerticalIntent(20, -670, threshold) !== true) {
+  fail("the observed completed diagonal (20, -670) must count as net vertical intent");
+}
+if (settle.classifyTouchIntent(20, -3, threshold) !== "horizontal") {
+  fail("early contact classification must still latch the 20px lead as horizontal");
+}
+
+const hugeCompleted = [-1e9, -10000, -640, 640, 10000, 1e9];
+for (let origin = 0; origin < rests.length; origin++) {
+  for (const dy of hugeCompleted) {
+    const got = liftFromNet(origin, 20, dy);
+    if (!got || Math.abs(got.index - origin) > 1) {
+      fail(
+        "arbitrarily large net vertical deltas must still produce only ±1 index (origin=" +
+          origin +
+          " dy=" +
+          dy +
+          " got " +
+          JSON.stringify(got) +
+          ")"
+      );
+    }
+    if (got.native) {
+      fail("qualifying net-vertical completion must not stay native (origin=" + origin + " dy=" + dy + ")");
+    }
+  }
+}
+
+// Second contact retains the origin; lift still cannot escape more than one rest.
+if (/cancelGesture/.test(touchMoveFn)) {
+  fail("a second contact on touchmove must not erase the origin record");
+}
+const interruptFn = extractFn(helper, "interruptGesture");
+if (!interruptFn || !/interrupted\s*=\s*true/.test(interruptFn) || !/locked\s*=\s*false/.test(interruptFn)) {
+  fail("interruptGesture must mark ownership interrupted and release the native lock");
+}
+if (!/interruptGesture/.test(touchStartFn) || !/interruptGesture/.test(touchMoveFn) || !/interruptGesture/.test(touchEndFn)) {
+  fail("a second contact must mark ownership interrupted without inventing pinch behavior");
+}
+const remainingContacts = touchEndFn.match(/touches\.length\s*>\s*0[\s\S]*?return;/);
+if (!remainingContacts) {
+  fail("touchend must keep a distinct remaining-contact branch");
+}
+if (/cancelGesture/.test(remainingContacts[0]) || /gesture\s*=\s*null/.test(remainingContacts[0])) {
+  fail("remaining contacts must retain the origin record through the final lift");
+}
+if (/startSettle/.test(remainingContacts[0])) {
+  fail("a mid-gesture second contact must not invent a settle or pinch destination");
+}
+if (/cancelGesture\(\);\s*if\s*\(\s*!shouldCaptureTouch/.test(touchStartFn.replace(/\s+/g, " "))) {
+  fail("touchstart must not erase the origin record before checking for a second contact");
+}
+
+expectLift(
+  0,
+  18,
+  -1e9,
+  1,
+  1000,
+  false,
+  "an interrupted primary whose net completed motion is vertical still advances exactly one rest"
+);
+expectLift(
+  3,
+  22,
+  1e9,
+  2,
+  2400,
+  false,
+  "an interrupted reverse primary still cannot escape more than one adjacent rest"
+);
+expectLift(
+  1,
+  90,
+  -8,
+  1,
+  null,
+  true,
+  "interrupted multi-touch whose net motion stays horizontal must remain native"
+);
+
 console.log(
-  "PASS: mobile one-adjacent-beat touch lock (non-passive preventDefault; quiet/reduced native; ±1 rest helper; reachable invert; no CSS scroll-snap)"
+  "PASS: mobile one-adjacent-beat touch lock (non-passive preventDefault; completed-net lift; second-contact retains origin; quiet/reduced native; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );
