@@ -4,14 +4,15 @@
  * rest N may finish only at N-1, N, or N+1. Native touch momentum does
  * not own passage distance. The first-axis latch may hold native scroll
  * during contact; completed net motion owns the lift. While attached,
- * html and body use touch-action: pan-x pinch-zoom so vertical page
- * panning never enters the compositor momentum pipeline; detach restores
- * the exact prior inline values. A second contact interrupts ownership
- * but keeps the origin. Destinations are the Opening terminal hold,
- * BEAT_DWELL Hand/Work plateaus, and the Work terminal — inverted from
- * the existing remap mathematics, then snapped to reachable whole CSS
- * pixels. Quiet and reduced-motion stay native. Desktop stays unbound.
- * Not CSS scroll-snap.
+ * html and body keep touch-action: pan-x pinch-zoom and a standing
+ * overflow-y:hidden vertical lock so the document is not a native
+ * vertical scroller; only controller scrollTo may move the passage.
+ * Detach restores the exact prior inline touch-action and overflow
+ * values. A second contact interrupts ownership but keeps the origin.
+ * Destinations are the Opening terminal hold, BEAT_DWELL Hand/Work
+ * plateaus, and the Work terminal — inverted from the existing remap
+ * mathematics, then snapped to reachable whole CSS pixels. Quiet and
+ * reduced-motion stay native. Desktop stays unbound. Not CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
@@ -33,6 +34,7 @@
   var OPENING_HOLD_KEEP = 0.88;
   var SWIPE_THRESHOLD_PX = 10;
   var TOUCH_ACTION_POLICY = "pan-x pinch-zoom";
+  var VERTICAL_OVERFLOW_LOCK = "hidden";
 
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
@@ -208,6 +210,21 @@
     return "horizontal";
   }
 
+  // True when an element's inline overflow cannot feed native vertical
+  // document momentum. Empty / visible / auto / scroll remain available.
+  function nativeVerticalOverflowLocked(style) {
+    if (!style) return false;
+    var y = style.overflowY;
+    if (y === "hidden" || y === "clip") return true;
+    var all = style.overflow;
+    if (!y && all) {
+      var parts = String(all).trim().split(/\s+/);
+      var axisY = parts.length > 1 ? parts[1] : parts[0];
+      if (axisY === "hidden" || axisY === "clip") return true;
+    }
+    return false;
+  }
+
   function completedVerticalIntent(dx, dy, thresholdPx) {
     return classifyTouchIntent(dx, dy, thresholdPx) === "vertical";
   }
@@ -279,7 +296,10 @@
     chooseAdjacentDestination: chooseAdjacentDestination,
     mergeRests: mergeRests,
     aimAtRest: aimAtRest,
-    TOUCH_ACTION_POLICY: TOUCH_ACTION_POLICY
+    TOUCH_ACTION_POLICY: TOUCH_ACTION_POLICY,
+    VERTICAL_OVERFLOW_LOCK: VERTICAL_OVERFLOW_LOCK,
+    nativeVerticalOverflowLocked: nativeVerticalOverflowLocked,
+    isNativeVerticalDocumentScrollLocked: isNativeVerticalDocumentScrollLocked
   };
 
   var authoredSvhPxCache = 0;
@@ -303,7 +323,13 @@
   var reduceQuery = null;
   var priorRootTouchAction = "";
   var priorBodyTouchAction = "";
-  var touchActionOwned = false;
+  var priorRootOverflow = "";
+  var priorRootOverflowX = "";
+  var priorRootOverflowY = "";
+  var priorBodyOverflow = "";
+  var priorBodyOverflowX = "";
+  var priorBodyOverflowY = "";
+  var documentLockOwned = false;
 
   function isMobileViewport() {
     try {
@@ -344,26 +370,88 @@
     return live() && !quietModeActive() && !prefersReducedMotion();
   }
 
-  function applyDocumentTouchAction() {
-    if (touchActionOwned) return;
+  function isNativeVerticalDocumentScrollLocked() {
+    if (!documentLockOwned) return false;
     var root = typeof document !== "undefined" ? document.documentElement : null;
     var body = typeof document !== "undefined" ? document.body : null;
+    return (
+      nativeVerticalOverflowLocked(root && root.style) &&
+      nativeVerticalOverflowLocked(body && body.style)
+    );
+  }
+
+  function snapshotInlineOverflow(style) {
+    if (!style) {
+      return { overflow: "", overflowX: "", overflowY: "" };
+    }
+    return {
+      overflow: style.overflow,
+      overflowX: style.overflowX,
+      overflowY: style.overflowY
+    };
+  }
+
+  function restoreInlineOverflow(style, prior) {
+    if (!style || !prior) return;
+    style.overflow = prior.overflow;
+    style.overflowX = prior.overflowX;
+    style.overflowY = prior.overflowY;
+  }
+
+  function applyDocumentTouchAction() {
+    if (documentLockOwned) return;
+    var root = typeof document !== "undefined" ? document.documentElement : null;
+    var body = typeof document !== "undefined" ? document.body : null;
+    var rootOverflow = snapshotInlineOverflow(root && root.style);
+    var bodyOverflow = snapshotInlineOverflow(body && body.style);
     priorRootTouchAction = root && root.style ? root.style.touchAction : "";
     priorBodyTouchAction = body && body.style ? body.style.touchAction : "";
-    if (root && root.style) root.style.touchAction = TOUCH_ACTION_POLICY;
-    if (body && body.style) body.style.touchAction = TOUCH_ACTION_POLICY;
-    touchActionOwned = true;
+    priorRootOverflow = rootOverflow.overflow;
+    priorRootOverflowX = rootOverflow.overflowX;
+    priorRootOverflowY = rootOverflow.overflowY;
+    priorBodyOverflow = bodyOverflow.overflow;
+    priorBodyOverflowX = bodyOverflow.overflowX;
+    priorBodyOverflowY = bodyOverflow.overflowY;
+    if (root && root.style) {
+      root.style.touchAction = TOUCH_ACTION_POLICY;
+      root.style.overflowY = VERTICAL_OVERFLOW_LOCK;
+    }
+    if (body && body.style) {
+      body.style.touchAction = TOUCH_ACTION_POLICY;
+      body.style.overflowY = VERTICAL_OVERFLOW_LOCK;
+    }
+    documentLockOwned = true;
   }
 
   function restoreDocumentTouchAction() {
-    if (!touchActionOwned) return;
+    if (!documentLockOwned) return;
     var root = typeof document !== "undefined" ? document.documentElement : null;
     var body = typeof document !== "undefined" ? document.body : null;
-    if (root && root.style) root.style.touchAction = priorRootTouchAction;
-    if (body && body.style) body.style.touchAction = priorBodyTouchAction;
+    if (root && root.style) {
+      root.style.touchAction = priorRootTouchAction;
+      restoreInlineOverflow(root.style, {
+        overflow: priorRootOverflow,
+        overflowX: priorRootOverflowX,
+        overflowY: priorRootOverflowY
+      });
+    }
+    if (body && body.style) {
+      body.style.touchAction = priorBodyTouchAction;
+      restoreInlineOverflow(body.style, {
+        overflow: priorBodyOverflow,
+        overflowX: priorBodyOverflowX,
+        overflowY: priorBodyOverflowY
+      });
+    }
     priorRootTouchAction = "";
     priorBodyTouchAction = "";
-    touchActionOwned = false;
+    priorRootOverflow = "";
+    priorRootOverflowX = "";
+    priorRootOverflowY = "";
+    priorBodyOverflow = "";
+    priorBodyOverflowX = "";
+    priorBodyOverflowY = "";
+    documentLockOwned = false;
   }
 
   function authoredSvhPx() {
@@ -489,20 +577,8 @@
   }
 
   function stopNativeMomentum(y) {
-    var root = document.documentElement;
-    var body = document.body;
-    if (root) {
-      var rootOverflow = root.style.overflow;
-      root.style.overflow = "hidden";
-      void root.offsetHeight;
-      root.style.overflow = rootOverflow;
-    }
-    if (body) {
-      var bodyOverflow = body.style.overflow;
-      body.style.overflow = "hidden";
-      void body.offsetHeight;
-      body.style.overflow = bodyOverflow;
-    }
+    // Standing overflow-y lock already makes native momentum unavailable.
+    // Do not pulse-restore overflow; that re-opens the Samsung scroller.
     window.scrollTo(0, y);
   }
 
@@ -909,6 +985,7 @@
   api.boot = boot;
   api.collectRests = collectRests;
   api.cancelSettle = cancelSettle;
+  api.startSettle = startSettle;
   api.attach = attach;
   api.detach = detach;
   api.onBreakpointChange = onBreakpointChange;
