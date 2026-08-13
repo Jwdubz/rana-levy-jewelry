@@ -6,6 +6,7 @@
  * authored rests, stacking or stranding adjacent moments:
  * - helper is homepage-only, gated to max-width 700px
  * - destinations invert OPENING_SPAN final rest, BEAT_DWELL plateaus, terminal
+ * - runtime rests/targets are reachable whole CSS pixels (operational ranges)
  * - forward/reverse choice uses direction + bounded nearest adjacent rest
  * - touch/pointer/wheel/keyboard/resize/pagehide/link/hash cancel immediately
  * - settle rAF cannot recursively schedule another settle
@@ -213,19 +214,37 @@ if (/behavior:\s*["']smooth["']/.test(helper)) {
 const chooseFn = extractFn(helper, "chooseBeatDestination");
 if (!chooseFn) fail("could not isolate chooseBeatDestination");
 if (/start\s*-\s*near/.test(chooseFn) || /end\s*\+\s*near/.test(chooseFn)) {
-  fail("chooseBeatDestination must use the exact authored start..end, not the near zone");
+  fail("chooseBeatDestination must use the exact operational start..end, not the near zone");
 }
 if (!/y\s*>=\s*rest\.start\s*&&\s*y\s*<=\s*rest\.end/.test(chooseFn)) {
-  fail("already-inside must be the exact inclusive authored rest range");
+  fail("already-inside must be the exact inclusive operational rest range");
+}
+if (!/operationalRests\s*\(\s*rests\s*\)/.test(chooseFn)) {
+  fail("chooseBeatDestination must classify against reachable operational rests");
 }
 if (/if\s*\(\s*dist\s*<=\s*NEAR_PX\s*\)\s*return\s*;/.test(startFn)) {
   fail("tiny-distance optimization must not suppress the final alignment");
 }
 if (!/dist\s*<=\s*NEAR_PX/.test(startFn) || !/scrollTo\(\s*0\s*,\s*targetY\s*\)/.test(startFn)) {
-  fail("tiny distances must still finish at the exact authored boundary");
+  fail("tiny distances must still finish at the exact operational boundary");
 }
 if (/Math\.abs\(\s*target\s*-\s*y\s*\)\s*<=\s*NEAR_PX/.test(maybeFn)) {
   fail("maybeSettle must not treat a near-zone gap as already settled");
+}
+
+const collectFn = extractFn(helper, "collectRests");
+if (!collectFn) fail("could not isolate collectRests");
+if (!/operationalRests\(\s*mergeRests\(\s*rests\s*,\s*NEAR_PX\s*\)\s*,\s*maxY\s*\)/.test(collectFn)) {
+  fail("collectRests must operationalize after merge so runtime rests stay reachable");
+}
+if (!/function\s+operationalRest\s*\(/.test(helper) || !/Math\.ceil\(\s*rest\.start\s*\)/.test(helper) || !/Math\.floor\(\s*rest\.end\s*\)/.test(helper)) {
+  fail("operationalRest must take first/last reachable integers inside an authored plateau");
+}
+if (!/Math\.round\(\s*\(\s*rest\.start\s*\+\s*rest\.end\s*\)\s*\/\s*2\s*\)/.test(helper)) {
+  fail("a span with no reachable integer must become one nearest reachable point");
+}
+if (!/function\s+lastReachableScrollY\s*\(/.test(helper) || !/id === "work-terminal"/.test(helper)) {
+  fail("Work terminal must map to the reachable max-scroll endpoint");
 }
 
 // ——— Executable math: inverse plateaus + forward/reverse choice ———
@@ -398,6 +417,200 @@ if (choose(4800, -1) !== 4400) {
   fail("reverse from the terminal approach must return to the last Work rest");
 }
 
+if (typeof settle.operationalRest !== "function" || typeof settle.operationalRests !== "function") {
+  fail("helper must export operationalRest / operationalRests");
+}
+if (typeof settle.lastReachableScrollY !== "function") {
+  fail("helper must export lastReachableScrollY");
+}
+if (settle.lastReachableScrollY(6740) !== 6740) {
+  fail("integer max-scroll must stay reachable");
+}
+if (settle.lastReachableScrollY(6739.59375) !== 6739) {
+  fail("last reachable pixel must be the last integer inside max-scroll");
+}
+if (settle.lastReachableScrollY(0) !== 0) {
+  fail("empty document max-scroll must stay at 0");
+}
+
+function expectOperational(rest, start, end, msg) {
+  const got = settle.operationalRest(rest);
+  if (got.start !== start || got.end !== end) {
+    fail(msg + " (got " + got.start + ".." + got.end + ", want " + start + ".." + end + ")");
+  }
+  if (!Number.isInteger(got.start) || !Number.isInteger(got.end)) {
+    fail(msg + " must return reachable integers");
+  }
+}
+
+expectOperational({ id: "work-1", start: 4434.5, end: 4854.5 }, 4435, 4854, ".5-end plateau must shrink to first/last integer inside");
+expectOperational({ id: "work-0", start: 4917.23, end: 5476.42575 }, 4918, 5476, ".23-start plateau must shrink to first/last integer inside");
+expectOperational({ id: "work-terminal", start: 6739.59375, end: 6739.59375 }, 6740, 6740, "375 fractional terminal must become the nearest reachable point");
+expectOperational({ id: "work-terminal", start: 7735.59375, end: 7735.59375 }, 7736, 7736, "430 fractional terminal must become the nearest reachable point");
+expectOperational({ id: "opening-final", start: 1000, end: 1400 }, 1000, 1400, "integer plateau must stay exact");
+expectOperational({ id: "opening-start", start: 0, end: 0 }, 0, 0, "integer point rest must stay exact");
+
+const once = settle.operationalRest({ id: "work-1", start: 4434.5, end: 4854.5 });
+const twice = settle.operationalRest(once);
+if (twice.start !== once.start || twice.end !== once.end) {
+  fail("operationalRest must be idempotent");
+}
+
+const mergedAuthored = settle.mergeRests(
+  [
+    { id: "a", start: 100.4, end: 200.6 },
+    { id: "b", start: 208.2, end: 300.8 }
+  ],
+  nearPx
+);
+if (mergedAuthored.length !== 1 || mergedAuthored[0].start !== 100.4 || mergedAuthored[0].end !== 300.8) {
+  fail("merge must still use authored distances before operationalize");
+}
+expectOperational(mergedAuthored[0], 101, 300, "merged authored range then operationalizes inward");
+
+const unmerged = settle.mergeRests(
+  [
+    { id: "a", start: 100, end: 200 },
+    { id: "b", start: 213, end: 300 }
+  ],
+  nearPx
+);
+if (unmerged.length !== 2) fail("authored gaps wider than NEAR_PX must stay unmerged");
+
+const termSnapped = settle.operationalRests(
+  [
+    { id: "work-2", start: 6086.74575, end: 6573.94575 },
+    { id: "work-terminal", start: 6739.59375, end: 6739.59375 }
+  ],
+  6740
+);
+if (termSnapped[1].start !== 6740 || termSnapped[1].end !== 6740) {
+  fail("Work terminal must map to the reachable max-scroll endpoint");
+}
+if (termSnapped[0].start !== 6087 || termSnapped[0].end !== 6573) {
+  fail("Work plateau next to the terminal must still operationalize inward");
+}
+
+const fracRests = [
+  { id: "opening-start", start: 0, end: 0 },
+  { id: "work-1", start: 4434.5, end: 4854.5 },
+  { id: "work-0", start: 4917.23, end: 5476.42575 },
+  { id: "work-terminal", start: 6739.59375, end: 6739.59375 }
+];
+
+function chooseFrac(y, dir) {
+  return settle.chooseBeatDestination(y, dir, fracRests);
+}
+
+function restContaining(y, rests) {
+  return rests.find((rest) => y >= rest.start && y <= rest.end) || null;
+}
+
+const fracOperational = settle.operationalRests(fracRests);
+fracOperational.forEach((rest) => {
+  if (!Number.isInteger(rest.start) || !Number.isInteger(rest.end)) {
+    fail("operational rests must be reachable integers (" + rest.id + ")");
+  }
+});
+
+if (chooseFrac(4854, 1) !== null) fail("last reachable pixel of a .5-end rest must count as inside");
+if (chooseFrac(4435, -1) !== null) fail("first reachable pixel of a .5-end rest must count as inside");
+if (chooseFrac(4918, 1) !== null) fail("first reachable pixel of a .23-start rest must count as inside");
+if (chooseFrac(6740, -1) !== null) fail("nearest reachable terminal pixel must count as inside");
+
+if (chooseFrac(4854.5, 1) !== 4854) {
+  fail("authored .5 end is not reachable; settle must aim at the last integer inside (got " + chooseFrac(4854.5, 1) + ")");
+}
+if (chooseFrac(4917.23, 1) !== 4918) {
+  fail("authored .23 start is not reachable; settle must aim at the first integer inside (got " + chooseFrac(4917.23, 1) + ")");
+}
+if (chooseFrac(6739.59375, 1) !== 6740) {
+  fail("authored fractional terminal is not reachable; settle must aim at the nearest pixel (got " + chooseFrac(6739.59375, 1) + ")");
+}
+
+for (const gap of [1, 5, nearPx]) {
+  const pastEnd = chooseFrac(4854 + gap, 1);
+  if (pastEnd !== 4854) fail(gap + "px past a .5 operational end must settle to that end (got " + pastEnd + ")");
+  const pastEndRev = chooseFrac(4854 + gap, -1);
+  if (pastEndRev !== 4854) fail(gap + "px past a .5 operational end must settle to that end in reverse (got " + pastEndRev + ")");
+  const beforeStart = chooseFrac(4435 - gap, 1);
+  if (beforeStart !== 4435) fail(gap + "px before a .5 operational start must settle to that start (got " + beforeStart + ")");
+  const beforeStartRev = chooseFrac(4435 - gap, -1);
+  if (beforeStartRev !== 4435) fail(gap + "px before a .5 operational start must settle to that start in reverse (got " + beforeStartRev + ")");
+  const beforeDot23 = chooseFrac(4918 - gap, 1);
+  if (beforeDot23 !== 4918) fail(gap + "px before a .23 operational start must settle to that start (got " + beforeDot23 + ")");
+  const beforeDot23Rev = chooseFrac(4918 - gap, -1);
+  if (beforeDot23Rev !== 4918) fail(gap + "px before a .23 operational start must settle to that start in reverse (got " + beforeDot23Rev + ")");
+  const beforeTerm = chooseFrac(6740 - gap, 1);
+  if (beforeTerm !== 6740) fail(gap + "px before the fractional terminal must settle onto it (got " + beforeTerm + ")");
+  const pastTerm = chooseFrac(6740 + gap, 1);
+  if (pastTerm !== 6740) fail(gap + "px past the fractional terminal must settle onto it (got " + pastTerm + ")");
+}
+
+const consumerCases = [
+  {
+    label: "320 work-1 .5 end",
+    rests: [{ id: "work-1", start: 4434.5, end: 4854.5 }],
+    observedY: 4855,
+    wantTarget: 4854
+  },
+  {
+    label: "430 work-0 .23 start",
+    rests: [{ id: "work-0", start: 4917.23, end: 5476.42575 }],
+    observedY: 4917,
+    wantTarget: 4918
+  },
+  {
+    label: "375 fractional terminal",
+    rests: [{ id: "work-terminal", start: 6739.59375, end: 6739.59375 }],
+    observedY: 6740,
+    wantTarget: null
+  },
+  {
+    label: "430 fractional terminal",
+    rests: [{ id: "work-terminal", start: 7735.59375, end: 7735.59375 }],
+    observedY: 7736,
+    wantTarget: null
+  }
+];
+
+consumerCases.forEach((item) => {
+  const operational = settle.operationalRests(item.rests);
+  const target = settle.chooseBeatDestination(item.observedY, 1, item.rests);
+  if (target !== item.wantTarget) {
+    fail(item.label + " choose must return " + item.wantTarget + " (got " + target + ")");
+  }
+  const finalY = target == null ? item.observedY : target;
+  if (!Number.isInteger(finalY)) fail(item.label + " final y must be a reachable integer");
+  if (!restContaining(finalY, operational)) {
+    fail(item.label + " final y " + finalY + " must lie inside the exact operational rest");
+  }
+});
+
+[
+  0,
+  4434.5,
+  4435,
+  4854,
+  4854.5,
+  4855,
+  4917,
+  4917.23,
+  4918,
+  5476,
+  6739.59375,
+  6740,
+  5000
+].forEach((y) => {
+  const target = chooseFrac(y, 1);
+  if (target != null && !Number.isInteger(target)) {
+    fail("chooseBeatDestination must return a reachable integer (y=" + y + " got " + target + ")");
+  }
+  if (target != null && !restContaining(target, fracOperational)) {
+    fail("chosen y " + target + " must lie inside an exact operational rest");
+  }
+});
+
 console.log(
-  "PASS: mobile beat settle (700px gate; opening-final + BEAT_DWELL invert; forward/reverse + cancel/reentrancy; no CSS scroll-snap)"
+  "PASS: mobile beat settle (700px gate; opening-final + BEAT_DWELL invert; reachable operational rests; forward/reverse + cancel/reentrancy; no CSS scroll-snap)"
 );

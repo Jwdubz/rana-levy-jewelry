@@ -3,7 +3,8 @@
  * After a mobile finger gesture ends, one fully composed authored rest owns
  * the viewport. Destinations are the Opening terminal hold, BEAT_DWELL
  * Hand/Work plateaus, and the Work terminal — inverted from the existing
- * remap mathematics. Desktop stays unbound. Not CSS scroll-snap.
+ * remap mathematics, then snapped to reachable whole CSS pixels. Desktop
+ * stays unbound. Not CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
@@ -26,6 +27,47 @@
 
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
+  }
+
+  function lastReachableScrollY(maxY) {
+    if (!(maxY > 0)) return 0;
+    return Math.floor(maxY);
+  }
+
+  // Continuous authored [start, end] → reachable whole CSS pixels.
+  // A plateau that contains an integer becomes first..last integer inside it.
+  // A zero/narrow span with no integer becomes one nearest reachable point.
+  function operationalRest(rest) {
+    if (!rest) return rest;
+    var first = Math.ceil(rest.start);
+    var last = Math.floor(rest.end);
+    if (first <= last) {
+      return { id: rest.id, start: first, end: last };
+    }
+    var nearest = Math.round((rest.start + rest.end) / 2);
+    return { id: rest.id, start: nearest, end: nearest };
+  }
+
+  function operationalRests(rests, maxY) {
+    if (!rests || !rests.length) return rests || [];
+    var reachableMax = maxY == null ? null : lastReachableScrollY(maxY);
+    var out = [];
+    var i;
+    var rest;
+    for (i = 0; i < rests.length; i++) {
+      rest = operationalRest(rests[i]);
+      if (reachableMax != null) {
+        rest.start = clamp(rest.start, 0, reachableMax);
+        rest.end = clamp(rest.end, 0, reachableMax);
+        if (rest.end < rest.start) rest.start = rest.end;
+        if (rest.id === "work-terminal") {
+          rest.start = reachableMax;
+          rest.end = reachableMax;
+        }
+      }
+      out.push(rest);
+    }
+    return out;
   }
 
   function deriveOpeningFinalPhysical(span) {
@@ -96,9 +138,10 @@
   }
 
   // Direction + bounded nearest adjacent rest. Returns a scrollY or null
-  // when the viewport is already inside an exact authored rest.
+  // when the viewport is already inside an exact operational rest.
   function chooseBeatDestination(scrollY, direction, rests, options) {
     if (!rests || !rests.length) return null;
+    rests = operationalRests(rests);
     var snapBack =
       options && options.snapBackPx != null ? options.snapBackPx : SNAP_BACK_PX;
     var bound =
@@ -160,6 +203,9 @@
     DIRECTION_BOUND: DIRECTION_BOUND,
     deriveOpeningFinalPhysical: deriveOpeningFinalPhysical,
     plateauPhysicalRange: plateauPhysicalRange,
+    lastReachableScrollY: lastReachableScrollY,
+    operationalRest: operationalRest,
+    operationalRests: operationalRests,
     chooseBeatDestination: chooseBeatDestination,
     mergeRests: mergeRests,
     aimAtRest: aimAtRest
@@ -315,7 +361,7 @@
     rests.sort(function (a, b) {
       return a.start - b.start;
     });
-    return mergeRests(rests, NEAR_PX);
+    return operationalRests(mergeRests(rests, NEAR_PX), maxY);
   }
 
   function clearIdle() {
@@ -385,7 +431,7 @@
     var y = currentScrollY();
     var target = chooseBeatDestination(y, direction, collectRests());
     if (target == null) return;
-    target = clamp(target, 0, maxScrollY());
+    target = clamp(target, 0, lastReachableScrollY(maxScrollY()));
     if (!(Math.abs(target - y) > 0)) return;
     startSettle(target);
   }
