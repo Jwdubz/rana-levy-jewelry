@@ -210,6 +210,24 @@ if (/behavior:\s*["']smooth["']/.test(helper)) {
   fail("must not use native behavior:smooth (not immediately cancellable)");
 }
 
+const chooseFn = extractFn(helper, "chooseBeatDestination");
+if (!chooseFn) fail("could not isolate chooseBeatDestination");
+if (/start\s*-\s*near/.test(chooseFn) || /end\s*\+\s*near/.test(chooseFn)) {
+  fail("chooseBeatDestination must use the exact authored start..end, not the near zone");
+}
+if (!/y\s*>=\s*rest\.start\s*&&\s*y\s*<=\s*rest\.end/.test(chooseFn)) {
+  fail("already-inside must be the exact inclusive authored rest range");
+}
+if (/if\s*\(\s*dist\s*<=\s*NEAR_PX\s*\)\s*return\s*;/.test(startFn)) {
+  fail("tiny-distance optimization must not suppress the final alignment");
+}
+if (!/dist\s*<=\s*NEAR_PX/.test(startFn) || !/scrollTo\(\s*0\s*,\s*targetY\s*\)/.test(startFn)) {
+  fail("tiny distances must still finish at the exact authored boundary");
+}
+if (/Math\.abs\(\s*target\s*-\s*y\s*\)\s*<=\s*NEAR_PX/.test(maybeFn)) {
+  fail("maybeSettle must not treat a near-zone gap as already settled");
+}
+
 // ——— Executable math: inverse plateaus + forward/reverse choice ———
 let settle;
 try {
@@ -316,6 +334,32 @@ function choose(y, dir) {
 
 if (choose(1200, 1) !== null) fail("already-inside a rest must not resettle");
 if (choose(1200, -1) !== null) fail("already-inside a rest must not resettle in reverse");
+if (choose(1000, 1) !== null) fail("exact rest start must count as already inside");
+if (choose(1400, -1) !== null) fail("exact rest end must count as already inside");
+if (choose(1001, 1) !== null) fail("1px inside a rest start must stay put");
+if (choose(1399, -1) !== null) fail("1px inside a rest end must stay put");
+if (choose(0, 1) !== null) fail("exact point rest must count as already inside");
+if (choose(5200, -1) !== null) fail("exact terminal point rest must count as already inside");
+
+const nearPx = settle.NEAR_PX;
+if (!(nearPx > 0)) fail("NEAR_PX must remain a positive near-zone width");
+
+function expectChoose(y, dir, expected, msg) {
+  const got = choose(y, dir);
+  if (got !== expected) fail(msg + " (y=" + y + " dir=" + dir + " got " + got + ", want " + expected + ")");
+}
+
+for (const gap of [1, 5, nearPx]) {
+  expectChoose(1400 + gap, 1, 1400, gap + "px past a rest end must settle to that end going forward");
+  expectChoose(1400 + gap, -1, 1400, gap + "px past a rest end must settle to that end in reverse");
+  expectChoose(1000 - gap, 1, 1000, gap + "px before a rest start must settle to that start going forward");
+  expectChoose(1000 - gap, -1, 1000, gap + "px before a rest start must settle to that start in reverse");
+  expectChoose(gap, 1, 0, gap + "px past a point rest must settle onto it going forward");
+  expectChoose(gap, -1, 0, gap + "px past a point rest must settle onto it in reverse");
+  expectChoose(5200 + gap, 1, 5200, gap + "px past the terminal must settle onto it going forward");
+  expectChoose(5200 - gap, 1, 5200, gap + "px before the terminal must settle onto it going forward");
+  expectChoose(5200 - gap, -1, 5200, gap + "px before the terminal must settle onto it in reverse");
+}
 
 if (choose(1600, 1) !== 2000) {
   fail("forward idle between rests must choose the next rest start (got " + choose(1600, 1) + ")");

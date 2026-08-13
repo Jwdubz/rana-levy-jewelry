@@ -96,10 +96,9 @@
   }
 
   // Direction + bounded nearest adjacent rest. Returns a scrollY or null
-  // when the viewport is already inside a rest.
+  // when the viewport is already inside an exact authored rest.
   function chooseBeatDestination(scrollY, direction, rests, options) {
     if (!rests || !rests.length) return null;
-    var near = options && options.nearPx != null ? options.nearPx : NEAR_PX;
     var snapBack =
       options && options.snapBackPx != null ? options.snapBackPx : SNAP_BACK_PX;
     var bound =
@@ -107,21 +106,16 @@
         ? options.directionBound
         : DIRECTION_BOUND;
     var y = scrollY;
-    var inside = null;
     var prev = null;
     var next = null;
     var i;
     var rest;
     for (i = 0; i < rests.length; i++) {
       rest = rests[i];
-      if (y >= rest.start - near && y <= rest.end + near) {
-        inside = rest;
-        break;
-      }
-      if (rest.end < y - near) prev = rest;
-      if (rest.start > y + near && !next) next = rest;
+      if (y >= rest.start && y <= rest.end) return null;
+      if (rest.end < y) prev = rest;
+      if (rest.start > y && !next) next = rest;
     }
-    if (inside) return null;
 
     var chosen;
     if (direction > 0) {
@@ -357,7 +351,12 @@
     cancelSettle();
     var from = currentScrollY();
     var dist = Math.abs(targetY - from);
-    if (dist <= NEAR_PX) return;
+    if (!(dist > 0)) return;
+    if (dist <= NEAR_PX) {
+      window.scrollTo(0, targetY);
+      finishSettle();
+      return;
+    }
     var duration = clamp(SETTLE_MIN_MS + dist * 0.28, SETTLE_MIN_MS, SETTLE_MAX_MS);
     var gen = settleGen;
     settling = true;
@@ -387,7 +386,7 @@
     var target = chooseBeatDestination(y, direction, collectRests());
     if (target == null) return;
     target = clamp(target, 0, maxScrollY());
-    if (Math.abs(target - y) <= NEAR_PX) return;
+    if (!(Math.abs(target - y) > 0)) return;
     startSettle(target);
   }
 
