@@ -45,7 +45,8 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* 340svh = 100 sticky + 180 choreography travel + 60 terminal hold (OPENING_SPAN). */
+    /* Desktop/fallback: 340svh = 100 sticky + 180 choreography + 60 terminal hold.
+       Mobile live contract (700px query): 100dvh sticky + the same 240svh travel. */
     .passage {
       position: relative;
       height: 340svh;
@@ -275,6 +276,20 @@
     }
 
     @media (max-width: 700px) {
+      /*
+        Live sticky tracks collapsing browser chrome (100dvh). Authored travel
+        stays 180svh choreography + 60svh terminal hold, not a total-dvh span.
+      */
+      .passage {
+        height: 340svh;
+        height: calc(100dvh + 240svh);
+      }
+
+      .scene {
+        height: 100svh;
+        height: 100dvh;
+      }
+
       /*
         True full-screen mobile opening oracle:
         The complete visible viewport is the carrier. Portrait-art-directed
@@ -688,6 +703,7 @@
       // Physical opening span: sticky viewport + choreography travel + terminal hold.
       // MOTION cue fractions remain authored against the 180svh choreography; the hold
       // is pure plateau after finalTextEnd. Passage CSS height must match the sum.
+      // Mobile live sticky is 100dvh; travel stays these svh distances.
       const OPENING_SPAN = {
         stickySvh: 100,
         choreographySvh: 180,

@@ -599,14 +599,26 @@
 }
 
 @media (max-width: 700px) {
-  /* Mobile Hand: 340svh total = 100svh sticky + 120svh choreography +
-     2 × 60svh unscaled holds (sticky travel 240svh). */
+  /* Live sticky tracks collapsing browser chrome. Travel stays authored svh.
+     Hand: 120svh choreography + 2 × 60svh holds (240svh). */
   .movement-hand {
+    margin-top: -100svh;
+    margin-top: -100dvh;
     height: 340svh;
+    height: calc(100dvh + 240svh);
   }
 
+  /* Work: existing 450svh - 100svh sticky = 170svh choreography + 3 x 60svh holds. */
   .movement-work {
+    margin-top: -100svh;
+    margin-top: -100dvh;
     height: 450svh;
+    height: calc(100dvh + 350svh);
+  }
+
+  .movement-sticky {
+    height: 100svh;
+    height: 100dvh;
   }
 
   /*

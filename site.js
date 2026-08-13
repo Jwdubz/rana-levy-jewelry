@@ -544,10 +544,31 @@
   }
 
   // Generic physical-progress → choreography-progress remapper for M2–M4.
-  // Total travel comes from the live sticky range; each plateau is holdSvh of
-  // the layout viewport. Ordinary segments keep the pre-existing choreography
-  // rate; each plateau returns its exact anchor; the map is monotonic 0→1.
+  // Total travel comes from the live sticky range (offsetHeight - innerHeight).
+  // Each plateau is holdSvh of the authored small viewport (100svh), so a
+  // collapsing browser chrome cannot stretch holds or compress choreography.
+  // Ordinary segments keep the pre-existing choreography rate; each plateau
+  // returns its exact anchor; the map is monotonic 0→1.
   // Smooth raw physical progress once upstream; never smooth the remapped clock.
+  let authoredSvhPxCache = 0;
+
+  function invalidateAuthoredSvhPx() {
+    authoredSvhPxCache = 0;
+  }
+
+  function authoredSvhPx() {
+    if (authoredSvhPxCache > 0) return authoredSvhPxCache;
+    const probe = document.createElement("div");
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText =
+      "position:absolute;left:0;top:0;width:0;height:100svh;visibility:hidden;pointer-events:none;";
+    document.documentElement.appendChild(probe);
+    const px = probe.getBoundingClientRect().height;
+    probe.remove();
+    authoredSvhPxCache = px > 0 ? px : window.innerHeight;
+    return authoredSvhPxCache;
+  }
+
   function remapBeatProgress(el, physicalProgress, anchors) {
     const p = clamp(physicalProgress, 0, 1);
     if (!el || !anchors || !anchors.length) return p;
@@ -556,7 +577,7 @@
 
     const totalTravel = Math.max(1, el.offsetHeight - window.innerHeight);
     const holdSvh = BEAT_DWELL.holdSvh;
-    const plateauPx = (holdSvh / 100) * window.innerHeight;
+    const plateauPx = (holdSvh / 100) * authoredSvhPx();
     const choreographyTravel = Math.max(1, totalTravel - anchors.length * plateauPx);
 
     let remaining = p * totalTravel;
@@ -1668,6 +1689,7 @@
   window.addEventListener(
     "resize",
     function () {
+      invalidateAuthoredSvhPx();
       state.isMobile = window.matchMedia("(max-width: 700px)").matches;
       if (quietModeActive()) {
         state.openingVisual = sectionProgress(opening);
