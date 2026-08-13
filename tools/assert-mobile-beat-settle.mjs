@@ -814,18 +814,26 @@ function expectAdjacent(origin, dy, wantIndex, wantY, msg) {
   }
 }
 
+if (typeof settle.restAimY !== "function") {
+  fail("helper must export restAimY so adjacent landings aim at composed plateau centers");
+}
+
+function aimY(rest) {
+  return settle.restAimY(settle.operationalRest(rest));
+}
+
 expectAdjacent(0, 0, 0, null, "a tap must stay at the origin rest");
 expectAdjacent(2, threshold - 1, 2, null, "below-threshold upward travel must stay put");
 expectAdjacent(2, -(threshold - 1), 2, null, "below-threshold downward finger travel must stay put");
-expectAdjacent(0, -threshold, 1, 1000, "forward must target the immediate next rest start");
-expectAdjacent(1, -50, 2, 2000, "forward from opening-final must choose hand-0 start");
-expectAdjacent(2, 50, 1, 1400, "reverse must target the immediate previous rest end");
-expectAdjacent(3, 80, 2, 2400, "reverse from hand-1 must choose hand-0 end");
+expectAdjacent(0, -threshold, 1, aimY(rests[1]), "forward must target the immediate next composed rest center");
+expectAdjacent(1, -50, 2, aimY(rests[2]), "forward from opening-final must choose the hand-0 composed center");
+expectAdjacent(2, 50, 1, aimY(rests[1]), "reverse must target the immediate previous composed rest center");
+expectAdjacent(3, 80, 2, aimY(rests[2]), "reverse from hand-1 must choose the hand-0 composed center");
 expectAdjacent(0, 400, 0, null, "reverse at the first rest must clamp");
 expectAdjacent(5, -400, 5, null, "forward at the last rest must clamp");
 
 const provenWrongReplay = adjacent(0, 80 - 720);
-if (provenWrongReplay.index !== 1 || provenWrongReplay.y !== 1000) {
+if (provenWrongReplay.index !== 1 || provenWrongReplay.y !== aimY(rests[1])) {
   fail(
     "the proven-wrong 375x812 long swipe from opening-start must advance exactly one rest, not land at hand-1 (got " +
       JSON.stringify(provenWrongReplay) +
@@ -854,11 +862,8 @@ for (let origin = 0; origin < rests.length; origin++) {
     if (got.y != null && !restContaining(got.y, rests)) {
       fail("adjacent destination y " + got.y + " must lie inside an authored rest");
     }
-    if (got.index > origin && got.y !== rests[got.index].start) {
-      fail("forward adjacent destination must be the next rest start");
-    }
-    if (got.index < origin && got.y !== rests[got.index].end) {
-      fail("reverse adjacent destination must be the previous rest end");
+    if (got.y != null && got.y !== aimY(rests[got.index])) {
+      fail("adjacent destination must be the composed rest center, not a plateau edge");
     }
     if (got.index === origin && got.y !== null) {
       fail("a clamped or below-threshold gesture must stay put (y=null)");
@@ -873,12 +878,14 @@ if (settle.restIndexForY(1700, rests) !== 1) fail("mid-gap must snapshot the nea
 if (settle.restIndexForY(5200, rests) !== 5) fail("terminal point rest must snapshot as current");
 
 const fracAdj = settle.chooseAdjacentDestination(1, -40, fracRests);
-if (fracAdj.index !== 2 || fracAdj.y !== 4918) {
-  fail("forward adjacent destination must use the next rest's reachable start (got " + JSON.stringify(fracAdj) + ")");
+const fracAdjWant = aimY(fracOperational[2]);
+if (fracAdj.index !== 2 || fracAdj.y !== fracAdjWant) {
+  fail("forward adjacent destination must use the next rest's composed center (got " + JSON.stringify(fracAdj) + ", want " + fracAdjWant + ")");
 }
 const fracAdjBack = settle.chooseAdjacentDestination(2, 40, fracRests);
-if (fracAdjBack.index !== 1 || fracAdjBack.y !== 4854) {
-  fail("reverse adjacent destination must use the previous rest's reachable end (got " + JSON.stringify(fracAdjBack) + ")");
+const fracAdjBackWant = aimY(fracOperational[1]);
+if (fracAdjBack.index !== 1 || fracAdjBack.y !== fracAdjBackWant) {
+  fail("reverse adjacent destination must use the previous rest's composed center (got " + JSON.stringify(fracAdjBack) + ", want " + fracAdjBackWant + ")");
 }
 
 const resizeFn = extractFn(helper, "onResize");
@@ -974,7 +981,7 @@ expectLift(
   20,
   -670,
   1,
-  1000,
+  aimY(rests[1]),
   false,
   "horizontally latched + net-vertical completed motion must use the adjacent path"
 );
@@ -983,7 +990,7 @@ expectLift(
   30,
   -670,
   1,
-  1000,
+  aimY(rests[1]),
   false,
   "a 30px lateral lead with net-vertical completion must still take the adjacent path"
 );
@@ -992,7 +999,7 @@ expectLift(
   45,
   -670,
   1,
-  1000,
+  aimY(rests[1]),
   false,
   "a 45px lateral lead with net-vertical completion must still take the adjacent path"
 );
@@ -1001,12 +1008,12 @@ expectLift(0, 80, -30, 0, null, true, "horizontal-dominant completed motion must
 expectLift(2, 3, -3, 2, null, true, "a tap/below-threshold gesture must stay put");
 expectLift(2, threshold - 1, -(threshold - 1), 2, null, true, "below-threshold diagonal travel must stay put");
 
-expectLift(1, 20, -50, 2, 2000, false, "diagonal forward must use the same adjacent start as a straight swipe");
-expectLift(1, 20, 50, 0, 0, false, "diagonal reverse must use the same adjacent end as a straight swipe");
-expectLift(1, -20, -50, 2, 2000, false, "diagonal forward must be symmetric in lateral sign");
+expectLift(1, 20, -50, 2, aimY(rests[2]), false, "diagonal forward must use the same adjacent composed center as a straight swipe");
+expectLift(1, 20, 50, 0, 0, false, "diagonal reverse must use the same adjacent composed center as a straight swipe");
+expectLift(1, -20, -50, 2, aimY(rests[2]), false, "diagonal forward must be symmetric in lateral sign");
 expectLift(1, -20, 50, 0, 0, false, "diagonal reverse must be symmetric in lateral sign");
-expectLift(2, 20, 50, 1, 1400, false, "diagonal reverse from hand-0 must target opening-final's end");
-expectLift(2, 20, -50, 3, 3000, false, "diagonal forward from hand-0 must target hand-1 start");
+expectLift(2, 20, 50, 1, aimY(rests[1]), false, "diagonal reverse from hand-0 must target opening-final's composed center");
+expectLift(2, 20, -50, 3, aimY(rests[3]), false, "diagonal forward from hand-0 must target hand-1 composed center");
 
 if (settle.completedVerticalIntent(20, -3, threshold) !== false) {
   fail("the observed first delivered lead (20, -3) must remain a horizontal latch during contact");
@@ -1069,7 +1076,7 @@ expectLift(
   18,
   -1e9,
   1,
-  1000,
+  aimY(rests[1]),
   false,
   "an interrupted primary whose net completed motion is vertical still advances exactly one rest"
 );
@@ -1078,7 +1085,7 @@ expectLift(
   22,
   1e9,
   2,
-  2400,
+  aimY(rests[2]),
   false,
   "an interrupted reverse primary still cannot escape more than one adjacent rest"
 );
@@ -1634,16 +1641,23 @@ function expectOverflowRestore(root, body, prior, msg) {
       this.prevented = true;
     }
   });
-  if (window.scrollY !== next.start) {
+  const wantFirst = settle.chooseAdjacentDestination(0, -580, rests);
+  if (!wantFirst || wantFirst.index !== 1 || wantFirst.y == null) {
+    fail("geometry swipe must have an adjacent composed destination for rest 1");
+  }
+  if (window.scrollY !== wantFirst.y) {
     fail(
       "a long/fast completed swipe from rest 0 must finish only at rest 1 (got y=" +
         window.scrollY +
         ", want " +
-        next.start +
+        wantFirst.y +
         "; last rest is " +
         last.start +
         ")"
     );
+  }
+  if (next.end > next.start && (window.scrollY === next.start || window.scrollY === next.end)) {
+    fail("a completed swipe must finish on the composed interior of rest 1, not a plateau edge");
   }
   if (Math.abs(window.scrollY - last.start) < 1) {
     fail("a long/fast swipe must not coast to the terminal rest");

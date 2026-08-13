@@ -11,14 +11,17 @@
  * values. A second contact interrupts ownership but keeps the origin.
  * Destinations are the Opening terminal hold, BEAT_DWELL Hand/Work
  * plateaus, and the Work terminal — inverted from the existing remap
- * mathematics, then snapped to reachable whole CSS pixels. Quiet and
- * reduced-motion stay native. Desktop stays unbound. Not CSS scroll-snap.
+ * mathematics, then snapped to reachable whole CSS pixels. Adjacent
+ * gesture landings aim at the composed plateau center so the damped
+ * visual clock stays inside the hold, not on a black leading edge.
+ * Quiet and reduced-motion stay native. Desktop stays unbound. Not
+ * CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
  * Future consumer: homepage mobile visitor after a finger gesture; any operator editing passage beats
  * Activation: auto-load — index.html script after site.js
- * Behavioral check: node tools/assert-mobile-beat-settle.mjs
+ * Behavioral check: node tools/assert-mobile-beat-settle.mjs && node tools/assert-mobile-composed-rest-landings.mjs
  * Retirement: when mobile per-beat settle is retired or superseded
  */
 (function () {
@@ -116,6 +119,12 @@
       prev = anchors[i];
     }
     return null;
+  }
+
+  function restAimY(rest) {
+    if (!rest) return null;
+    if (rest.start === rest.end) return rest.start;
+    return Math.round((rest.start + rest.end) / 2);
   }
 
   function aimAtRest(y, rest) {
@@ -231,6 +240,7 @@
 
   // Pure adjacent-destination: finger deltaY > 0 is swipe down / reverse.
   // Never more than one rest away, regardless of swipe length.
+  // Land on the composed plateau center, not the leading/trailing edge.
   function chooseAdjacentDestination(originIndex, swipeDeltaY, rests, options) {
     if (!rests || !rests.length) return { index: 0, y: null };
     rests = operationalRests(rests);
@@ -250,7 +260,7 @@
     if (dest === origin) return { index: dest, y: null };
     return {
       index: dest,
-      y: dest > origin ? rests[dest].start : rests[dest].end
+      y: restAimY(rests[dest])
     };
   }
 
@@ -295,6 +305,7 @@
     chooseBeatDestination: chooseBeatDestination,
     chooseAdjacentDestination: chooseAdjacentDestination,
     mergeRests: mergeRests,
+    restAimY: restAimY,
     aimAtRest: aimAtRest,
     TOUCH_ACTION_POLICY: TOUCH_ACTION_POLICY,
     VERTICAL_OVERFLOW_LOCK: VERTICAL_OVERFLOW_LOCK,
