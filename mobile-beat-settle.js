@@ -1,10 +1,12 @@
 /* RANA LEVY mobile beat settle.
  *
- * After a mobile finger gesture ends, one fully composed authored rest owns
- * the viewport. Destinations are the Opening terminal hold, BEAT_DWELL
- * Hand/Work plateaus, and the Work terminal — inverted from the existing
- * remap mathematics, then snapped to reachable whole CSS pixels. Desktop
- * stays unbound. Not CSS scroll-snap.
+ * One continuous single-finger vertical gesture that begins at authored
+ * rest N may finish only at N-1, N, or N+1. Native touch momentum does
+ * not own passage distance. Destinations are the Opening terminal hold,
+ * BEAT_DWELL Hand/Work plateaus, and the Work terminal — inverted from
+ * the existing remap mathematics, then snapped to reachable whole CSS
+ * pixels. Quiet and reduced-motion stay native. Desktop stays unbound.
+ * Not CSS scroll-snap.
  *
  * Residue: mobile beat settle
  * Disposition: maintained asset
@@ -24,6 +26,7 @@
   var SNAP_BACK_PX = 36;
   var DIRECTION_BOUND = 2.35;
   var OPENING_HOLD_KEEP = 0.88;
+  var SWIPE_THRESHOLD_PX = 10;
 
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
@@ -172,6 +175,58 @@
     return aimAtRest(y, chosen);
   }
 
+  function restIndexForY(y, rests) {
+    if (!rests || !rests.length) return 0;
+    rests = operationalRests(rests);
+    var prev = -1;
+    var next = -1;
+    var i;
+    var rest;
+    for (i = 0; i < rests.length; i++) {
+      rest = rests[i];
+      if (y >= rest.start && y <= rest.end) return i;
+      if (rest.end < y) prev = i;
+      if (rest.start > y && next < 0) next = i;
+    }
+    if (prev < 0) return next < 0 ? 0 : next;
+    if (next < 0) return prev;
+    return y - rests[prev].end <= rests[next].start - y ? prev : next;
+  }
+
+  function classifyTouchIntent(dx, dy, thresholdPx) {
+    var threshold = thresholdPx == null ? SWIPE_THRESHOLD_PX : thresholdPx;
+    var adx = Math.abs(dx);
+    var ady = Math.abs(dy);
+    if (adx < threshold && ady < threshold) return null;
+    if (ady >= adx && ady >= threshold) return "vertical";
+    return "horizontal";
+  }
+
+  // Pure adjacent-destination: finger deltaY > 0 is swipe down / reverse.
+  // Never more than one rest away, regardless of swipe length.
+  function chooseAdjacentDestination(originIndex, swipeDeltaY, rests, options) {
+    if (!rests || !rests.length) return { index: 0, y: null };
+    rests = operationalRests(rests);
+    var last = rests.length - 1;
+    var origin = originIndex;
+    if (origin == null || origin !== origin) origin = 0;
+    origin = clamp(Math.round(origin), 0, last);
+    var threshold =
+      options && options.thresholdPx != null
+        ? options.thresholdPx
+        : SWIPE_THRESHOLD_PX;
+    var dest = origin;
+    if (Math.abs(swipeDeltaY) >= threshold) {
+      if (swipeDeltaY < 0) dest = Math.min(last, origin + 1);
+      else dest = Math.max(0, origin - 1);
+    }
+    if (dest === origin) return { index: dest, y: null };
+    return {
+      index: dest,
+      y: dest > origin ? rests[dest].start : rests[dest].end
+    };
+  }
+
   function mergeRests(rests, nearPx) {
     if (!rests.length) return rests;
     var near = nearPx == null ? NEAR_PX : nearPx;
@@ -201,12 +256,16 @@
     NEAR_PX: NEAR_PX,
     SNAP_BACK_PX: SNAP_BACK_PX,
     DIRECTION_BOUND: DIRECTION_BOUND,
+    SWIPE_THRESHOLD_PX: SWIPE_THRESHOLD_PX,
     deriveOpeningFinalPhysical: deriveOpeningFinalPhysical,
     plateauPhysicalRange: plateauPhysicalRange,
     lastReachableScrollY: lastReachableScrollY,
     operationalRest: operationalRest,
     operationalRests: operationalRests,
+    restIndexForY: restIndexForY,
+    classifyTouchIntent: classifyTouchIntent,
     chooseBeatDestination: chooseBeatDestination,
+    chooseAdjacentDestination: chooseAdjacentDestination,
     mergeRests: mergeRests,
     aimAtRest: aimAtRest
   };
@@ -219,7 +278,6 @@
   var armed = false;
   var suppress = false;
   var fingerDown = false;
-  var sawContact = false;
   var settling = false;
   var settleGen = 0;
   var raf = 0;
@@ -227,7 +285,10 @@
   var direction = 0;
   var lastY = 0;
   var ignoreScrollUntil = 0;
+  var settleTargetY = 0;
+  var gesture = null;
   var mediaQuery = null;
+  var reduceQuery = null;
 
   function isMobileViewport() {
     try {
@@ -262,6 +323,10 @@
 
   function live() {
     return bound && isMobileViewport() && !!(opening && hand && work);
+  }
+
+  function shouldCaptureTouch() {
+    return live() && !quietModeActive() && !prefersReducedMotion();
   }
 
   function authoredSvhPx() {
@@ -386,18 +451,55 @@
     idleTimer = setTimeout(maybeSettle, IDLE_MS);
   }
 
+  function stopNativeMomentum(y) {
+    var root = document.documentElement;
+    var body = document.body;
+    if (root) {
+      var rootOverflow = root.style.overflow;
+      root.style.overflow = "hidden";
+      void root.offsetHeight;
+      root.style.overflow = rootOverflow;
+    }
+    if (body) {
+      var bodyOverflow = body.style.overflow;
+      body.style.overflow = "hidden";
+      void body.offsetHeight;
+      body.style.overflow = bodyOverflow;
+    }
+    window.scrollTo(0, y);
+  }
+
+  function holdGestureOrigin() {
+    if (!gesture) return;
+    if (Math.abs(currentScrollY() - gesture.originY) > 0) {
+      window.scrollTo(0, gesture.originY);
+    }
+  }
+
+  function cancelGesture() {
+    if (gesture && gesture.locked) {
+      stopNativeMomentum(gesture.originY);
+    }
+    gesture = null;
+  }
+
   function finishSettle() {
     settling = false;
     raf = 0;
     direction = 0;
     ignoreScrollUntil = (performance.now ? performance.now() : Date.now()) + 80;
+    stopNativeMomentum(settleTargetY);
   }
 
   function startSettle(targetY) {
     cancelSettle();
     var from = currentScrollY();
     var dist = Math.abs(targetY - from);
-    if (!(dist > 0)) return;
+    settleTargetY = targetY;
+    if (!(dist > 0)) {
+      stopNativeMomentum(targetY);
+      return;
+    }
     if (dist <= NEAR_PX) {
       window.scrollTo(0, targetY);
       finishSettle();
@@ -438,48 +540,130 @@
 
   function onScroll() {
     if (!live() || settling) return;
+    if (gesture && gesture.locked) {
+      holdGestureOrigin();
+      return;
+    }
     var now = performance.now ? performance.now() : Date.now();
     if (now < ignoreScrollUntil) return;
     var y = currentScrollY();
     if (y > lastY + 0.5) direction = 1;
     else if (y < lastY - 0.5) direction = -1;
     lastY = y;
-    if (sawContact && !suppress) armed = true;
     if (armed && !fingerDown && !suppress) scheduleIdle();
+  }
+
+  function onTouchStart(event) {
+    if (!live()) return;
+    cancelSettle();
+    clearIdle();
+    armed = false;
+    fingerDown = true;
+    cancelGesture();
+    if (!shouldCaptureTouch()) return;
+    if (!event || !event.touches || event.touches.length !== 1) return;
+    var touch = event.touches[0];
+    var y = currentScrollY();
+    var rests = collectRests();
+    if (!rests.length) return;
+    gesture = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      lastY: touch.clientY,
+      originY: y,
+      originIndex: restIndexForY(y, rests),
+      axis: null,
+      locked: false
+    };
+  }
+
+  function onTouchMove(event) {
+    if (!live()) return;
+    cancelSettle();
+    fingerDown = true;
+    clearIdle();
+    if (!shouldCaptureTouch() || !gesture) return;
+    if (!event || !event.touches || event.touches.length !== 1) {
+      cancelGesture();
+      return;
+    }
+    var touch = event.touches[0];
+    var dx = touch.clientX - gesture.startX;
+    var dy = touch.clientY - gesture.startY;
+    gesture.lastX = touch.clientX;
+    gesture.lastY = touch.clientY;
+    if (gesture.axis !== "vertical" && gesture.axis !== "horizontal") {
+      gesture.axis = classifyTouchIntent(dx, dy);
+      if (gesture.axis === "vertical") {
+        gesture.locked = true;
+        stopNativeMomentum(gesture.originY);
+      }
+    }
+    if (gesture.axis === "vertical") {
+      if (event.cancelable) event.preventDefault();
+      holdGestureOrigin();
+    }
+  }
+
+  function onTouchEnd(event) {
+    if (!live()) return;
+    fingerDown = false;
+    if (!gesture) return;
+    if (event && event.touches && event.touches.length > 0) {
+      cancelSettle();
+      clearIdle();
+      cancelGesture();
+      return;
+    }
+    var dy = gesture.lastY - gesture.startY;
+    var axis = gesture.axis;
+    var originIndex = gesture.originIndex;
+    var originY = gesture.originY;
+    gesture = null;
+    if (axis !== "vertical" || !shouldCaptureTouch()) return;
+    if (event && event.cancelable) event.preventDefault();
+    stopNativeMomentum(originY);
+    var dest = chooseAdjacentDestination(originIndex, dy, collectRests());
+    if (!dest || dest.y == null) return;
+    dest.y = clamp(dest.y, 0, lastReachableScrollY(maxScrollY()));
+    if (!(Math.abs(dest.y - originY) > 0)) return;
+    startSettle(dest.y);
+  }
+
+  function onTouchCancel() {
+    if (!live()) return;
+    fingerDown = false;
+    cancelSettle();
+    clearIdle();
+    cancelGesture();
   }
 
   function onPointerDown() {
     if (!live()) return;
     cancelSettle();
-    fingerDown = true;
-    sawContact = true;
     clearIdle();
-  }
-
-  function onTouchMove() {
-    if (!live()) return;
-    cancelSettle();
     fingerDown = true;
-    armed = true;
-    suppress = false;
-    clearIdle();
   }
 
   function onPointerMove(event) {
     if (!live()) return;
+    if (gesture) return;
     if (!fingerDown && !(event && event.buttons > 0)) return;
-    onTouchMove();
+    cancelSettle();
+    clearIdle();
   }
 
   function onPointerUp() {
     if (!live()) return;
+    if (gesture) return;
     fingerDown = false;
-    if (armed && !suppress) scheduleIdle();
   }
 
   function onWheel() {
     if (!live()) return;
     cancelSettle();
+    cancelGesture();
     armed = true;
     suppress = false;
     fingerDown = false;
@@ -512,14 +696,15 @@
     authoredSvhPxCache = 0;
     cancelSettle();
     clearIdle();
+    cancelGesture();
   }
 
   function onPageHide() {
     cancelSettle();
     clearIdle();
+    cancelGesture();
     armed = false;
     fingerDown = false;
-    sawContact = false;
   }
 
   function onVisibility() {
@@ -529,10 +714,10 @@
   function onHashOrNav() {
     cancelSettle();
     clearIdle();
+    cancelGesture();
     armed = false;
     suppress = true;
     fingerDown = false;
-    sawContact = false;
   }
 
   function onActivate(event) {
@@ -558,17 +743,17 @@
     armed = false;
     suppress = false;
     fingerDown = false;
-    sawContact = false;
     settling = false;
+    gesture = null;
     direction = 0;
     lastY = currentScrollY();
     authoredSvhPxCache = 0;
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: true });
-    window.addEventListener("touchstart", onPointerDown, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    window.addEventListener("touchend", onPointerUp, { passive: true });
-    window.addEventListener("touchcancel", onPointerUp, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", onTouchCancel, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
@@ -586,12 +771,13 @@
     if (!bound) return;
     cancelSettle();
     clearIdle();
+    cancelGesture();
     window.removeEventListener("scroll", onScroll);
     window.removeEventListener("wheel", onWheel);
-    window.removeEventListener("touchstart", onPointerDown);
+    window.removeEventListener("touchstart", onTouchStart);
     window.removeEventListener("touchmove", onTouchMove);
-    window.removeEventListener("touchend", onPointerUp);
-    window.removeEventListener("touchcancel", onPointerUp);
+    window.removeEventListener("touchend", onTouchEnd);
+    window.removeEventListener("touchcancel", onTouchCancel);
     window.removeEventListener("pointerdown", onPointerDown);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
@@ -607,15 +793,20 @@
     armed = false;
     suppress = false;
     fingerDown = false;
-    sawContact = false;
     opening = null;
     hand = null;
     work = null;
   }
 
   function onBreakpointChange() {
-    if (isMobileViewport() && !quietModeActive()) attach();
+    if (isMobileViewport() && !quietModeActive() && !prefersReducedMotion()) attach();
     else detach();
+  }
+
+  function listenMedia(query, fn) {
+    if (!query) return;
+    if (query.addEventListener) query.addEventListener("change", fn);
+    else if (query.addListener) query.addListener(fn);
   }
 
   function boot() {
@@ -626,11 +817,13 @@
     } catch (e) {
       return;
     }
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener("change", onBreakpointChange);
-    } else if (mediaQuery.addListener) {
-      mediaQuery.addListener(onBreakpointChange);
+    try {
+      reduceQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    } catch (e) {
+      reduceQuery = null;
     }
+    listenMedia(mediaQuery, onBreakpointChange);
+    listenMedia(reduceQuery, onBreakpointChange);
     onBreakpointChange();
   }
 

@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 /**
- * Source + math assertion: mobile-only beat settle after a finger gesture.
+ * Source + math assertion: mobile one-gesture / one-adjacent-beat touch lock.
  *
- * Locks the owner correction that an ordinary mobile lift can stop between
- * authored rests, stacking or stranding adjacent moments:
+ * Locks the owner correction that native touch momentum must never own
+ * passage distance. A continuous single-finger vertical gesture that
+ * begins at authored rest N may finish only at N-1, N, or N+1:
  * - helper is homepage-only, gated to max-width 700px
+ * - touchmove is non-passive; the vertical path calls preventDefault()
+ * - quiet mode and prefers-reduced-motion cannot intercept touch
  * - destinations invert OPENING_SPAN final rest, BEAT_DWELL plateaus, terminal
  * - runtime rests/targets are reachable whole CSS pixels (operational ranges)
- * - forward/reverse choice uses direction + bounded nearest adjacent rest
+ * - an exported adjacent-destination helper cannot emit more than ±1 rest
+ * - tap/below-threshold stays put; links/buttons remain usable
  * - touch/pointer/wheel/keyboard/resize/pagehide/link/hash cancel immediately
  * - settle rAF cannot recursively schedule another settle
  * - no CSS section scroll-snap fallback
@@ -16,10 +20,10 @@
  *
  * Residue: mobile-beat-settle tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing homepage mobile settle / remap / snap
+ * Future consumer: any operator editing homepage mobile touch lock / settle / remap
  * Activation: execute — node tools/assert-mobile-beat-settle.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the mobile beat-settle contract is retired or superseded
+ * Retirement: when the mobile one-adjacent-beat touch-lock contract is retired or superseded
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -128,6 +132,48 @@ if (!/quietModeActive\(\)\s*\|\|\s*prefersReducedMotion\(\)/.test(maybeFn)) {
   fail("maybeSettle must refuse quiet mode and reduced-motion before scrolling");
 }
 
+const bpFn = extractFn(helper, "onBreakpointChange");
+if (!bpFn) fail("could not isolate onBreakpointChange");
+if (!/quietModeActive\(\)/.test(bpFn) || !/prefersReducedMotion\(\)/.test(bpFn)) {
+  fail("quiet mode and reduced-motion must prevent touch intercept attach, not only post-momentum settle");
+}
+
+const touchStartFn = extractFn(helper, "onTouchStart");
+const touchMoveFn = extractFn(helper, "onTouchMove");
+const touchEndFn = extractFn(helper, "onTouchEnd");
+const touchCancelFn = extractFn(helper, "onTouchCancel");
+if (!touchStartFn) fail("could not isolate onTouchStart");
+if (!touchMoveFn) fail("could not isolate onTouchMove");
+if (!touchEndFn) fail("could not isolate onTouchEnd");
+if (!touchCancelFn) fail("could not isolate onTouchCancel");
+
+const touchMoveBinds = [...helper.matchAll(/addEventListener\(\s*"touchmove"\s*,\s*([^,]+)\s*,\s*(\{[^}]*\})/g)];
+if (!touchMoveBinds.length) fail("touchmove must be registered with an options object");
+if (!touchMoveBinds.some((m) => /passive:\s*false/.test(m[2]))) {
+  fail("touchmove must be registered non-passive so preventDefault can cancel native fling");
+}
+if (touchMoveBinds.some((m) => /passive:\s*true/.test(m[2]))) {
+  fail("touchmove must not be registered passively; native momentum must not own passage");
+}
+
+if (!/preventDefault\s*\(/.test(touchMoveFn)) {
+  fail("the vertical gesture path must call preventDefault()");
+}
+const touchMoveGate = touchMoveFn.search(/shouldCaptureTouch\(|quietModeActive\(|prefersReducedMotion\(/);
+const touchMovePrevent = touchMoveFn.indexOf("preventDefault");
+if (touchMoveGate < 0 || touchMovePrevent < 0 || touchMoveGate > touchMovePrevent) {
+  fail("quiet and reduced-motion paths must refuse intercept before preventDefault");
+}
+if (!/classifyTouchIntent|vertical/.test(touchMoveFn)) {
+  fail("touchmove must distinguish vertical intent before locking native scroll");
+}
+if (/preventDefault\s*\(/.test(touchStartFn)) {
+  fail("touchstart must not preventDefault; taps and links must stay native");
+}
+if (!/shouldCaptureTouch\(|quietModeActive\(|prefersReducedMotion\(/.test(touchStartFn)) {
+  fail("touchstart must not snapshot or lock when quiet or reduced-motion");
+}
+
 // No new visitor-facing chrome.
 if (/class(List)?\.(add|toggle)\([^)]*(progress|pagination|dot|indicator|hint)/i.test(helper)) {
   fail("helper must not add visible progress/pagination chrome");
@@ -201,8 +247,33 @@ if (/maybeSettle|scheduleIdle/.test(finishFn)) {
 if (!/if\s*\(\s*!live\(\)\s*\|\|\s*settling\s*\)\s*return/.test(scrollFn)) {
   fail("onScroll must ignore the settle's own scrollTo events");
 }
-if (!/sawContact/.test(scrollFn) || !/armed = true/.test(scrollFn)) {
-  fail("onScroll must arm after a real contact so a fast flick still settles");
+if (/sawContact/.test(scrollFn) && /armed = true/.test(scrollFn)) {
+  fail("onScroll must not arm post-momentum settle from a touch contact");
+}
+if (!/cancelSettle/.test(touchStartFn)) {
+  fail("a new touchstart must cancel any in-flight settle");
+}
+if (!/restIndexForY/.test(touchStartFn)) {
+  fail("touchstart must snapshot the current or nearest authored rest as the gesture origin");
+}
+if (/scheduleIdle/.test(touchEndFn)) {
+  fail("touchend must not queue post-momentum idle settle");
+}
+if (!/chooseAdjacentDestination/.test(touchEndFn)) {
+  fail("touchend must choose an adjacent authored rest immediately");
+}
+if (!/startSettle/.test(touchEndFn)) {
+  fail("a qualifying swipe must animate exactly once on lift");
+}
+if (/startSettle/.test(touchCancelFn) || /scheduleIdle/.test(touchCancelFn)) {
+  fail("touchcancel must not queue a second movement");
+}
+if (!/cancelSettle/.test(touchCancelFn)) {
+  fail("touchcancel must cancel any in-flight settle");
+}
+const pointerUpFn = extractFn(helper, "onPointerUp");
+if (pointerUpFn && /scheduleIdle/.test(pointerUpFn)) {
+  fail("pointerup must not queue a second settle after touch lift");
 }
 if (!/settling = true/.test(startFn) || !/requestAnimationFrame\(step\)/.test(startFn)) {
   fail("settle must be a cancellable rAF ease, not a native page snap");
@@ -258,7 +329,23 @@ try {
 if (!settle || typeof settle.chooseBeatDestination !== "function") {
   fail("helper must export chooseBeatDestination");
 }
+if (typeof settle.chooseAdjacentDestination !== "function") {
+  fail("helper must export chooseAdjacentDestination");
+}
+if (typeof settle.restIndexForY !== "function") {
+  fail("helper must export restIndexForY");
+}
+if (typeof settle.classifyTouchIntent !== "function") {
+  fail("helper must export classifyTouchIntent");
+}
 if (settle.MOBILE_MAX_WIDTH !== 700) fail("exported mobile gate must be 700");
+if (!(settle.SWIPE_THRESHOLD_PX > 0)) fail("SWIPE_THRESHOLD_PX must be a positive deliberate threshold");
+
+const adjFn = extractFn(helper, "chooseAdjacentDestination");
+if (!adjFn) fail("could not isolate chooseAdjacentDestination");
+if (!/operationalRests\s*\(\s*rests\s*\)/.test(adjFn)) {
+  fail("chooseAdjacentDestination must classify against reachable operational rests");
+}
 
 function remapBeatProgress(physicalProgress, totalTravel, holdSvh, svhPx, anchors) {
   const p = Math.max(0, Math.min(1, physicalProgress));
@@ -611,6 +698,124 @@ consumerCases.forEach((item) => {
   }
 });
 
+const threshold = settle.SWIPE_THRESHOLD_PX;
+if (settle.classifyTouchIntent(0, 0, threshold) !== null) {
+  fail("zero movement must stay a tap, not a swipe");
+}
+if (settle.classifyTouchIntent(3, threshold - 1, threshold) !== null) {
+  fail("below-threshold travel must stay a tap");
+}
+if (settle.classifyTouchIntent(0, threshold, threshold) !== "vertical") {
+  fail("threshold vertical travel must be a vertical swipe");
+}
+if (settle.classifyTouchIntent(threshold + 8, 4, threshold) !== "horizontal") {
+  fail("horizontal-dominant travel must not lock the vertical passage");
+}
+if (settle.classifyTouchIntent(threshold, threshold, threshold) !== "vertical") {
+  fail("equal-axis travel at threshold must prefer the vertical passage axis");
+}
+
+function adjacent(origin, dy) {
+  return settle.chooseAdjacentDestination(origin, dy, rests);
+}
+
+function expectAdjacent(origin, dy, wantIndex, wantY, msg) {
+  const got = adjacent(origin, dy);
+  if (!got || got.index !== wantIndex || got.y !== wantY) {
+    fail(
+      msg +
+        " (origin=" +
+        origin +
+        " dy=" +
+        dy +
+        " got " +
+        JSON.stringify(got) +
+        ", want {index:" +
+        wantIndex +
+        ", y:" +
+        wantY +
+        "})"
+    );
+  }
+}
+
+expectAdjacent(0, 0, 0, null, "a tap must stay at the origin rest");
+expectAdjacent(2, threshold - 1, 2, null, "below-threshold upward travel must stay put");
+expectAdjacent(2, -(threshold - 1), 2, null, "below-threshold downward finger travel must stay put");
+expectAdjacent(0, -threshold, 1, 1000, "forward must target the immediate next rest start");
+expectAdjacent(1, -50, 2, 2000, "forward from opening-final must choose hand-0 start");
+expectAdjacent(2, 50, 1, 1400, "reverse must target the immediate previous rest end");
+expectAdjacent(3, 80, 2, 2400, "reverse from hand-1 must choose hand-0 end");
+expectAdjacent(0, 400, 0, null, "reverse at the first rest must clamp");
+expectAdjacent(5, -400, 5, null, "forward at the last rest must clamp");
+
+const provenWrongReplay = adjacent(0, 80 - 720);
+if (provenWrongReplay.index !== 1 || provenWrongReplay.y !== 1000) {
+  fail(
+    "the proven-wrong 375x812 long swipe from opening-start must advance exactly one rest, not land at hand-1 (got " +
+      JSON.stringify(provenWrongReplay) +
+      ")"
+  );
+}
+
+const hugeDeltas = [-1e9, -10000, -640, -threshold, threshold, 640, 10000, 1e9];
+for (let origin = 0; origin < rests.length; origin++) {
+  for (const dy of hugeDeltas) {
+    const got = adjacent(origin, dy);
+    if (!got || Math.abs(got.index - origin) > 1) {
+      fail(
+        "adjacent destination must never move more than one rest (origin=" +
+          origin +
+          " dy=" +
+          dy +
+          " got " +
+          JSON.stringify(got) +
+          ")"
+      );
+    }
+    if (got.y != null && !Number.isInteger(got.y)) {
+      fail("adjacent destination y must be a reachable integer");
+    }
+    if (got.y != null && !restContaining(got.y, rests)) {
+      fail("adjacent destination y " + got.y + " must lie inside an authored rest");
+    }
+    if (got.index > origin && got.y !== rests[got.index].start) {
+      fail("forward adjacent destination must be the next rest start");
+    }
+    if (got.index < origin && got.y !== rests[got.index].end) {
+      fail("reverse adjacent destination must be the previous rest end");
+    }
+    if (got.index === origin && got.y !== null) {
+      fail("a clamped or below-threshold gesture must stay put (y=null)");
+    }
+  }
+}
+
+if (settle.restIndexForY(0, rests) !== 0) fail("y=0 must snapshot opening-start");
+if (settle.restIndexForY(1200, rests) !== 1) fail("inside opening-final must snapshot that rest");
+if (settle.restIndexForY(1400, rests) !== 1) fail("exact rest end must count as current");
+if (settle.restIndexForY(1700, rests) !== 1) fail("mid-gap must snapshot the nearest rest");
+if (settle.restIndexForY(5200, rests) !== 5) fail("terminal point rest must snapshot as current");
+
+const fracAdj = settle.chooseAdjacentDestination(1, -40, fracRests);
+if (fracAdj.index !== 2 || fracAdj.y !== 4918) {
+  fail("forward adjacent destination must use the next rest's reachable start (got " + JSON.stringify(fracAdj) + ")");
+}
+const fracAdjBack = settle.chooseAdjacentDestination(2, 40, fracRests);
+if (fracAdjBack.index !== 1 || fracAdjBack.y !== 4854) {
+  fail("reverse adjacent destination must use the previous rest's reachable end (got " + JSON.stringify(fracAdjBack) + ")");
+}
+
+const resizeFn = extractFn(helper, "onResize");
+const hideFn = extractFn(helper, "onPageHide");
+const navFn = extractFn(helper, "onHashOrNav");
+if (!resizeFn || !/cancelSettle/.test(resizeFn)) fail("resize must cancel the in-flight gesture");
+if (!hideFn || !/cancelSettle/.test(hideFn)) fail("pagehide must cancel the in-flight gesture");
+if (!navFn || !/cancelSettle/.test(navFn)) fail("navigation must cancel the in-flight gesture");
+if (!/cancelGesture|gesture = null/.test(resizeFn) || !/cancelGesture|gesture = null/.test(hideFn) || !/cancelGesture|gesture = null/.test(navFn)) {
+  fail("resize, pagehide, and navigation must drop gesture ownership without a queued movement");
+}
+
 console.log(
-  "PASS: mobile beat settle (700px gate; opening-final + BEAT_DWELL invert; reachable operational rests; forward/reverse + cancel/reentrancy; no CSS scroll-snap)"
+  "PASS: mobile one-adjacent-beat touch lock (non-passive preventDefault; quiet/reduced native; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );
