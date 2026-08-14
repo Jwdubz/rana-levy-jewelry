@@ -562,7 +562,7 @@ if (!/id="handBridgeVideo"/.test(index) || !/id="workBridge"/.test(index)) {
   fail("desktop bridge markup (#handBridgeVideo / #workBridge) must remain present");
 }
 
-// --- site.js: Hand portrait world retired; direct bench passage + opening-final exit ---
+// --- site.js: Hand portrait world retired; direct bench passage + workbench Cut-by-hand ---
 const handPassage = spawnSync(
   process.execPath,
   [path.join(root, "tools/assert-hand-direct-bench-passage.mjs")],
@@ -595,6 +595,17 @@ if (handMotion.status !== 0) {
   process.stdout.write(handMotion.stdout || "");
   process.stderr.write(handMotion.stderr || "");
   fail("hand motion authority tripwire failed");
+}
+
+const passageCorrection = spawnSync(
+  process.execPath,
+  [path.join(root, "tools/assert-mobile-passage-corrections.mjs")],
+  { encoding: "utf8" }
+);
+if (passageCorrection.status !== 0) {
+  process.stdout.write(passageCorrection.stdout || "");
+  process.stderr.write(passageCorrection.stderr || "");
+  fail("mobile passage correction tripwire failed");
 }
 
 const catalogSummary = spawnSync(

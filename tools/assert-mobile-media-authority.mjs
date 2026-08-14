@@ -413,8 +413,11 @@ if (!/handBenchStack\.style\.transform\s*=\s*["']translate3d\(0,0,0\) scale\(1\)
 if (!/\.hand-bench\s+\.layer-media\s*\{[^}]*inset:\s*0/i.test(styles)) {
   fail("hand-bench layer-media must remain full-viewport inset:0");
 }
-if (!/#workStack0\s*>\s*img[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobile)) {
-  fail("mobile first Work still must remain object-fit:cover full-viewport authority");
+if (!/#workStack0\s*>\s*(img|video)[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobile)) {
+  fail("mobile first Work carrier must remain object-fit:cover full-viewport authority");
+}
+if (!/id="vegasVideo"/.test(index) || !/setVideoActive\s*\(\s*vegasVideo/.test(siteJs)) {
+  fail("Vegas montage must be a deferred work-0 video armed through setVideoActive");
 }
 // Forbidden mobile filler grammar for this handoff.
 const forbidden = [
@@ -437,7 +440,7 @@ if (!/if\s*\(\s*retired\s*\)\s*\{\s*owns\s*=\s*false\s*;\s*\}/.test(manageBody))
 // Boundary B: mobile updateActivity always retires handBridgeVideo (never co-live with handVideo).
 // Boundary C: handVideo only when handActive (which on mobile needs openingRetired).
 // These three predicates together imply at most one unpaused is-live authority at
-// Opening→Hand and Hand→Work boundaries (Work is still-only).
+// Opening→Hand and Hand→Work boundaries (Vegas video only after Hand retires).
 if (!/function\s+retireBridgeLayer\s*\(/.test(siteJs)) {
   fail("retireBridgeLayer must exist for causal mobile bridge paint retirement");
 }

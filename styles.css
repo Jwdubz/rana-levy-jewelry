@@ -337,12 +337,16 @@
   gap: 0.55em;
 }
 
+.thought .line {
+  display: block;
+}
+
 /* ——— M2 Hand ——— */
 
 .movement-hand {
-  /* 380svh total = 100svh sticky + 160svh choreography + 2 × 60svh holds
-     (sticky travel 280svh). Direct ring→bench carrier carries the interval. */
-  height: 380svh;
+  /* 320svh total = 100svh sticky + 160svh choreography + 1 × 60svh hold
+     (sticky travel 220svh). Direct ring→bench carrier carries the interval. */
+  height: 320svh;
 }
 
 .hand-bench {
@@ -449,8 +453,30 @@
    bleeding sharp subject. Vertical art-direction uses --work-subject-shift-y
    on the sharp image (object-position is inert for contained 1:1 in a 1:1 box). */
 .work-world-0 {
-  --work-echo-src: url("assets/ring-art-deco.webp");
+  --work-echo-src: none;
   --work-subject-shift-y: 0svh;
+  background: #020005;
+}
+
+.work-world-0::before {
+  content: none;
+  display: none;
+}
+
+#workStack0 > img,
+#workStack0 > video {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  object-position: 50% 46%;
+  transform: none;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .work-world-1 {
@@ -463,8 +489,8 @@
   --work-subject-shift-y: 2svh;
 }
 
-/* Echo underlay lives on the world so angled Turns / opacity mask one continuous field. */
-.work-world-0::before,
+/* Echo underlay lives on the world so angled Turns / opacity mask one continuous field.
+   work-world-0 is the Vegas film and must not grow a blurred duplicate field. */
 .work-world-1::before,
 .work-world-2::before {
   content: "";
@@ -490,8 +516,8 @@
 }
 
 /* Direct sharp subject only — square source canvas, contain, far-perimeter feather.
-   Translate is on the image so the parent stack's breath transform stays intact. */
-#workStack0 > img,
+   Translate is on the image so the parent stack's breath transform stays intact.
+   Vegas #workStack0 is a full-bleed film, not a contained jewelry still. */
 #workStack1 > img,
 #workStack2 > img {
   position: absolute;
@@ -520,9 +546,14 @@
   );
 }
 
-.work-thought-open {
+.work-thought-vegas {
   left: 6vw;
   bottom: 12svh;
+  max-width: min(36rem, 82vw);
+}
+
+.work-copy-dock {
+  position: static;
 }
 
 .work-thought-rest {
@@ -600,12 +631,12 @@
 
 @media (max-width: 700px) {
   /* Live sticky tracks collapsing browser chrome. Travel stays authored svh.
-     Hand: 120svh choreography + 2 × 60svh holds (240svh). */
+     Hand: 120svh choreography + 1 × 60svh hold (180svh). */
   .movement-hand {
     margin-top: -100svh;
     margin-top: -100dvh;
-    height: 340svh;
-    height: calc(100dvh + 240svh);
+    height: 280svh;
+    height: calc(100dvh + 180svh);
   }
 
   /* Work: existing 450svh - 100svh sticky = 170svh choreography + 3 x 60svh holds. */
@@ -841,6 +872,7 @@
   }
 
   #workStack0 > img,
+  #workStack0 > video,
   #workStack1 > img,
   #workStack2 > img {
     position: absolute;
@@ -859,7 +891,8 @@
     border-radius: 0;
   }
 
-  .work-world-0 #workStack0 > img {
+  .work-world-0 #workStack0 > img,
+  .work-world-0 #workStack0 > video {
     object-position: 50% 46%;
   }
 
@@ -871,20 +904,83 @@
     object-position: 52% 48%;
   }
 
-  .work-links {
+  .work-thought-vegas {
     left: 8vw;
-    bottom: 7svh;
-    flex-direction: column;
-    gap: 0.7rem;
+    right: 8vw;
+    bottom: 11svh;
+    max-width: none;
+    text-align: center;
+    font-size: max(1rem, min(5.2vw, 1.35rem));
   }
 
-  /* Sit above the three-row .work-links stack with stable breath. */
+  .movement-work {
+    --work-copy-dock-h: max(15.5rem, 32dvh);
+  }
+
+  .movement-work .work-world,
+  .movement-work .work-bridge,
+  .movement-work .movement-veil,
+  .movement-work .junction-light,
+  .movement-work .movement-grain {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--work-copy-dock-t, 0) * var(--work-copy-dock-h));
+    height: auto;
+  }
+
+  .work-copy-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 33;
+    height: calc(var(--work-copy-dock-t, 0) * var(--work-copy-dock-h));
+    background: #020005;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .movement-work.is-copy-dock .work-copy-dock {
+    pointer-events: auto;
+  }
+
+  .work-links {
+    position: static;
+    left: auto;
+    bottom: auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    filter: none;
+  }
+
   .work-thought-rest {
-    bottom: calc(7svh + 8rem);
-    text-shadow:
-      0 1px 2px rgba(2, 0, 5, 0.7),
-      0 2px 28px rgba(2, 0, 5, 0.62),
-      0 0 40px rgba(2, 0, 5, 0.34);
+    position: static;
+    left: auto;
+    bottom: auto;
+    max-width: 88vw;
+    text-align: center;
+    font-size: max(1rem, min(4.6vw, 1.2rem));
+    line-height: 1.28;
+    text-shadow: none;
+  }
+
+  .choice-link {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: max(1rem, 1.05rem);
+    padding: 0.35rem 0.4rem;
   }
 
   /* No radial resting wash on mobile — readability via localized text shadow. */

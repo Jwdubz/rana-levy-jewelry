@@ -45,11 +45,11 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Desktop/fallback: 340svh = 100 sticky + 180 choreography + 60 terminal hold.
-       Mobile live contract (700px query): 100dvh sticky + the same 240svh travel. */
+    /* Desktop/fallback: 280svh = 100 sticky + 180 choreography (no opening-final hold).
+       Mobile live contract (700px query): 100dvh sticky + the same 180svh travel. */
     .passage {
       position: relative;
-      height: 340svh;
+      height: 280svh;
       width: 100%;
     }
 
@@ -259,30 +259,18 @@
       filter: drop-shadow(0 2px 28px rgba(0, 0, 0, 0.32));
     }
 
-    .final {
-      left: 6vw;
-      bottom: 10svh;
-      transform: translate3d(0, 5svh, 0);
-      font-size: clamp(2.8rem, 5vw, 5.8rem);
-      font-weight: 400;
-      line-height: 0.96;
-      letter-spacing: -0.01em;
-      opacity: 0;
-      white-space: normal;
-    }
-
-    .final .line {
-      display: block;
+    .copy-dock-opening {
+      display: none;
     }
 
     @media (max-width: 700px) {
       /*
         Live sticky tracks collapsing browser chrome (100dvh). Authored travel
-        stays 180svh choreography + 60svh terminal hold, not a total-dvh span.
+        stays 180svh choreography, not a total-dvh span.
       */
       .passage {
-        height: 340svh;
-        height: calc(100dvh + 240svh);
+        height: 280svh;
+        height: calc(100dvh + 180svh);
       }
 
       .scene {
@@ -359,41 +347,57 @@
           0 0 36px rgba(2, 0, 5, 0.28);
       }
 
+      .scene {
+        --opening-copy-dock-h: 18dvh;
+      }
+
+      .copy-dock-opening {
+        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 7;
+        height: calc(var(--opening-copy-dock-t, 0) * var(--opening-copy-dock-h));
+        background: #020005;
+        pointer-events: none;
+      }
+
+      .world-studio,
+      .world-ring {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--opening-copy-dock-t, 0) * var(--opening-copy-dock-h));
+        height: auto;
+      }
+
       .headline {
-        left: 8vw;
+        left: 0;
+        right: 0;
         top: auto;
-        bottom: 18svh;
-        right: auto;
-        transform: translate3d(0, 6svh, 0);
-        font-size: clamp(2.55rem, 11.2vw, 3.35rem);
-        line-height: 0.92;
-        text-align: left;
-        white-space: normal;
-        max-width: 86vw;
-        text-shadow:
-          0 1px 2px rgba(2, 0, 5, 0.5),
-          0 2px 26px rgba(2, 0, 5, 0.48),
-          0 0 40px rgba(2, 0, 5, 0.28);
+        bottom: 0;
+        height: var(--opening-copy-dock-h, 18dvh);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: none;
+        font-size: clamp(1rem, 5.2vw, 1.25rem);
+        line-height: 1.15;
+        text-align: center;
+        white-space: nowrap;
+        max-width: none;
+        padding: 0 0.75rem;
+        box-sizing: border-box;
+        text-shadow: none;
       }
 
       .headline .line {
-        display: block;
+        display: inline;
       }
 
       .headline .break {
-        display: block;
-      }
-
-      .final {
-        left: 8vw;
-        bottom: 12svh;
-        font-size: clamp(2.15rem, 9.6vw, 2.9rem);
-        line-height: 1.02;
-        max-width: 84vw;
-        text-shadow:
-          0 1px 2px rgba(2, 0, 5, 0.55),
-          0 2px 26px rgba(2, 0, 5, 0.5),
-          0 0 40px rgba(2, 0, 5, 0.3);
+        display: none;
       }
     }
 
@@ -537,15 +541,12 @@
 
         <p class="type setup" id="setupLine">Some stones turn colors.</p>
 
+        <div class="copy-dock-opening" id="openingCopyDock" aria-hidden="true"></div>
+
         <h1 class="type headline" id="headline">
           <span class="line">Custom Gems</span><span class="break"></span>
           <span class="line"> Turn <span class="heads" id="heads">Heads</span></span>
         </h1>
-
-        <p class="type final" id="finalLine">
-          <span class="line">Cut by hand,</span>
-          <span class="line">one at a time.</span>
-        </p>
       </div>
     </section>
 
@@ -616,11 +617,10 @@
         <div class="junction-light" id="handJunction" aria-hidden="true"></div>
         <div class="movement-grain" aria-hidden="true"></div>
 
-        <p class="thought thought-lg hand-thought-a" id="handThought0">Rana works each facet at the lap.</p>
-        <div class="thought thought-md hand-thought-rest thought-stack" id="handThought1">
-          <span>From her home studio in Las Vegas.</span>
-          <span>Cutting stones for six years. Designing Jewelry for nearly a Decade</span>
-        </div>
+        <p class="thought thought-lg hand-thought-a" id="handThought0">
+          <span class="line">Cut by hand,</span>
+          <span class="line">one at a time.</span>
+        </p>
       </div>
     </section>
 
@@ -631,7 +631,30 @@
 
         <div class="layer work-world work-world-0 is-base" id="workWorld0">
           <div class="layer-media" id="workStack0">
-            <img src="assets/ring-art-deco.webp" alt="" width="1440" height="1440" decoding="async">
+            <img
+              src="assets/vegas-strip-night.jpg"
+              data-desktop-src="assets/vegas-strip-night.jpg"
+              data-mobile-src="assets/vegas-strip-night-portrait.jpg"
+              alt=""
+              width="1920"
+              height="1080"
+              decoding="async"
+            >
+            <video
+              id="vegasVideo"
+              data-src="assets/vegas-strip-night.mp4"
+              data-desktop-src="assets/vegas-strip-night.mp4"
+              data-mobile-src="assets/vegas-strip-night-portrait.mp4"
+              poster="assets/vegas-strip-night.jpg"
+              data-desktop-poster="assets/vegas-strip-night.jpg"
+              data-mobile-poster="assets/vegas-strip-night-portrait.jpg"
+              muted
+              loop
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              disableremoteplayback
+            ></video>
           </div>
         </div>
 
@@ -667,12 +690,14 @@
         <div class="work-rest-wash" id="workRestWash" aria-hidden="true"></div>
         <div class="movement-grain" aria-hidden="true"></div>
 
-        <p class="thought thought-lg work-thought-open" id="workThoughtOpen">Some of what she's made.</p>
-        <p class="thought thought-md work-thought-rest" id="workThoughtRest">See what's ready now or work with Rana to bring your Custom Design to Life.</p>
-        <div class="work-links" id="workLinks">
-          <a class="choice-link" href="ready.html">Ready Now</a>
-          <a class="choice-link" href="made.html">Made To Order</a>
-          <a class="choice-link" href="consultation.html">Custom Consultation</a>
+        <p class="thought thought-md work-thought-vegas" id="workThoughtVegas">Designing Jewelry for nearly a Decade.</p>
+        <div class="work-copy-dock" id="workCopyDock">
+          <p class="thought thought-md work-thought-rest" id="workThoughtRest">See what's ready now or work with Rana to bring your Custom Design to Life.</p>
+          <div class="work-links" id="workLinks">
+            <a class="choice-link" href="ready.html">Ready Now</a>
+            <a class="choice-link" href="made.html">Made To Order</a>
+            <a class="choice-link" href="consultation.html">Custom Consultation</a>
+          </div>
         </div>
       </div>
     </section>
@@ -702,14 +727,14 @@
         finalTextEnd: 0.86
       };
 
-      // Physical opening span: sticky viewport + choreography travel + terminal hold.
-      // MOTION cue fractions remain authored against the 180svh choreography; the hold
-      // is pure plateau after finalTextEnd. Passage CSS height must match the sum.
+      // Physical opening span: sticky viewport + choreography travel.
+      // MOTION cue fractions remain authored against the 180svh choreography.
+      // The opening-final hold is retired; Custom Gems is the last opening rest.
       // Mobile live sticky is 100dvh; travel stays these svh distances.
       const OPENING_SPAN = {
         stickySvh: 100,
         choreographySvh: 180,
-        terminalHoldSvh: 60,
+        terminalHoldSvh: 0,
         // Fully composed mobile #headline center inside 0.48–0.62.
         headlineChoreography: 0.55
       };
@@ -863,8 +888,9 @@
       const markEl = document.getElementById("mark");
       const setupLine = document.getElementById("setupLine");
       const headline = document.getElementById("headline");
+      const openingCopyDock = document.getElementById("openingCopyDock");
       const heads = document.getElementById("heads");
-      const finalLine = document.getElementById("finalLine");
+      const sceneEl = document.getElementById("scene");
       const worldRing = document.getElementById("worldRing");
       const studioStack = document.getElementById("studioStack");
       const ringStack = document.getElementById("ringStack");
@@ -1064,8 +1090,6 @@
         const headInEnd = mobile ? 0.48 : MOTION.headlineInEnd;
         const headOutStart = mobile ? 0.62 : MOTION.headlineOutStart;
         const headOutEnd = mobile ? 0.74 : MOTION.headlineOutEnd;
-        const finalInStart = mobile ? 0.76 : MOTION.finalTextStart;
-        const finalInEnd = mobile ? 0.9 : MOTION.finalTextEnd;
 
         const setupT = windowProgress(progress, setupOutStart, setupOutEnd);
         const setupY = lerp(0, -5, setupT);
@@ -1092,7 +1116,7 @@
         }
 
         if (mobile) {
-          headline.style.transform = "translate3d(0, " + headY + "svh, 0)";
+          headline.style.transform = "none";
         } else {
           headline.style.transform =
             "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
@@ -1104,11 +1128,14 @@
         const prismX = lerp(18, 82, prismT);
         heads.style.backgroundPosition = prismX + "% 50%";
 
-        const finalT = windowProgress(progress, finalInStart, finalInEnd);
-        const finalY = lerp(5, 0, finalT);
-        finalLine.style.transform = "translate3d(0, " + finalY + "svh, 0)";
-        finalLine.style.opacity = String(finalT);
-        finalLine.style.visibility = finalT < 0.02 ? "hidden" : "visible";
+        if (sceneEl) {
+          const dockT = mobile ? headOpacity : 0;
+          sceneEl.style.setProperty("--opening-copy-dock-t", String(dockT));
+          sceneEl.classList.toggle("is-copy-dock", mobile && dockT > 0.5);
+        }
+        if (openingCopyDock) {
+          openingCopyDock.setAttribute("aria-hidden", "true");
+        }
       }
 
       function applyHandoff(progress) {

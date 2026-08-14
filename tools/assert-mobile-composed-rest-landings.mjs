@@ -50,13 +50,10 @@ const styles = read("styles.css");
 const REQUIRED_REST_IDS = [
   "opening-start",
   "opening-headline",
-  "opening-final",
   "hand-0",
-  "hand-1",
   "work-0",
   "work-1",
-  "work-2",
-  "work-terminal"
+  "work-2"
 ];
 
 const COMPOSED_MIN = 0.85;
@@ -92,17 +89,17 @@ if (!(headlineChoreography > 0.48) || !(headlineChoreography < 0.62)) {
   fail("OPENING_SPAN.headlineChoreography must sit inside the fully composed 0.48–0.62 headline interval");
 }
 
-if (!/finalInStart\s*=\s*mobile\s*\?\s*0\.76/.test(index) || !/finalInEnd\s*=\s*mobile\s*\?\s*0\.9/.test(index)) {
-  fail("mobile opening-final copy window must stay 0.76–0.90 so composition can be judged");
+if (/finalInStart\s*=\s*mobile\s*\?\s*0\.76/.test(index) || /id="finalLine"/.test(index)) {
+  fail("opening-final copy window must be retired");
 }
 if (!/handThought0InStart:\s*0\.14/.test(siteJs) || !/handThought0InEnd:\s*0\.26/.test(siteJs)) {
   fail("Hand thought 0 in-window must stay 0.14–0.26");
 }
-if (!/thoughtOpacity\(p,\s*0\.70,\s*0\.82,\s*0\.90,\s*0\.98\)/.test(siteJs)) {
-  fail("Hand thought 1 window must stay 0.70–0.82 / 0.90–0.98");
+if (!/handThought0OutStart:\s*0\.88/.test(siteJs) || !/handThought0OutEnd:\s*0\.96/.test(siteJs)) {
+  fail("Hand Cut-by-hand out-window must stay 0.88–0.96");
 }
-if (!/thoughtOpacity\(p,\s*0\.12,\s*0\.2,\s*0\.28,\s*0\.36\)/.test(siteJs)) {
-  fail("Work opening thought window must stay 0.12–0.2 / 0.28–0.36");
+if (!/thoughtOpacity\(p,\s*0\.14,\s*0\.26,\s*0\.40,\s*0\.52\)/.test(siteJs)) {
+  fail("Vegas decade thought window must stay 0.14–0.26 / 0.40–0.52");
 }
 if (!/thoughtOpacity\(p,\s*0\.78,\s*0\.88,\s*null,\s*null\)/.test(siteJs)) {
   fail("Work rest thought window must stay 0.78–0.88");
@@ -195,15 +192,11 @@ function describeComposition(section, physical, choreo) {
     const headIn = windowProgress(choreo, 0.28, 0.48);
     const headOut = windowProgress(choreo, 0.62, 0.74);
     const head = headOut > 0 ? 1 - headOut : headIn;
-    const finalCopy = windowProgress(choreo, 0.76, 0.9);
     if (physical <= 0.02 && setup >= COMPOSED_MIN) {
       return { id: "opening-start", ok: true };
     }
-    if (head >= COMPOSED_MIN && setup <= 1 - COMPOSED_MIN && finalCopy <= 1 - COMPOSED_MIN) {
+    if (head >= COMPOSED_MIN && setup <= 1 - COMPOSED_MIN) {
       return { id: "opening-headline", ok: true };
-    }
-    if (finalCopy >= COMPOSED_MIN && head <= 1 - COMPOSED_MIN) {
-      return { id: "opening-final", ok: true };
     }
     return {
       id: null,
@@ -213,21 +206,15 @@ function describeComposition(section, physical, choreo) {
         setup.toFixed(3) +
         " head=" +
         head.toFixed(3) +
-        " final=" +
-        finalCopy.toFixed(3) +
         " choreo=" +
         choreo.toFixed(3)
     };
   }
   if (section === "hand") {
-    const t0 = thoughtOpacity(choreo, 0.14, 0.26, 0.4, 0.52);
-    const t1 = thoughtOpacity(choreo, 0.7, 0.82, 0.9, 0.98);
+    const t0 = thoughtOpacity(choreo, 0.14, 0.26, 0.88, 0.96);
     const endFade = 1 - windowProgress(choreo, 0.9, 0.98);
-    if (t0 >= COMPOSED_MIN && t1 <= 1 - COMPOSED_MIN) {
+    if (t0 * endFade >= COMPOSED_MIN) {
       return { id: "hand-0", ok: true };
-    }
-    if (t1 * endFade >= COMPOSED_MIN && t0 <= 1 - COMPOSED_MIN) {
-      return { id: "hand-1", ok: true };
     }
     return {
       id: null,
@@ -235,33 +222,31 @@ function describeComposition(section, physical, choreo) {
       detail:
         "hand t0=" +
         t0.toFixed(3) +
-        " t1=" +
-        t1.toFixed(3) +
         " endFade=" +
         endFade.toFixed(3) +
         " choreo=" +
         choreo.toFixed(3)
     };
   }
-  const openThought = thoughtOpacity(choreo, 0.12, 0.2, 0.28, 0.36);
+  const vegasThought = thoughtOpacity(choreo, 0.14, 0.26, 0.4, 0.52);
   const restThought = thoughtOpacity(choreo, 0.78, 0.88, null, null);
   const world1 = workWorldReveal(choreo, 1);
   const world2 = workWorldReveal(choreo, 2);
-  if (openThought >= COMPOSED_MIN && world1 < 0.5) {
+  if (vegasThought >= COMPOSED_MIN && world1 < 0.5) {
     return { id: "work-0", ok: true };
   }
-  if (world1 >= COMPOSED_MIN && openThought <= 1 - COMPOSED_MIN && restThought <= 1 - COMPOSED_MIN) {
+  if (world1 >= COMPOSED_MIN && vegasThought <= 1 - COMPOSED_MIN && restThought <= 1 - COMPOSED_MIN) {
     return { id: "work-1", ok: true };
   }
   if (restThought >= COMPOSED_MIN && world2 >= COMPOSED_MIN) {
-    return { id: physical >= 0.999 ? "work-terminal" : "work-2", ok: true };
+    return { id: "work-2", ok: true };
   }
   return {
     id: null,
     ok: false,
     detail:
-      "work open=" +
-      openThought.toFixed(3) +
+      "work vegas=" +
+      vegasThought.toFixed(3) +
       " rest=" +
       restThought.toFixed(3) +
       " world1=" +
@@ -296,7 +281,7 @@ function installSamsungGeometry() {
     style: { touchAction: "", overflow: "", overflowX: "", overflowY: "" },
     classList: { contains: () => false },
     offsetHeight: 1,
-    scrollHeight: Math.round(inner * 9.3),
+    scrollHeight: Math.round(inner * 8.2),
     appendChild() {}
   };
   const body = {
@@ -313,9 +298,9 @@ function installSamsungGeometry() {
     })
   });
   const sections = {
-    opening: makeSection("opening", 0, inner * 3.4),
-    hand: makeSection("hand", inner * 2.4, inner * 3.4),
-    work: makeSection("work", inner * 4.8, inner * 4.5)
+    opening: makeSection("opening", 0, inner * 2.8),
+    hand: makeSection("hand", inner * 1.8, inner * 2.8),
+    work: makeSection("work", inner * 3.6, inner * 4.5)
   };
   const matchMedia = (query) => {
     const q = String(query);
@@ -390,7 +375,7 @@ if (
   restIds.some((id, i) => id !== REQUIRED_REST_IDS[i])
 ) {
   fail(
-    "authored rest order must be exactly the nine rests [" +
+    "authored rest order must be exactly the six rests [" +
       REQUIRED_REST_IDS.join(", ") +
       "] (got " +
       JSON.stringify(restIds) +
@@ -398,10 +383,10 @@ if (
   );
 }
 
-const openingTravel = geometry.inner * 3.4 - geometry.inner;
-const handTop = geometry.inner * 2.4;
-const handTravel = geometry.inner * 3.4 - geometry.inner;
-const workTop = geometry.inner * 4.8;
+const openingTravel = geometry.inner * 2.8 - geometry.inner;
+const handTop = geometry.inner * 1.8;
+const handTravel = geometry.inner * 2.8 - geometry.inner;
+const workTop = geometry.inner * 3.6;
 const workTravel = geometry.inner * 4.5 - geometry.inner;
 
 function owningSection(y) {
@@ -449,14 +434,7 @@ function plateauInteriorMargin(rest) {
 }
 
 const recorded = {
-  "opening-headline": { start: 693, end: 693 },
-  "opening-final": { start: 1260, end: 1629 },
-  "hand-0": { start: 1916, end: 2335 },
-  "hand-1": { start: 2823, end: 3242 },
-  "work-0": { start: 3694, end: 4113 },
-  "work-1": { start: 4435, end: 4854 },
-  "work-2": { start: 5248, end: 5667 },
-  "work-terminal": { start: 5810, end: 5810 }
+  "opening-headline": { start: 693, end: 693 }
 };
 
 rests.forEach((rest) => {
@@ -541,7 +519,7 @@ function assertLanding(originIndex, originY, dy, dir) {
           ")"
       );
     }
-    if (dest.id !== "work-terminal" && sample.composed.id !== dest.id) {
+    if (sample.composed.id !== dest.id) {
       fail(
         dir +
           " " +
@@ -584,8 +562,8 @@ for (let step = 1; step < rests.length; step++) {
 }
 if (cursorIndex !== 0) fail("reverse passage must finish on opening-start");
 
-if (landings.length !== 16) {
-  fail("expected the 16 forward/reverse adjacent landings across nine rests, got " + landings.length);
+if (landings.length !== 10) {
+  fail("expected the 10 forward/reverse adjacent landings across six rests, got " + landings.length);
 }
 
 const swipeFromStart = settle.chooseAdjacentDestination(0, -400, rests);
@@ -617,12 +595,12 @@ if (
   );
 }
 
-if (!/height:\s*calc\(\s*100dvh\s*\+\s*240svh\s*\)/.test(styles) || !/height:\s*calc\(\s*100dvh\s*\+\s*350svh\s*\)/.test(styles)) {
-  fail("mobile Hand/Work travel used by this geometry must remain 240svh / 350svh");
+if (!/height:\s*calc\(\s*100dvh\s*\+\s*180svh\s*\)/.test(styles) || !/height:\s*calc\(\s*100dvh\s*\+\s*350svh\s*\)/.test(styles)) {
+  fail("mobile Hand/Work travel used by this geometry must remain 180svh / 350svh");
 }
 
 uninstallHarness();
 
 console.log(
-  "PASS: mobile composed rest landings (16 adjacent gestures; damped visual sample stays on a fully composed beat; opening-headline/opening-final/hand/work interiors; nine authored rest identities preserved)"
+  "PASS: mobile composed rest landings (10 adjacent gestures; damped visual sample stays on a fully composed beat; opening-headline/hand/vegas/heirloom/terminal interiors; six authored rest identities preserved)"
 );

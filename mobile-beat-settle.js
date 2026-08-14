@@ -13,9 +13,9 @@
  * move the passage. Detach restores the exact prior inline
  * touch-action and overflow values. A second contact interrupts
  * ownership but keeps the origin.
- * Destinations are the Opening headline composed frame, Opening
- * terminal hold, BEAT_DWELL Hand/Work plateaus, and the Work terminal
- * — inverted from the existing remap mathematics, then snapped to
+ * Destinations are the Opening headline composed frame,
+ * BEAT_DWELL Hand/Work plateaus — inverted from the existing remap
+ * mathematics, then snapped to
  * reachable whole CSS pixels. Adjacent
  * gesture landings aim at the composed plateau center so the damped
  * visual clock stays inside the hold, not on a black leading edge.
@@ -80,9 +80,9 @@
         rest.start = clamp(rest.start, 0, reachableMax);
         rest.end = clamp(rest.end, 0, reachableMax);
         if (rest.end < rest.start) rest.start = rest.end;
-        if (rest.id === "work-terminal") {
-          rest.start = reachableMax;
+        if (i === rests.length - 1) {
           rest.end = reachableMax;
+          if (rest.end < rest.start) rest.start = rest.end;
         }
       }
       out.push(rest);
@@ -549,15 +549,6 @@
       });
     }
 
-    var openingFinal = deriveOpeningFinalPhysical(span);
-    if (openingFinal) {
-      rests.push({
-        id: "opening-final",
-        start: scrollYForSectionProgress(opening, openingFinal.startP),
-        end: scrollYForSectionProgress(opening, openingFinal.endP)
-      });
-    }
-
     var handTravel = sectionTravel(hand);
     var i;
     var range;
@@ -575,15 +566,15 @@
     for (i = 0; i < beat.work.length; i++) {
       range = plateauPhysicalRange(workTravel, hold, svh, beat.work, i);
       if (!range) continue;
+      if (i === beat.work.length - 1) {
+        range.endP = 1;
+      }
       rests.push({
         id: "work-" + i,
         start: scrollYForSectionProgress(work, range.startP),
         end: scrollYForSectionProgress(work, range.endP)
       });
     }
-
-    var term = scrollYForSectionProgress(work, 1);
-    rests.push({ id: "work-terminal", start: term, end: term });
 
     var maxY = maxScrollY();
     for (i = 0; i < rests.length; i++) {

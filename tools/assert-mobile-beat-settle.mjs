@@ -331,7 +331,7 @@ if (!/window\.BEAT_DWELL/.test(helper)) {
   fail("collectRests must read live BEAT_DWELL anchors");
 }
 if (!/window\.OPENING_SPAN/.test(helper)) {
-  fail("collectRests must read live OPENING_SPAN for the opening final rest");
+  fail("collectRests must read live OPENING_SPAN for the opening headline rest");
 }
 if (!/deriveOpeningHeadlinePhysical/.test(helper)) {
   fail("opening headline rest must be derived from OPENING_SPAN");
@@ -345,17 +345,14 @@ if (!/id:\s*"opening-headline"/.test(helper) && !/"opening-headline"/.test(helpe
 if (!/headlineChoreography:\s*0\.55/.test(index)) {
   fail("OPENING_SPAN must expose the mobile headline choreography anchor 0.55");
 }
-if (!/deriveOpeningFinalPhysical/.test(helper)) {
-  fail("opening final rest must be derived from OPENING_SPAN");
+if (/id:\s*"opening-final"/.test(helper) && /collectRests[\s\S]*opening-final/.test(helper)) {
+  const collectOnly = helper.slice(helper.indexOf("function collectRests"));
+  if (/id:\s*"opening-final"/.test(collectOnly) || /"opening-final"/.test(collectOnly)) {
+    fail("collectRests must not name opening-final as a swipe destination");
+  }
 }
 if (!/plateauPhysicalRange/.test(helper)) {
   fail("Hand/Work rests must invert remapBeatProgress plateaus");
-}
-if (!/id:\s*"work-terminal"/.test(helper) && !/"work-terminal"/.test(helper)) {
-  fail("terminal rest must be derived as work physical 1");
-}
-if (!/id:\s*"opening-final"/.test(helper) && !/"opening-final"/.test(helper)) {
-  fail("opening final rest must be a named destination");
 }
 if (/\[[^\]]*0\.28[^\]]*0\.86/.test(helper) || /\[[^\]]*0\.28[^\]]*0\.55[^\]]*0\.88/.test(helper)) {
   fail("helper must not hardcode BEAT_DWELL anchors; derive them");
@@ -456,8 +453,14 @@ if (/Math\.abs\(\s*target\s*-\s*y\s*\)\s*<=\s*NEAR_PX/.test(maybeFn)) {
 
 const collectFn = extractFn(helper, "collectRests");
 if (!collectFn) fail("could not isolate collectRests");
-if (!/opening-start[\s\S]*opening-headline[\s\S]*opening-final/.test(collectFn)) {
-  fail("collectRests must insert opening-headline between opening-start and opening-final");
+if (!/opening-start[\s\S]*opening-headline[\s\S]*hand-/.test(collectFn)) {
+  fail("collectRests must insert opening-headline between opening-start and the first Hand rest");
+}
+if (/id:\s*"opening-final"/.test(collectFn) || /"opening-final"/.test(collectFn)) {
+  fail("collectRests must not collect opening-final");
+}
+if (/id:\s*"work-terminal"/.test(collectFn)) {
+  fail("collectRests must not keep a duplicate work-terminal rest");
 }
 if (!/operationalRests\(\s*mergeRests\(\s*rests\s*,\s*NEAR_PX\s*\)\s*,\s*maxY\s*\)/.test(collectFn)) {
   fail("collectRests must operationalize after merge so runtime rests stay reachable");
@@ -468,8 +471,8 @@ if (!/function\s+operationalRest\s*\(/.test(helper) || !/Math\.ceil\(\s*rest\.st
 if (!/Math\.round\(\s*\(\s*rest\.start\s*\+\s*rest\.end\s*\)\s*\/\s*2\s*\)/.test(helper)) {
   fail("a span with no reachable integer must become one nearest reachable point");
 }
-if (!/function\s+lastReachableScrollY\s*\(/.test(helper) || !/id === "work-terminal"/.test(helper)) {
-  fail("Work terminal must map to the reachable max-scroll endpoint");
+if (!/function\s+lastReachableScrollY\s*\(/.test(helper)) {
+  fail("lastReachableScrollY must remain so the last rest can reach max-scroll");
 }
 
 // ——— Executable math: inverse plateaus + forward/reverse choice ———
@@ -1286,11 +1289,11 @@ function installHomepageHarness(options) {
         height: inner
       })
     });
-    sections.opening = makeSection("opening", 0, inner * 3.4);
-    sections.hand = makeSection("hand", inner * 2.4, inner * 3.4);
-    sections.work = makeSection("work", inner * 4.8, inner * 4.5);
-    root.scrollHeight = inner * 9.3;
-    body.scrollHeight = inner * 9.3;
+    sections.opening = makeSection("opening", 0, inner * 2.8);
+    sections.hand = makeSection("hand", inner * 1.8, inner * 2.8);
+    sections.work = makeSection("work", inner * 3.6, inner * 4.5);
+    root.scrollHeight = inner * 8.2;
+    body.scrollHeight = inner * 8.2;
     root.appendChild = () => {};
   }
   global.window = {
@@ -1310,10 +1313,10 @@ function installHomepageHarness(options) {
       this.pageYOffset = top;
     },
     BEAT_DWELL: opts.geometry
-      ? { holdSvh: 60, hand: [0.28, 0.86], work: [0.28, 0.55, 0.88] }
+      ? { holdSvh: 60, hand: [0.50], work: [0.28, 0.55, 0.88] }
       : undefined,
     OPENING_SPAN: opts.geometry
-      ? { choreographySvh: 180, terminalHoldSvh: 60, choreographyEnd: 0.75, headlineChoreography: 0.55 }
+      ? { choreographySvh: 180, terminalHoldSvh: 0, choreographyEnd: 1, headlineChoreography: 0.55 }
       : undefined,
     __ranaQuietModeActive: state.quiet ? () => true : undefined
   };
@@ -1783,13 +1786,10 @@ function expectOverflowRestore(root, body, prior, msg) {
   const authoredIds = [
     "opening-start",
     "opening-headline",
-    "opening-final",
     "hand-0",
-    "hand-1",
     "work-0",
     "work-1",
-    "work-2",
-    "work-terminal"
+    "work-2"
   ];
   const geometryIds = (rests || []).map((rest) => rest.id);
   if (
@@ -1797,7 +1797,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     geometryIds.length !== authoredIds.length ||
     geometryIds.some((id, i) => id !== authoredIds[i])
   ) {
-    fail("geometry homepage must expose the nine ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
+    fail("geometry homepage must expose the six ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
   }
   const origin = rests[0];
   const next = rests[1];
@@ -2105,20 +2105,17 @@ function emitVerticalSwipe(emit, startY, endY) {
   const reduceWant = [
     "opening-start",
     "opening-headline",
-    "opening-final",
     "hand-0",
-    "hand-1",
     "work-0",
     "work-1",
-    "work-2",
-    "work-terminal"
+    "work-2"
   ];
   if (
     !rests ||
     reduceIds.length !== reduceWant.length ||
     reduceIds.some((id, i) => id !== reduceWant[i])
   ) {
-    fail("cold boot at <=700 with reduce=true must expose the nine ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
+    fail("cold boot at <=700 with reduce=true must expose the six ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
   }
   const last = rests[rests.length - 1];
   window.scrollTo(0, rests[0].start);

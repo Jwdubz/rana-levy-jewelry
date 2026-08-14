@@ -6,14 +6,14 @@
  * - no studio-portrait world in Hand or Hand→Work
  * - responsive bench poster authority on the work bridge
  * - exact scale 1 for the Hand bench carrier
- * - opening final exits on Hand entry before first Hand thought
- * - no Cut-by-hand / Rana-works-each-facet opacity overlap at sampled boundaries
+ * - Cut by hand lives on the workbench, not the opening ring
+ * - rejected facet / six-year copy is absent
  *
  * Usage: node tools/assert-hand-direct-bench-passage.mjs
  *
  * Residue: hand-direct-bench-passage tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing Hand / Hand→Work / opening-final handoff
+ * Future consumer: any operator editing Hand / Hand→Work / workbench copy
  * Activation: execute — node tools/assert-hand-direct-bench-passage.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
  * Retirement: when the direct bench Hand passage is retired or superseded
@@ -141,69 +141,47 @@ if (!/studio-hand-work-cycle\.mp4/.test(handMarkup)) {
   fail("Hand cycle film must remain on the bench carrier");
 }
 
-// C. Explicit opening-final exit keyed to Hand entry.
-if (!/function\s+applyOpeningFinalExit\s*\(/.test(siteJs)) {
-  fail("site.js must define applyOpeningFinalExit for Cut-by-hand ownership");
-}
-if (!/applyOpeningFinalExit\s*\(\s*handTargetChoreo\s*,\s*handChoreo\s*\)/.test(siteJs)) {
-  fail("siteTick must call applyOpeningFinalExit(handTargetChoreo, handChoreo)");
-}
-if (!/Math\.max\(\s*handTargetChoreo\s*,\s*handVisualChoreo\s*\)/.test(siteJs)) {
-  fail("opening-final exit must lead with max(target, visual) for forward/reverse");
-}
-if (!/openingFinalExitStart\s*:\s*0(?:\.0)?/.test(siteJs)) {
-  fail("SITE_MOTION.openingFinalExitStart must be 0");
-}
-if (!/openingFinalExitEnd\s*:\s*0\.12/.test(siteJs)) {
-  fail("SITE_MOTION.openingFinalExitEnd must be 0.12 (complete before Hand thought 0.14)");
-}
+// C. Cut by hand now belongs to the workbench, not the opening ring.
 if (!/handThought0InStart\s*:\s*0\.14/.test(siteJs)) {
   fail("SITE_MOTION.handThought0InStart must remain 0.14");
 }
 if (!/handThought0InEnd\s*:\s*0\.26/.test(siteJs)) {
   fail("SITE_MOTION.handThought0InEnd must remain 0.26");
 }
-
-// Copy text preserved.
-if (!/Cut by hand,/.test(index) || !/one at a time\./.test(index)) {
-  fail('opening final copy "Cut by hand, / one at a time." must remain');
-}
-if (!/Rana works each facet at the lap\./.test(index)) {
-  fail('Hand thought "Rana works each facet at the lap." must remain');
+if (/id="finalLine"/.test(index) || /applyOpeningFinalExit/.test(siteJs)) {
+  fail("opening-final line and applyOpeningFinalExit must be retired; Cut by hand is a Hand thought");
 }
 
-// Sampled opacity ownership: no overlap at representative boundaries.
-const exitStart = 0.0;
-const exitEnd = 0.12;
+const handThoughtBlock = handMarkup.match(/id="handThought0"[\s\S]*?<\/p>/);
+if (!handThoughtBlock || !/Cut by hand,/.test(handThoughtBlock[0]) || !/one at a time\./.test(handThoughtBlock[0])) {
+  fail('Hand thought #handThought0 must carry "Cut by hand, / one at a time."');
+}
+if (/id="handThought1"/.test(index)) {
+  fail("retired #handThought1 stack must be absent");
+}
+if (/Rana works each facet at the lap\./.test(index)) {
+  fail('rejected copy "Rana works each facet at the lap." must be absent');
+}
+if (/Cutting stones for six years\./.test(index)) {
+  fail('rejected copy "Cutting stones for six years." must be absent');
+}
+
 const t0In0 = 0.14;
 const t0In1 = 0.26;
-const t0Out0 = 0.4;
-const t0Out1 = 0.52;
-const samples = [0, 0.06, 0.12, 0.13, 0.14, 0.2, 0.26, 0.35, 0.45, 0.7];
+const t0Out0 = 0.88;
+const t0Out1 = 0.96;
+const samples = [0, 0.06, 0.12, 0.13, 0.14, 0.2, 0.26, 0.5, 0.7, 0.9];
 for (let i = 0; i < samples.length; i++) {
   const p = samples[i];
-  // Assume opening final fully entered (worst-case coexistence).
-  const finalOp = 1 * (1 - windowProgress(p, exitStart, exitEnd));
   const handOp = thoughtOpacity(p, t0In0, t0In1, t0Out0, t0Out1);
-  if (finalOp > 0.02 && handOp > 0.02) {
-    fail(
-      "Cut-by-hand and Rana-works-each-facet must not both exceed 0.02 opacity at p=" +
-        p +
-        " (final=" +
-        finalOp.toFixed(3) +
-        ", hand=" +
-        handOp.toFixed(3) +
-        ")"
-    );
-  }
-  if (p >= exitEnd && finalOp > 0.001) {
-    fail("opening final must be fully exited by p=" + exitEnd + " (got " + finalOp + ")");
-  }
   if (p <= t0In0 && handOp > 0.001) {
-    fail("first Hand thought must not enter before p=" + t0In0 + " (got " + handOp + " at p=" + p + ")");
+    fail("Cut-by-hand must not enter before p=" + t0In0 + " (got " + handOp + " at p=" + p + ")");
+  }
+  if (p >= t0In1 && p <= 0.7 && handOp < 0.85) {
+    fail("Cut-by-hand must be fully composed at p=" + p + " (got " + handOp + ")");
   }
 }
 
 console.log(
-  "PASS: hand direct bench passage (no portrait world; bench workBridge; scale 1; opening-final exit before first Hand thought; no copy overlap)"
+  "PASS: hand direct bench passage (no portrait world; bench workBridge; scale 1; Cut by hand on workbench; rejected facet/six-year copy absent)"
 );

@@ -14,7 +14,7 @@
     junctionFeatherFloor: 16,
     junctionLightPeak: 0.72,
     // Direct ring→bench carrier stays exact scale 1 for the whole Hand movement.
-    // Surviving work worlds: art-deco, heirloom, pink-star terminal.
+    // Surviving work worlds: Vegas night, heirloom, pink-star terminal.
     workSpans: [1.00, 0.86, 0.94],
     workHoldFraction: 0.56,
     workScaleStart: 1.025,
@@ -22,14 +22,10 @@
     restFloorLuma: 0.10,
     mobileMaxWidth: 700,
     mobileSpanScale: 0.82,
-    // Opening final ("Cut by hand…") exits as Hand entry begins; fully gone
-    // before first Hand thought enters at 0.14.
-    openingFinalExitStart: 0.0,
-    openingFinalExitEnd: 0.12,
     handThought0InStart: 0.14,
     handThought0InEnd: 0.26,
-    handThought0OutStart: 0.40,
-    handThought0OutEnd: 0.52
+    handThought0OutStart: 0.88,
+    handThought0OutEnd: 0.96
   };
 
   // Hand bench loop: full derived craft-story cycle asset
@@ -42,8 +38,8 @@
   // fully composed Hand / Work beat. Work is terminal.
   const BEAT_DWELL = {
     holdSvh: 60,
-    // Fully composed word beats on the direct bench passage (fade durations preserved).
-    hand: [0.28, 0.86],
+    // Fully composed word beats: bench Cut-by-hand; Vegas decade; heirloom; pink terminal.
+    hand: [0.50],
     work: [0.28, 0.55, 0.88]
   };
 
@@ -774,11 +770,7 @@
   const handBridge = document.getElementById("handBridge");
   const handBridgeVideo = document.getElementById("handBridgeVideo");
   const handJunction = document.getElementById("handJunction");
-  const openingFinalLine = document.getElementById("finalLine");
-  const handThoughts = [
-    document.getElementById("handThought0"),
-    document.getElementById("handThought1")
-  ];
+  const handThought0 = document.getElementById("handThought0");
 
   const workWorlds = [
     document.getElementById("workWorld0"),
@@ -793,8 +785,10 @@
   const workBridge = document.getElementById("workBridge");
   const workJunction = document.getElementById("workJunction");
   const workRestWash = document.getElementById("workRestWash");
-  const workThoughtOpen = document.getElementById("workThoughtOpen");
+  const workThoughtVegas = document.getElementById("workThoughtVegas");
   const workThoughtRest = document.getElementById("workThoughtRest");
+  const workCopyDock = document.getElementById("workCopyDock");
+  const vegasVideo = document.getElementById("vegasVideo");
   const workLinks = document.getElementById("workLinks");
   const workLinkAnchors = workLinks
     ? Array.prototype.slice.call(workLinks.querySelectorAll("a.choice-link"))
@@ -810,6 +804,7 @@
     workTarget: 0,
     workVisual: 0,
     handVideoArmed: false,
+    vegasVideoArmed: false,
     bridgePhaseSynced: false
   };
 
@@ -1182,29 +1177,18 @@
       handBenchStack.style.transform = "translate3d(0,0,0) scale(1)";
     }
 
-    // Copy: one thought at a time on the continuous bench/lap world.
-    // 0: Rana works...  1: From her home... + Cutting stones / Designing Jewelry...
-    // Re-anchored for the direct ring→bench passage: no long uncaused silent middle.
-    // Authored fade durations preserved (0.12 / 0.12 and 0.12 / 0.08); 60svh plateaus
-    // remain at BEAT_DWELL.hand fully-composed anchors.
-    // End-fade keeps M2 type from coexisting with Work above 0.15 opacity.
+    // Copy: Cut by hand on the continuous bench/lap world.
     const endFade = 1 - windowProgress(p, 0.9, 0.98);
     const t0In0 = SITE_MOTION.handThought0InStart;
     const t0In1 = SITE_MOTION.handThought0InEnd;
     const t0Out0 = SITE_MOTION.handThought0OutStart;
     const t0Out1 = SITE_MOTION.handThought0OutEnd;
     const o0 = thoughtOpacity(p, t0In0, t0In1, t0Out0, t0Out1) * endFade;
-    const o1 = thoughtOpacity(p, 0.70, 0.82, 0.90, 0.98);
 
-    if (handThoughts[0]) {
-      handThoughts[0].style.opacity = String(o0);
-      handThoughts[0].style.transform =
+    if (handThought0) {
+      handThought0.style.opacity = String(o0);
+      handThought0.style.transform =
         "translate3d(0," + lerp(4, 0, windowProgress(p, t0In0, t0In1)) + "svh,0)";
-    }
-    if (handThoughts[1]) {
-      handThoughts[1].style.opacity = String(o1);
-      handThoughts[1].style.transform =
-        "translate3d(0," + lerp(3, 0, windowProgress(p, 0.70, 0.82)) + "svh,0)";
     }
 
     // Mobile object positions already in CSS; slight progress drift on desktop bench.
@@ -1216,25 +1200,6 @@
       if (img) img.style.objectPosition = x + y;
       if (video) video.style.objectPosition = x + y;
     }
-  }
-
-  // Opening final line owns entrance in the opening script; Hand entry owns the
-  // explicit exit so "Cut by hand…" cannot coexist with the first Hand thought.
-  // lead = max(target, visual): forward target leads so rapid scroll cannot leave
-  // the line lagging; reverse visual leads so Hand thought yields before restore.
-  function applyOpeningFinalExit(handTargetChoreo, handVisualChoreo) {
-    if (!openingFinalLine) return;
-    const enterOp = parseFloat(openingFinalLine.style.opacity);
-    const enter = isFinite(enterOp) ? clamp(enterOp, 0, 1) : 0;
-    const lead = Math.max(handTargetChoreo, handVisualChoreo);
-    const exitT = windowProgress(
-      lead,
-      SITE_MOTION.openingFinalExitStart,
-      SITE_MOTION.openingFinalExitEnd
-    );
-    const op = enter * (1 - exitT);
-    openingFinalLine.style.opacity = String(op);
-    openingFinalLine.style.visibility = op < 0.02 ? "hidden" : "visible";
   }
 
   // ——— M3 Work (terminal) ———
@@ -1303,19 +1268,31 @@
       );
     }
 
-    // Opening thought after the entry Turn settles; rest + links late.
-    const openOp = thoughtOpacity(p, 0.12, 0.2, 0.28, 0.36);
+    // Vegas decade line on the first work world; terminal sentence + links late.
+    const vegasOp = thoughtOpacity(p, 0.14, 0.26, 0.40, 0.52);
     const restOp = thoughtOpacity(p, 0.78, 0.88, null, null);
 
-    if (workThoughtOpen) {
-      workThoughtOpen.style.opacity = String(openOp);
-      workThoughtOpen.style.transform =
-        "translate3d(0," + lerp(3, 0, windowProgress(p, 0.12, 0.2)) + "svh,0)";
+    if (workThoughtVegas) {
+      workThoughtVegas.style.opacity = String(vegasOp);
+      workThoughtVegas.style.transform =
+        "translate3d(0," + lerp(3, 0, windowProgress(p, 0.14, 0.26)) + "svh,0)";
     }
     if (workThoughtRest) {
       workThoughtRest.style.opacity = String(restOp);
-      workThoughtRest.style.transform =
-        "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+      if (mobile && restOp > 0.5) {
+        workThoughtRest.style.transform = "none";
+      } else {
+        workThoughtRest.style.transform =
+          "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+      }
+    }
+    if (work) {
+      const dockT = mobile ? restOp : 0;
+      work.style.setProperty("--work-copy-dock-t", String(dockT));
+      work.classList.toggle("is-copy-dock", mobile && dockT > 0.5);
+    }
+    if (workCopyDock) {
+      workCopyDock.setAttribute("aria-hidden", restOp < 0.15 ? "true" : "false");
     }
     if (workLinks) {
       workLinks.style.opacity = String(restOp);
@@ -1452,9 +1429,14 @@
       !mobile && workActive && workP < 0.2 ? "opacity, mask-image" : ""
     );
 
-    // Videos: active only while Hand owns the viewport; never seek from scroll.
+    // Videos: active only while their world owns the viewport; never seek from scroll.
     // No choreography cutoff — that unmasked the static studio-poster mid-Hand.
     setVideoActive(handVideo, handActive, "handVideoArmed");
+
+    const vegasHoldEnd =
+      workStarts.length > 1 ? workStarts[1] + workNorm[1] * 0.42 : 0.45;
+    const vegasActive = workActive && workP < vegasHoldEnd && (mobile ? handRetired : true);
+    setVideoActive(vegasVideo, vegasActive, "vegasVideoArmed");
 
     // Bridge ring video: desktop only during the opening→hand Turn.
     // Mobile never hydrates, plays, or paints the duplicate ring bridge.
@@ -1635,10 +1617,6 @@
     if (renderHandNow) renderHand(handChoreo);
     if (renderWorkNow) renderWork(workChoreo);
 
-    // Always apply: even when Hand is far, lead progress must keep the opening
-    // final line restored (or held out) coherently on reverse/forward travel.
-    applyOpeningFinalExit(handTargetChoreo, handChoreo);
-
     updateActivity(handChoreo, workChoreo, handProx.near);
   }
 
@@ -1665,7 +1643,6 @@
     const workChoreo0 = remapBeatProgress(work, state.workVisual, BEAT_DWELL.work);
     renderHand(handChoreo0);
     renderWork(workChoreo0);
-    applyOpeningFinalExit(handChoreo0, handChoreo0);
   }
 
   // Bind windowed natural loops (no scroll-seeking). Playback arms when near.
@@ -1674,7 +1651,7 @@
 
   // Deferred elements never receive src here. Explicit quiet: keep paused posters.
   // Normal motion: start paused; siteTick hydrates + plays only when near.
-  [handVideo, handBridgeVideo].forEach(function (v) {
+  [handVideo, handBridgeVideo, vegasVideo].forEach(function (v) {
     if (!v) return;
     v.removeAttribute("autoplay");
     v.autoplay = false;

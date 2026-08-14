@@ -177,10 +177,10 @@ if (!indexMobile) fail("could not extract index.html mobile slice");
 if (!stylesMobile) fail("could not extract styles.css mobile slice");
 
 // Authored travel from existing comments/constants — sticky is live, travel stays svh.
-// Opening: 180 choreography + 60 terminal hold.
-const OPENING_TRAVEL_SVH = 240;
-// Mobile Hand: 120 choreography + 2 × 60 holds.
-const HAND_MOBILE_TRAVEL_SVH = 240;
+// Opening: 180 choreography (opening-final hold retired).
+const OPENING_TRAVEL_SVH = 180;
+// Mobile Hand: 120 choreography + 1 × 60 hold.
+const HAND_MOBILE_TRAVEL_SVH = 180;
 // Mobile Work: existing 450svh − 100svh sticky → 170 choreography + 3 × 60 holds.
 const WORK_MOBILE_TRAVEL_SVH = 350;
 
@@ -197,8 +197,8 @@ if (lastDecl(desktopScene, "height") !== "100svh") {
 if (/100dvh|calc\(/.test(desktopScene)) {
   fail("desktop .scene must not use dvh or calc live geometry");
 }
-if (lastDecl(desktopPassage, "height") !== "340svh") {
-  fail(`desktop .passage height must remain 340svh (got ${lastDecl(desktopPassage, "height")})`);
+if (lastDecl(desktopPassage, "height") !== "280svh") {
+  fail(`desktop .passage height must remain 280svh (got ${lastDecl(desktopPassage, "height")})`);
 }
 if (/dvh/.test(desktopPassage)) {
   fail("desktop .passage must not use dvh");
@@ -209,8 +209,8 @@ if (lastDecl(desktopSticky, "height") !== "100svh") {
 if (/dvh/.test(desktopSticky)) {
   fail("desktop .movement-sticky must not use dvh");
 }
-if (lastDecl(desktopHand, "height") !== "380svh") {
-  fail(`desktop .movement-hand height must remain 380svh (got ${lastDecl(desktopHand, "height")})`);
+if (lastDecl(desktopHand, "height") !== "320svh") {
+  fail(`desktop .movement-hand height must remain 320svh (got ${lastDecl(desktopHand, "height")})`);
 }
 if (lastDecl(desktopWork, "height") !== "500svh") {
   fail(`desktop .movement-work height must remain 500svh (got ${lastDecl(desktopWork, "height")})`);
@@ -254,8 +254,8 @@ if (lastDecl(mobileSticky, "height") !== "100dvh") {
 
 // ——— Totals = live sticky + existing authored travel; not total-dvh ———
 if (!mobilePassage) fail("mobile opening must override .passage height");
-if (!hasDecl(mobilePassage, "height", "340svh")) {
-  fail("mobile .passage must keep 340svh fallback (100svh + 240svh authored travel)");
+if (!hasDecl(mobilePassage, "height", "280svh")) {
+  fail("mobile .passage must keep 280svh fallback (100svh + 180svh authored travel)");
 }
 if (parseLivePlusTravel(lastDecl(mobilePassage, "height")) !== OPENING_TRAVEL_SVH) {
   fail(
@@ -264,8 +264,8 @@ if (parseLivePlusTravel(lastDecl(mobilePassage, "height")) !== OPENING_TRAVEL_SV
 }
 
 if (!mobileHand) fail("mobile styles must override .movement-hand");
-if (!hasDecl(mobileHand, "height", "340svh")) {
-  fail("mobile .movement-hand must keep 340svh fallback (100svh + 240svh authored travel)");
+if (!hasDecl(mobileHand, "height", "280svh")) {
+  fail("mobile .movement-hand must keep 280svh fallback (100svh + 180svh authored travel)");
 }
 if (parseLivePlusTravel(lastDecl(mobileHand, "height")) !== HAND_MOBILE_TRAVEL_SVH) {
   fail(
@@ -325,8 +325,8 @@ if (!/100svh/.test(remap[0]) && !/authoredSvhPx|svhPx/.test(remap[0])) {
 }
 
 // Opening remapper remains fraction-of-authored-svh (180 / 240), not live innerHeight holds.
-if (!/choreographySvh:\s*180/.test(index) || !/terminalHoldSvh:\s*60/.test(index)) {
-  fail("OPENING_SPAN authored choreography/hold svh constants must remain 180 / 60");
+if (!/choreographySvh:\s*180/.test(index) || !/terminalHoldSvh:\s*0/.test(index)) {
+  fail("OPENING_SPAN authored choreography/hold svh constants must remain 180 / 0");
 }
 
 // ——— No filler grammar in the live-viewport overrides ———
@@ -382,7 +382,7 @@ if (Math.abs(newHand.sticky - livePx) > 0.01 || Math.abs(newWork.sticky - livePx
   fail("repaired Hand/Work stickies must equal the live viewport");
 }
 if (Math.abs(newOpen.travel - (OPENING_TRAVEL_SVH / 100) * svhPx) > 0.01) {
-  fail("repaired Opening travel must stay authored 240svh, not scale with dvh");
+  fail("repaired Opening travel must stay authored 180svh, not scale with dvh");
 }
 if (Math.abs(newRingBench.floor) > 0.01 || Math.abs(newRingBench.peekBelowOutgoing) > 0.01) {
   fail(
@@ -402,8 +402,8 @@ if (Math.abs(newBenchWork.incomingTop) > 0.01 || Math.abs(newBenchWork.outgoingB
 // When svh === dvh (desktop / chrome-expanded), totals match the previous svh contract.
 const same = 812;
 const desktopLikeOpen = sectionModel(same, same, OPENING_TRAVEL_SVH, true, true);
-if (Math.abs(desktopLikeOpen.total - 3.4 * same) > 0.01) {
-  fail("when svh equals dvh, Opening total must remain the approved 340svh measure");
+if (Math.abs(desktopLikeOpen.total - 2.8 * same) > 0.01) {
+  fail("when svh equals dvh, Opening total must remain the approved 280svh measure");
 }
 
 console.log(

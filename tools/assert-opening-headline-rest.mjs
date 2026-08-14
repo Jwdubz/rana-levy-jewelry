@@ -4,8 +4,9 @@
  * an authored adjacent rest. Exact parent 63e095c collects
  * opening-start → opening-final and therefore skips “Custom Gems Turn
  * Heads” on a long swipe. The candidate must insert opening-headline
- * between those rests, invert OPENING_SPAN.headlineChoreography (0.55)
- * into the mobile 0.48–0.62 composed interval, and keep every other rest.
+ * between those rests. This correction then retires opening-final as a
+ * swipe destination so the next rest is the workbench. Headline invert
+ * stays 0.55 inside 0.48–0.62.
  *
  * Usage: node tools/assert-opening-headline-rest.mjs
  *
@@ -30,6 +31,13 @@ const PARENT = "63e095c6c976288874769056e2c95b46e1b04b72";
 const EXPECTED_IDS = [
   "opening-start",
   "opening-headline",
+  "hand-0",
+  "work-0",
+  "work-1",
+  "work-2"
+];
+const PARENT_IDS = [
+  "opening-start",
   "opening-final",
   "hand-0",
   "hand-1",
@@ -38,7 +46,6 @@ const EXPECTED_IDS = [
   "work-2",
   "work-terminal"
 ];
-const PARENT_IDS = EXPECTED_IDS.filter((id) => id !== "opening-headline");
 const HEADLINE_COMPOSED_START = 0.48;
 const HEADLINE_COMPOSED_END = 0.62;
 const HEADLINE_ANCHOR = 0.55;
@@ -103,11 +110,16 @@ function installHarness(opts) {
   const quiet = !!opts.quiet;
   const reduced = !!opts.reduced;
   const span = opts.span;
+  const legacy = !!opts.legacyGeometry;
+  const openMul = legacy ? 3.4 : 2.8;
+  const handTopMul = legacy ? 2.4 : 1.8;
+  const handMul = legacy ? 3.4 : 2.8;
+  const workTopMul = legacy ? 4.8 : 3.6;
   const rootEl = {
     style: { touchAction: "", overflow: "", overflowX: "", overflowY: "" },
     classList: { contains: (name) => quiet && name === "is-quiet" },
     offsetHeight: 1,
-    scrollHeight: Math.round(inner * 9.3),
+    scrollHeight: Math.round(inner * (legacy ? 9.3 : 8.2)),
     appendChild() {}
   };
   const body = {
@@ -124,9 +136,9 @@ function installHarness(opts) {
     })
   });
   const sections = {
-    opening: makeSection("opening", 0, inner * 3.4),
-    hand: makeSection("hand", inner * 2.4, inner * 3.4),
-    work: makeSection("work", inner * 4.8, inner * 4.5)
+    opening: makeSection("opening", 0, inner * openMul),
+    hand: makeSection("hand", inner * handTopMul, inner * handMul),
+    work: makeSection("work", inner * workTopMul, inner * 4.5)
   };
   const matchMedia = (query) => {
     const q = String(query);
@@ -174,7 +186,9 @@ function installHarness(opts) {
       this.scrollY = top;
       this.pageYOffset = top;
     },
-    BEAT_DWELL: { holdSvh: 60, hand: [0.28, 0.86], work: [0.28, 0.55, 0.88] },
+    BEAT_DWELL: legacy
+      ? { holdSvh: 60, hand: [0.28, 0.86], work: [0.28, 0.55, 0.88] }
+      : { holdSvh: 60, hand: [0.50], work: [0.28, 0.55, 0.88] },
     OPENING_SPAN: {
       choreographySvh: span.choreographySvh,
       terminalHoldSvh: span.terminalHoldSvh,
@@ -301,7 +315,12 @@ const parentHelper = loadHelper(parentHelperSrc, "parent");
 const candidateHelper = loadHelper(candidateHelperSrc, "candidate");
 
 {
-  const harness = installHarness({ width: 360, height: 700, span: parentSpan });
+  const harness = installHarness({
+    width: 360,
+    height: 700,
+    span: parentSpan,
+    legacyGeometry: true
+  });
   parentHelper.attach();
   const parentRests = parentHelper.collectRests();
   const parentIds = idsOf(parentRests);
@@ -343,28 +362,26 @@ GEOMETRIES.forEach((geo) => {
       geo.width +
         "x" +
         geo.height +
-        " must collect the nine ordered rests (got " +
+        " must collect the six ordered rests (got " +
         JSON.stringify(ids) +
         ")"
     );
   }
-  PARENT_IDS.forEach((id) => {
-    if (ids.indexOf(id) < 0) {
-      fail("candidate must not lose existing rest " + id + " at " + geo.width + "x" + geo.height);
-    }
-  });
+  if (ids.indexOf("opening-final") >= 0) {
+    fail("opening-final must not remain a mobile swipe destination");
+  }
   const start = rests[0];
   const headline = rests[1];
-  const fin = rests[2];
-  if (start.id !== "opening-start" || headline.id !== "opening-headline" || fin.id !== "opening-final") {
-    fail("candidate order must start opening-start, opening-headline, opening-final");
+  const next = rests[2];
+  if (start.id !== "opening-start" || headline.id !== "opening-headline" || next.id !== "hand-0") {
+    fail("candidate order must start opening-start, opening-headline, hand-0");
   }
   if (!(headline.start === headline.end)) {
     fail("opening-headline must be a stable composed point rest, not a re-timed plateau");
   }
-  if (!(headline.start > start.end) || !(headline.end < fin.start)) {
+  if (!(headline.start > start.end) || !(headline.end < next.start)) {
     fail(
-      "opening-headline must lie strictly between opening-start and opening-final at " +
+      "opening-headline must lie strictly between opening-start and hand-0 at " +
         geo.width +
         "x" +
         geo.height +
@@ -373,11 +390,11 @@ GEOMETRIES.forEach((geo) => {
         " in " +
         start.end +
         ".." +
-        fin.start +
+        next.start +
         ")"
     );
   }
-  const openingTravel = geo.height * 3.4 - geo.height;
+  const openingTravel = geo.height * 2.8 - geo.height;
   const physical = headline.start / openingTravel;
   const choreo = physical / candidateSpan.choreographyEnd;
   if (choreo < HEADLINE_COMPOSED_START || choreo > HEADLINE_COMPOSED_END) {
@@ -438,9 +455,9 @@ GEOMETRIES.forEach((geo) => {
     );
   }
   const forward2 = candidateHelper.chooseAdjacentDestination(1, -580, rests);
-  if (!forward2 || forward2.index !== 2 || rests[forward2.index].id !== "opening-final") {
+  if (!forward2 || forward2.index !== 2 || rests[forward2.index].id !== "hand-0") {
     fail(
-      "next forward swipe from opening-headline must land at opening-final at " +
+      "next forward swipe from opening-headline must land at hand-0 at " +
         geo.width +
         "x" +
         geo.height +
@@ -452,7 +469,7 @@ GEOMETRIES.forEach((geo) => {
   const reverse1 = candidateHelper.chooseAdjacentDestination(2, 580, rests);
   if (!reverse1 || reverse1.index !== 1 || rests[reverse1.index].id !== "opening-headline") {
     fail(
-      "reverse from opening-final must return through opening-headline at " +
+      "reverse from hand-0 must return through opening-headline at " +
         geo.width +
         "x" +
         geo.height +
@@ -514,7 +531,7 @@ GEOMETRIES.forEach((geo) => {
   emitSwipe(harness.emit, 620, 40);
   if (window.scrollY !== forward2.y) {
     fail(
-      "simulated next swipe must settle on opening-final y=" +
+      "simulated next swipe must settle on hand-0 y=" +
         forward2.y +
         " (got " +
         window.scrollY +
@@ -544,7 +561,7 @@ GEOMETRIES.forEach((geo) => {
     geometry: geo.width + "x" + geo.height,
     ids: ids,
     headline: { start: headline.start, end: headline.end, choreo: Number(choreo.toFixed(4)) },
-    openingFinal: { start: fin.start, end: fin.end }
+    hand0: { start: next.start, end: next.end }
   });
   uninstall(candidateHelper);
 });
@@ -562,7 +579,7 @@ GEOMETRIES.forEach((geo) => {
   }
   const rests = candidateHelper.collectRests();
   if (!sameIds(idsOf(rests), EXPECTED_IDS)) {
-    fail("reduced-motion must retain the same nine ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
+    fail("reduced-motion must retain the same six ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
   }
   window.scrollTo(0, rests[0].start);
   emitSwipe(harness.emit, 620, 40);
@@ -578,8 +595,8 @@ GEOMETRIES.forEach((geo) => {
   }
   emitSwipe(harness.emit, 620, 40);
   const wantFinal = candidateHelper.chooseAdjacentDestination(1, -580, rests);
-  if (!wantFinal || rests[wantFinal.index].id !== "opening-final" || window.scrollY !== wantFinal.y) {
-    fail("reduced-motion next swipe must land at opening-final");
+  if (!wantFinal || rests[wantFinal.index].id !== "hand-0" || window.scrollY !== wantFinal.y) {
+    fail("reduced-motion next swipe must land at hand-0");
   }
   emitSwipe(harness.emit, 40, 620);
   if (window.scrollY !== wantHeadline.y) {
@@ -635,6 +652,6 @@ if (Math.abs(inverted.startP - HEADLINE_ANCHOR * candidateSpan.choreographyEnd) 
 }
 
 console.log(
-  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate nine rests start opening-start, opening-headline, opening-final; 0.55 invert inside 0.48–0.62; forward/reverse adjacency; reduce keeps ownership; quiet/desktop native)"
+  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate six rests start opening-start, opening-headline, hand-0; 0.55 invert inside 0.48–0.62; opening-final retired; forward/reverse adjacency; reduce keeps ownership; quiet/desktop native)"
 );
 console.log(JSON.stringify(reported));
