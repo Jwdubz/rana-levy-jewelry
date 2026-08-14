@@ -5,9 +5,11 @@
  * replaced approved product passages with different native-portrait clips.
  * The candidate must keep the exact approved 517-frame desktop recut
  * (content, order, timing) and reframe only — a uniquely named mobile
- * derivative whose frames expose materially more horizontal source
- * coverage than the prior 498x1080 tight crop, with honest black
- * negative space allowed and no blur / echo / vignette / substitution.
+ * derivative whose frames use an 800px source crop (760–820 band;
+ * ~1.61x the prior 498x1080 tight crop), letterboxed into 720x1560
+ * with honest black negative space and no blur / echo / vignette /
+ * substitution. The rejected 1080-wide square window is too short on
+ * tall phones; this assertion pins the balanced crop, not max coverage.
  *
  * Usage: node tools/assert-mobile-opening-wider-frame-media.mjs
  *
@@ -58,7 +60,14 @@ const ALT_CLIPS = [
 const TOTAL_FRAMES = 517;
 const EXPECTED_DURATION = TOTAL_FRAMES / 30;
 const OLD_CROP_W = 498;
-const MIN_SOURCE_W = 900;
+const EXPECTED_SOURCE_W = 800;
+const MIN_SOURCE_W = 760;
+const MAX_SOURCE_W = 820;
+const EXPECTED_SOURCE_X_DEFAULT = 680;
+const EXPECTED_SOURCE_X_ENGRAVING = 140;
+const SOURCE_X_TOL = 24;
+const OUT_W = 720;
+const OUT_H = 1560;
 const DESK_W = 2160;
 const DESK_H = 1080;
 const DETECT_W = 72;
@@ -474,8 +483,8 @@ const outH = Number(v.height);
 if (!Number.isFinite(outW) || !Number.isFinite(outH) || outW < 2 || outH < 2) {
   fail(`${NEW_VIDEO}: invalid geometry ${v.width}x${v.height}`);
 }
-if (outW >= outH) {
-  fail(`${NEW_VIDEO}: mobile derivative must be portrait (got ${outW}x${outH})`);
+if (outW !== OUT_W || outH !== OUT_H) {
+  fail(`${NEW_VIDEO}: canvas must be exactly ${OUT_W}x${OUT_H}, got ${outW}x${outH}`);
 }
 const atoms = moovBeforeMdat(NEW_VIDEO);
 if (atoms.moov < 0 || atoms.mdat < 0 || atoms.moov > atoms.mdat) {
@@ -539,9 +548,26 @@ try {
         `${NEW_VIDEO} ${sample.label} frame ${sample.n} does not match ${DESKTOP_VIDEO} frame ${sample.n} (mad ${match.mad.toFixed(3)} > 12)`
       );
     }
-    if (match.sourceW < MIN_SOURCE_W) {
+    if (inferredSourceW < MIN_SOURCE_W || inferredSourceW > MAX_SOURCE_W) {
       fail(
-        `${NEW_VIDEO} ${sample.label} frame ${sample.n} source width ${match.sourceW.toFixed(1)}px is not materially wider than the old ${OLD_CROP_W}px crop (need >= ${MIN_SOURCE_W})`
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} inferred source width ${inferredSourceW.toFixed(1)}px is outside the balanced ${MIN_SOURCE_W}-${MAX_SOURCE_W}px crop (old=${OLD_CROP_W}; rejected 1080-wide square)`
+      );
+    }
+    if (Math.abs(inferredSourceW - EXPECTED_SOURCE_W) > 8) {
+      fail(
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} inferred source width ${inferredSourceW.toFixed(1)}px is not the exact ${EXPECTED_SOURCE_W}px crop`
+      );
+    }
+    if (match.sourceW < MIN_SOURCE_W || match.sourceW > MAX_SOURCE_W) {
+      fail(
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} matched source width ${match.sourceW.toFixed(1)}px is outside ${MIN_SOURCE_W}-${MAX_SOURCE_W}px`
+      );
+    }
+    const expectX =
+      sample.n >= NEW_ENGRAVING_START ? EXPECTED_SOURCE_X_ENGRAVING : EXPECTED_SOURCE_X_DEFAULT;
+    if (Math.abs(match.sourceX - expectX) > SOURCE_X_TOL) {
+      fail(
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} sourceX ${match.sourceX.toFixed(1)}px is not the shot window (expected ${expectX}±${SOURCE_X_TOL})`
       );
     }
     coverage.push({
@@ -549,20 +575,23 @@ try {
       n: sample.n,
       mad: match.mad,
       sourceW: match.sourceW,
+      inferredSourceW,
       sourceX: match.sourceX,
     });
     console.log(
-      `  frame ${sample.n} ${sample.label}: mad=${match.mad.toFixed(3)} sourceW=${match.sourceW.toFixed(1)} sourceX=${match.sourceX.toFixed(1)}`
+      `  frame ${sample.n} ${sample.label}: mad=${match.mad.toFixed(3)} inferredW=${inferredSourceW.toFixed(1)} sourceW=${match.sourceW.toFixed(1)} sourceX=${match.sourceX.toFixed(1)}`
     );
   }
 
-  const minW = Math.min(...coverage.map((c) => c.sourceW));
-  const maxW = Math.max(...coverage.map((c) => c.sourceW));
-  if (minW < MIN_SOURCE_W) {
-    fail(`narrowest sampled source coverage ${minW.toFixed(1)}px < ${MIN_SOURCE_W}`);
+  const minW = Math.min(...coverage.map((c) => c.inferredSourceW));
+  const maxW = Math.max(...coverage.map((c) => c.inferredSourceW));
+  if (minW < MIN_SOURCE_W || maxW > MAX_SOURCE_W) {
+    fail(
+      `sampled inferred source coverage ${minW.toFixed(1)}-${maxW.toFixed(1)}px outside ${MIN_SOURCE_W}-${MAX_SOURCE_W}`
+    );
   }
   console.log(
-    `PASS: frames derive from the approved 517-frame desktop recut with wider coverage (min sourceW=${minW.toFixed(1)} max=${maxW.toFixed(1)}; old crop=${OLD_CROP_W})`
+    `PASS: frames derive from the approved 517-frame desktop recut with balanced ${EXPECTED_SOURCE_W}px coverage (inferred ${minW.toFixed(1)}-${maxW.toFixed(1)}; old crop=${OLD_CROP_W}; default x=${EXPECTED_SOURCE_X_DEFAULT}; engraving x=${EXPECTED_SOURCE_X_ENGRAVING})`
   );
 
   // Shot-boundary distinctness: adjacent partitions are different pictures.
@@ -664,5 +693,5 @@ if (index.includes("complete-silhouette") || styles.includes("complete-silhouett
 }
 
 console.log(
-  "PASS: mobile opening wider-frame media (unique 517-frame derivative of the approved recut; materially wider than 498x1080; mobile-only wiring; desktop bytes exact; no alternate clips or frame-fillers; source proof only — not visual consumer verification)"
+  "PASS: mobile opening wider-frame media (unique 517-frame 720x1560 derivative of the approved recut; exact 800px source crop in the 760-820 band; shot x=680 / engraving x=140; mobile-only wiring; desktop bytes exact; no alternate clips or frame-fillers; source proof only — not visual consumer verification)"
 );
