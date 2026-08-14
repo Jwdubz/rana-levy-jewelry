@@ -292,11 +292,13 @@
 
       /*
         True full-screen mobile opening oracle:
-        The complete visible viewport is the carrier. Portrait-art-directed
-        derivatives fill .media-stack edge-to-edge (inset:0; width/height 100%)
-        with square unmasked edges and object-fit:cover. No vignette, blurred
-        atmosphere, contained source-ratio strip/square, letterbox, gradient
-        filler, card chrome, or media filter. JS keeps mobile scale at 1.
+        The complete visible viewport is the carrier. The mobile opening
+        derivative fills .media-stack edge-to-edge (inset:0; width/height 100%)
+        with square unmasked edges and object-fit:cover. Honest black
+        negative space may exist inside that derivative so more of the
+        approved landscape frame is visible; CSS must not add contain-as-strip,
+        vignette, blur atmosphere, duplicate/echo filler, gradient filler,
+        card chrome, or a media filter. JS keeps mobile scale at 1.
       */
       .world-studio,
       .world-ring {
@@ -472,7 +474,7 @@
             <img
               src="assets/studio-opening-cluster-bench-engraving.jpg"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.jpg"
-              data-mobile-src="assets/studio-opening-cluster-complete-silhouette-portrait.jpg"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"
               alt=""
               width="2160"
               height="1080"
@@ -483,10 +485,10 @@
               id="studioVideo"
               data-src="assets/studio-opening-cluster-bench-engraving.mp4"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"
-              data-mobile-src="assets/studio-opening-cluster-complete-silhouette-portrait.mp4"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"
               poster="assets/studio-opening-cluster-bench-engraving.jpg"
               data-desktop-poster="assets/studio-opening-cluster-bench-engraving.jpg"
-              data-mobile-poster="assets/studio-opening-cluster-complete-silhouette-portrait.jpg"
+              data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"
               muted
               loop
               playsinline
