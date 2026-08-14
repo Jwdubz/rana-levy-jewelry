@@ -49,6 +49,7 @@ const styles = read("styles.css");
 
 const REQUIRED_REST_IDS = [
   "opening-start",
+  "opening-headline",
   "opening-final",
   "hand-0",
   "hand-1",
@@ -85,6 +86,11 @@ if (!spanMatch) fail("could not read OPENING_SPAN authored svh from index.html")
 const choreographySvh = Number(spanMatch[1]);
 const terminalHoldSvh = Number(spanMatch[2]);
 const choreographyEnd = choreographySvh / (choreographySvh + terminalHoldSvh);
+const headlineMatch = index.match(/headlineChoreography:\s*(\d+(?:\.\d+)?)/);
+const headlineChoreography = headlineMatch ? Number(headlineMatch[1]) : NaN;
+if (!(headlineChoreography > 0.48) || !(headlineChoreography < 0.62)) {
+  fail("OPENING_SPAN.headlineChoreography must sit inside the fully composed 0.48–0.62 headline interval");
+}
 
 if (!/finalInStart\s*=\s*mobile\s*\?\s*0\.76/.test(index) || !/finalInEnd\s*=\s*mobile\s*\?\s*0\.9/.test(index)) {
   fail("mobile opening-final copy window must stay 0.76–0.90 so composition can be judged");
@@ -192,6 +198,9 @@ function describeComposition(section, physical, choreo) {
     const finalCopy = windowProgress(choreo, 0.76, 0.9);
     if (physical <= 0.02 && setup >= COMPOSED_MIN) {
       return { id: "opening-start", ok: true };
+    }
+    if (head >= COMPOSED_MIN && setup <= 1 - COMPOSED_MIN && finalCopy <= 1 - COMPOSED_MIN) {
+      return { id: "opening-headline", ok: true };
     }
     if (finalCopy >= COMPOSED_MIN && head <= 1 - COMPOSED_MIN) {
       return { id: "opening-final", ok: true };
@@ -338,7 +347,8 @@ function installSamsungGeometry() {
     OPENING_SPAN: {
       choreographySvh: choreographySvh,
       terminalHoldSvh: terminalHoldSvh,
-      choreographyEnd: choreographyEnd
+      choreographyEnd: choreographyEnd,
+      headlineChoreography: headlineChoreography
     }
   };
   global.document = {
@@ -375,11 +385,18 @@ const rests = settle.collectRests();
 if (!rests || !rests.length) fail("360x700 homepage must expose authored rests");
 
 const restIds = rests.map((rest) => rest.id);
-REQUIRED_REST_IDS.forEach((id) => {
-  if (restIds.indexOf(id) < 0) {
-    fail("authored rest " + id + " is missing from collectRests (" + JSON.stringify(restIds) + ")");
-  }
-});
+if (
+  restIds.length !== REQUIRED_REST_IDS.length ||
+  restIds.some((id, i) => id !== REQUIRED_REST_IDS[i])
+) {
+  fail(
+    "authored rest order must be exactly the nine rests [" +
+      REQUIRED_REST_IDS.join(", ") +
+      "] (got " +
+      JSON.stringify(restIds) +
+      ")"
+  );
+}
 
 const openingTravel = geometry.inner * 3.4 - geometry.inner;
 const handTop = geometry.inner * 2.4;
@@ -432,6 +449,7 @@ function plateauInteriorMargin(rest) {
 }
 
 const recorded = {
+  "opening-headline": { start: 693, end: 693 },
   "opening-final": { start: 1260, end: 1629 },
   "hand-0": { start: 1916, end: 2335 },
   "hand-1": { start: 2823, end: 3242 },
@@ -566,8 +584,8 @@ for (let step = 1; step < rests.length; step++) {
 }
 if (cursorIndex !== 0) fail("reverse passage must finish on opening-start");
 
-if (landings.length < 14) {
-  fail("expected the 14 forward/reverse adjacent landings, got " + landings.length);
+if (landings.length !== 16) {
+  fail("expected the 16 forward/reverse adjacent landings across nine rests, got " + landings.length);
 }
 
 const swipeFromStart = settle.chooseAdjacentDestination(0, -400, rests);
@@ -576,9 +594,9 @@ if (!swipeFromStart || swipeFromStart.index !== 1) {
 }
 const firstPlateau = rests[1];
 const firstSample = compositionAtY(laggedY(rests[0].start, swipeFromStart.y));
-if (!firstSample.composed.ok || firstSample.composed.id !== "opening-final") {
+if (!firstSample.composed.ok || firstSample.composed.id !== "opening-headline") {
   fail(
-    "the first forward landing must visually resolve to the opening-final composed beat, not the studio→ring black handoff (got " +
+    "the first forward landing must visually resolve to the opening-headline composed beat, not opening-final or the studio→ring black handoff (got " +
       JSON.stringify(firstSample.composed) +
       " at y=" +
       swipeFromStart.y +
@@ -590,7 +608,7 @@ if (
   (swipeFromStart.y === firstPlateau.start || swipeFromStart.y === firstPlateau.end)
 ) {
   fail(
-    "opening-final landing y=" +
+    "opening-headline landing y=" +
       swipeFromStart.y +
       " is the plateau edge; the composed hold is the interior of " +
       firstPlateau.start +
@@ -606,5 +624,5 @@ if (!/height:\s*calc\(\s*100dvh\s*\+\s*240svh\s*\)/.test(styles) || !/height:\s*
 uninstallHarness();
 
 console.log(
-  "PASS: mobile composed rest landings (14 adjacent gestures; damped visual sample stays on a fully composed beat; opening-final/hand/work interiors; authored rest identities preserved)"
+  "PASS: mobile composed rest landings (16 adjacent gestures; damped visual sample stays on a fully composed beat; opening-headline/opening-final/hand/work interiors; nine authored rest identities preserved)"
 );

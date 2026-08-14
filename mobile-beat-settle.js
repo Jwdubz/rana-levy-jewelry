@@ -13,9 +13,10 @@
  * move the passage. Detach restores the exact prior inline
  * touch-action and overflow values. A second contact interrupts
  * ownership but keeps the origin.
- * Destinations are the Opening terminal hold, BEAT_DWELL Hand/Work
- * plateaus, and the Work terminal — inverted from the existing remap
- * mathematics, then snapped to reachable whole CSS pixels. Adjacent
+ * Destinations are the Opening headline composed frame, Opening
+ * terminal hold, BEAT_DWELL Hand/Work plateaus, and the Work terminal
+ * — inverted from the existing remap mathematics, then snapped to
+ * reachable whole CSS pixels. Adjacent
  * gesture landings aim at the composed plateau center so the damped
  * visual clock stays inside the hold, not on a black leading edge.
  * Quiet stays native. Reduced-motion may quiet idle settle animation
@@ -26,7 +27,7 @@
  * Disposition: maintained asset
  * Future consumer: homepage mobile visitor after a finger gesture; any operator editing passage beats
  * Activation: auto-load — index.html script after site.js
- * Behavioral check: node tools/assert-mobile-beat-settle.mjs && node tools/assert-mobile-composed-rest-landings.mjs
+ * Behavioral check: node tools/assert-mobile-beat-settle.mjs && node tools/assert-mobile-composed-rest-landings.mjs && node tools/assert-opening-headline-rest.mjs
  * Retirement: when mobile per-beat settle is retired or superseded
  */
 (function () {
@@ -87,6 +88,23 @@
       out.push(rest);
     }
     return out;
+  }
+
+  function deriveOpeningHeadlinePhysical(span) {
+    if (!span) return null;
+    var end = span.choreographyEnd;
+    if (!(end > 0) && span.choreographySvh > 0 && span.terminalHoldSvh >= 0) {
+      end = span.choreographySvh / (span.choreographySvh + span.terminalHoldSvh);
+    }
+    var choreo = span.headlineChoreography;
+    if (!(end > 0) || !(end <= 1)) return null;
+    if (!(choreo > 0) || !(choreo < 1)) return null;
+    var p = choreo * end;
+    if (!(p > 0) || !(p < end)) return null;
+    return {
+      startP: p,
+      endP: p
+    };
   }
 
   function deriveOpeningFinalPhysical(span) {
@@ -299,6 +317,7 @@
     SNAP_BACK_PX: SNAP_BACK_PX,
     DIRECTION_BOUND: DIRECTION_BOUND,
     SWIPE_THRESHOLD_PX: SWIPE_THRESHOLD_PX,
+    deriveOpeningHeadlinePhysical: deriveOpeningHeadlinePhysical,
     deriveOpeningFinalPhysical: deriveOpeningFinalPhysical,
     plateauPhysicalRange: plateauPhysicalRange,
     lastReachableScrollY: lastReachableScrollY,
@@ -519,6 +538,16 @@
     var rests = [];
     var open0 = scrollYForSectionProgress(opening, 0);
     rests.push({ id: "opening-start", start: open0, end: open0 });
+
+    var openingHeadline = deriveOpeningHeadlinePhysical(span);
+    if (openingHeadline) {
+      var headY = scrollYForSectionProgress(opening, openingHeadline.startP);
+      rests.push({
+        id: "opening-headline",
+        start: headY,
+        end: headY
+      });
+    }
 
     var openingFinal = deriveOpeningFinalPhysical(span);
     if (openingFinal) {

@@ -333,6 +333,18 @@ if (!/window\.BEAT_DWELL/.test(helper)) {
 if (!/window\.OPENING_SPAN/.test(helper)) {
   fail("collectRests must read live OPENING_SPAN for the opening final rest");
 }
+if (!/deriveOpeningHeadlinePhysical/.test(helper)) {
+  fail("opening headline rest must be derived from OPENING_SPAN");
+}
+if (!/headlineChoreography/.test(helper)) {
+  fail("collectRests must read live OPENING_SPAN.headlineChoreography");
+}
+if (!/id:\s*"opening-headline"/.test(helper) && !/"opening-headline"/.test(helper)) {
+  fail("opening headline rest must be a named destination");
+}
+if (!/headlineChoreography:\s*0\.55/.test(index)) {
+  fail("OPENING_SPAN must expose the mobile headline choreography anchor 0.55");
+}
 if (!/deriveOpeningFinalPhysical/.test(helper)) {
   fail("opening final rest must be derived from OPENING_SPAN");
 }
@@ -444,6 +456,9 @@ if (/Math\.abs\(\s*target\s*-\s*y\s*\)\s*<=\s*NEAR_PX/.test(maybeFn)) {
 
 const collectFn = extractFn(helper, "collectRests");
 if (!collectFn) fail("could not isolate collectRests");
+if (!/opening-start[\s\S]*opening-headline[\s\S]*opening-final/.test(collectFn)) {
+  fail("collectRests must insert opening-headline between opening-start and opening-final");
+}
 if (!/operationalRests\(\s*mergeRests\(\s*rests\s*,\s*NEAR_PX\s*\)\s*,\s*maxY\s*\)/.test(collectFn)) {
   fail("collectRests must operationalize after merge so runtime rests stay reachable");
 }
@@ -559,6 +574,24 @@ const openingFinal = settle.deriveOpeningFinalPhysical({
 });
 if (!openingFinal || Math.abs(openingFinal.startP - 0.75) > 1e-9) {
   fail("opening final rest must start at OPENING_SPAN.choreographyEnd (180/240)");
+}
+if (typeof settle.deriveOpeningHeadlinePhysical !== "function") {
+  fail("helper must export deriveOpeningHeadlinePhysical");
+}
+const openingHeadline = settle.deriveOpeningHeadlinePhysical({
+  choreographySvh: 180,
+  terminalHoldSvh: 60,
+  choreographyEnd: 180 / 240,
+  headlineChoreography: 0.55
+});
+if (!openingHeadline || openingHeadline.startP !== openingHeadline.endP) {
+  fail("opening headline rest must be a stable composed point inverted from OPENING_SPAN");
+}
+if (Math.abs(openingHeadline.startP - 0.55 * 0.75) > 1e-9) {
+  fail("opening headline rest must invert OPENING_SPAN.headlineChoreography through choreographyEnd");
+}
+if (!(openingHeadline.startP > 0) || !(openingHeadline.startP < openingFinal.startP)) {
+  fail("opening headline rest must lie strictly between opening start and opening final");
 }
 if (!(openingFinal.endP > openingFinal.startP) || openingFinal.endP >= 1) {
   fail("opening final rest must occupy the terminal hold without sitting on the Hand pin");
@@ -1280,7 +1313,7 @@ function installHomepageHarness(options) {
       ? { holdSvh: 60, hand: [0.28, 0.86], work: [0.28, 0.55, 0.88] }
       : undefined,
     OPENING_SPAN: opts.geometry
-      ? { choreographySvh: 180, terminalHoldSvh: 60, choreographyEnd: 0.75 }
+      ? { choreographySvh: 180, terminalHoldSvh: 60, choreographyEnd: 0.75, headlineChoreography: 0.55 }
       : undefined,
     __ranaQuietModeActive: state.quiet ? () => true : undefined
   };
@@ -1747,8 +1780,24 @@ function expectOverflowRestore(root, body, prior, msg) {
     "geometry homepage attach must lock body native vertical overflow before any gesture"
   );
   const rests = settle.collectRests();
-  if (!rests || rests.length < 3) {
-    fail("geometry homepage must expose multiple authored rests (got " + JSON.stringify(rests) + ")");
+  const authoredIds = [
+    "opening-start",
+    "opening-headline",
+    "opening-final",
+    "hand-0",
+    "hand-1",
+    "work-0",
+    "work-1",
+    "work-2",
+    "work-terminal"
+  ];
+  const geometryIds = (rests || []).map((rest) => rest.id);
+  if (
+    !rests ||
+    geometryIds.length !== authoredIds.length ||
+    geometryIds.some((id, i) => id !== authoredIds[i])
+  ) {
+    fail("geometry homepage must expose the nine ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
   }
   const origin = rests[0];
   const next = rests[1];
@@ -2052,8 +2101,24 @@ function emitVerticalSwipe(emit, startY, endY) {
     "cold boot at <=700 with reduce=true must apply the body-only vertical lock"
   );
   const rests = settle.collectRests();
-  if (!rests || rests.length < 3) {
-    fail("cold boot at <=700 with reduce=true must expose authored rests (got " + JSON.stringify(rests) + ")");
+  const reduceIds = (rests || []).map((rest) => rest.id);
+  const reduceWant = [
+    "opening-start",
+    "opening-headline",
+    "opening-final",
+    "hand-0",
+    "hand-1",
+    "work-0",
+    "work-1",
+    "work-2",
+    "work-terminal"
+  ];
+  if (
+    !rests ||
+    reduceIds.length !== reduceWant.length ||
+    reduceIds.some((id, i) => id !== reduceWant[i])
+  ) {
+    fail("cold boot at <=700 with reduce=true must expose the nine ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
   }
   const last = rests[rests.length - 1];
   window.scrollTo(0, rests[0].start);
