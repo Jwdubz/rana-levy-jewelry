@@ -804,7 +804,8 @@
 
   .hand-bench .layer-media img,
   .hand-bench .layer-media video {
-    object-position: 32% 48%;
+    /* Widened 720x1560 cycle is already centered in-source. */
+    object-position: 50% 50%;
   }
 
   /* Mobile subjects: full-viewport carriers, not contained square islands. */

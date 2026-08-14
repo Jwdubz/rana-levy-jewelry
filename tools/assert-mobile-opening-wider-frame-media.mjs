@@ -8,12 +8,13 @@
  * derivative letterboxed into 720x1560 with honest black negative
  * space and no blur / echo / vignette / substitution.
  *
- * Two source windows, same film:
- *   frames 0–111 (cluster): 1200px crop at x=280 (1140–1260 band) so
- *   the first impression shows the jewelry arrangement, not the
- *   rejected 800px x=680 tight crop of isolated pink/orange pieces.
- *   frames 112–516: exact c495 later geometry — 800px (760–820) at
- *   x=680 through frame 480 and x=140 for engraving 481–516.
+ * Same 1200px visual band on every shot of the same film:
+ *   frames 0–111 (cluster): frozen 1200px crop at x=280 from base 8a8832c.
+ *   frames 112–246 (product 1): 1200px at x=480.
+ *   frames 247–446 (product 2): 1200px at x=480.
+ *   frames 447–480 (bench): 1200px at x=360.
+ *   frames 481–516 (engraving): 1200px at x=0.
+ * Later shots replace the retired 800px x=680 / engraving x=140 windows.
  *
  * Usage: node tools/assert-mobile-opening-wider-frame-media.mjs
  *
@@ -40,6 +41,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PARENT = "c50760d14ec37dbf7c4260908a39b8363dcc26ac";
+const BASE = "8a8832c26eb55fec664c6cd884ce8eccd23c82cd";
 
 const NEW_VIDEO = "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4";
 const NEW_POSTER = "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg";
@@ -68,12 +70,14 @@ const FIRST_SOURCE_W = 1200;
 const FIRST_MIN_SOURCE_W = 1140;
 const FIRST_MAX_SOURCE_W = 1260;
 const FIRST_SOURCE_X = 280;
-const LATER_SOURCE_W = 800;
-const LATER_MIN_SOURCE_W = 760;
-const LATER_MAX_SOURCE_W = 820;
-const EXPECTED_SOURCE_X_DEFAULT = 680;
-const EXPECTED_SOURCE_X_ENGRAVING = 140;
+const LATER_SOURCE_W = 1200;
+const LATER_MIN_SOURCE_W = 1140;
+const LATER_MAX_SOURCE_W = 1260;
+const PRODUCT_SOURCE_X = 480;
+const BENCH_SOURCE_X = 360;
+const ENGRAVING_SOURCE_X = 0;
 const SOURCE_X_TOL = 24;
+const OLD_LATER_SOURCE_W = 800;
 const OUT_W = 720;
 const OUT_H = 1560;
 const DESK_W = 2160;
@@ -314,12 +318,30 @@ function expectedWindow(n) {
       label: "first-cluster",
     };
   }
+  if (n <= NEW_PRODUCT2_END) {
+    return {
+      sourceW: LATER_SOURCE_W,
+      minW: LATER_MIN_SOURCE_W,
+      maxW: LATER_MAX_SOURCE_W,
+      sourceX: PRODUCT_SOURCE_X,
+      label: n <= NEW_PRODUCT1_END ? "product1" : "product2",
+    };
+  }
+  if (n <= NEW_BENCH_END) {
+    return {
+      sourceW: LATER_SOURCE_W,
+      minW: LATER_MIN_SOURCE_W,
+      maxW: LATER_MAX_SOURCE_W,
+      sourceX: BENCH_SOURCE_X,
+      label: "bench",
+    };
+  }
   return {
     sourceW: LATER_SOURCE_W,
     minW: LATER_MIN_SOURCE_W,
     maxW: LATER_MAX_SOURCE_W,
-    sourceX: n >= NEW_ENGRAVING_START ? EXPECTED_SOURCE_X_ENGRAVING : EXPECTED_SOURCE_X_DEFAULT,
-    label: n >= NEW_ENGRAVING_START ? "engraving" : "later-shot",
+    sourceX: ENGRAVING_SOURCE_X,
+    label: "engraving",
   };
 }
 
@@ -476,8 +498,17 @@ if (desktopPosterNow !== desktopPosterHead) {
     `${DESKTOP_POSTER} bytes changed vs parent ${PARENT} (${desktopPosterHead} -> ${desktopPosterNow})`
   );
 }
+const posterBase = gitHash(BASE, NEW_POSTER);
+const posterNow = execFileSync("git", ["hash-object", path.join(root, NEW_POSTER)], {
+  encoding: "utf8",
+}).trim();
+if (posterNow !== posterBase) {
+  fail(
+    `${NEW_POSTER} bytes changed vs approved base ${BASE} (${posterBase} -> ${posterNow}); first-frame poster must stay frozen`
+  );
+}
 console.log(
-  `PASS: desktop opening source bytes unchanged (${DESKTOP_VIDEO} ${desktopVideoHead}; ${DESKTOP_POSTER} ${desktopPosterHead})`
+  `PASS: desktop opening source bytes unchanged (${DESKTOP_VIDEO} ${desktopVideoHead}; ${DESKTOP_POSTER} ${desktopPosterHead}); approved first-frame poster frozen (${NEW_POSTER} ${posterBase})`
 );
 
 const info = probeJson(path.join(root, NEW_VIDEO));
@@ -616,7 +647,7 @@ try {
     fail("must sample at least cluster-start and cluster-end for the first-segment window");
   }
   if (laterCov.length < 2) {
-    fail("must sample later-segment frames to prove the unchanged 800px window");
+    fail("must sample later-segment frames to prove the widened 1200px windows");
   }
   const firstMinW = Math.min(...firstCov.map((c) => c.inferredSourceW));
   const firstMaxW = Math.max(...firstCov.map((c) => c.inferredSourceW));
@@ -632,13 +663,19 @@ try {
       `later-segment inferred source coverage ${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)}px outside ${LATER_MIN_SOURCE_W}-${LATER_MAX_SOURCE_W}`
     );
   }
-  if (firstMinW <= laterMaxW) {
+  if (laterMinW <= OLD_LATER_SOURCE_W + 8) {
     fail(
-      `first-segment window (${firstMinW.toFixed(1)}-${firstMaxW.toFixed(1)}) must be materially wider than the later 800px window (${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)})`
+      `later-segment window (${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)}) must be materially wider than the retired ${OLD_LATER_SOURCE_W}px crop`
+    );
+  }
+  const bandDelta = Math.abs(firstMinW - laterMinW);
+  if (bandDelta > 8) {
+    fail(
+      `later-segment band (${laterMinW.toFixed(1)}px) must match the approved first-segment 1200px height (first ${firstMinW.toFixed(1)}px; delta ${bandDelta.toFixed(1)})`
     );
   }
   console.log(
-    `PASS: frames derive from the approved 517-frame desktop recut; first 0-111 is ${FIRST_SOURCE_W}px at x=${FIRST_SOURCE_X} (inferred ${firstMinW.toFixed(1)}-${firstMaxW.toFixed(1)}; old=${OLD_CROP_W}); frames 112-516 keep c495 ${LATER_SOURCE_W}px (inferred ${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)}; shot x=${EXPECTED_SOURCE_X_DEFAULT}; engraving x=${EXPECTED_SOURCE_X_ENGRAVING})`
+    `PASS: frames derive from the approved 517-frame desktop recut; first 0-111 remains ${FIRST_SOURCE_W}px at x=${FIRST_SOURCE_X} (inferred ${firstMinW.toFixed(1)}-${firstMaxW.toFixed(1)}; old=${OLD_CROP_W}); frames 112-516 now use the same ${LATER_SOURCE_W}px band (inferred ${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)}; product x=${PRODUCT_SOURCE_X}; bench x=${BENCH_SOURCE_X}; engraving x=${ENGRAVING_SOURCE_X})`
   );
 
   // Shot-boundary distinctness: adjacent partitions are different pictures.
@@ -659,6 +696,53 @@ try {
   }
   console.log(
     "PASS: Cluster → product → product → Bench → Engraving boundaries remain distinct in the mobile derivative"
+  );
+
+  // Approved first 112 frames must decode identically to base 8a8832c.
+  const baseOpening = path.join(tmp, "base-opening.mp4");
+  fs.writeFileSync(
+    baseOpening,
+    execFileSync("git", ["show", BASE + ":" + NEW_VIDEO], {
+      cwd: root,
+      maxBuffer: 32 * 1024 * 1024,
+    })
+  );
+  const baseMd5 = path.join(tmp, "base-first112.framemd5");
+  const candMd5 = path.join(tmp, "cand-first112.framemd5");
+  runFfmpeg(["-i", baseOpening, "-an", "-frames:v", "112", "-f", "framemd5", baseMd5]);
+  runFfmpeg([
+    "-i",
+    path.join(root, NEW_VIDEO),
+    "-an",
+    "-frames:v",
+    "112",
+    "-f",
+    "framemd5",
+    candMd5,
+  ]);
+  const md5Lines = (rel) =>
+    fs
+      .readFileSync(rel, "utf8")
+      .split("\n")
+      .filter((line) => line && !line.startsWith("#"));
+  const baseLines = md5Lines(baseMd5);
+  const candLines = md5Lines(candMd5);
+  if (baseLines.length !== 112 || candLines.length !== 112) {
+    fail(
+      `framemd5 first-112 line count base=${baseLines.length} candidate=${candLines.length}`
+    );
+  }
+  const mismatch = [];
+  for (let i = 0; i < 112; i++) {
+    if (baseLines[i] !== candLines[i]) mismatch.push(i);
+  }
+  if (mismatch.length) {
+    fail(
+      `frames 0-111 of ${NEW_VIDEO} are not decoded-identical to base ${BASE} (framemd5 mismatches at ${mismatch.slice(0, 8).join(", ")}${mismatch.length > 8 ? "…" : ""})`
+    );
+  }
+  console.log(
+    `PASS: frames 0-111 framemd5 match base ${BASE} (112/112 decoded frames bit-identical)`
   );
 
   // Poster is the new film's first frame, not a different still.
@@ -740,5 +824,5 @@ if (index.includes("complete-silhouette") || styles.includes("complete-silhouett
 }
 
 console.log(
-  "PASS: mobile opening wider-frame media (unique 517-frame 720x1560 derivative of the approved recut; frames 0-111 use 1200px x=280; frames 112-516 keep c495 800px x=680 / engraving x=140; mobile-only wiring; desktop bytes exact; no alternate clips or frame-fillers; source proof only — not visual consumer verification)"
+  "PASS: mobile opening wider-frame media (unique 517-frame 720x1560 derivative of the approved recut; frames 0-111 frozen 1200px x=280 and framemd5-identical to 8a8832c; frames 112-516 use the same 1200px band at product x=480 / bench x=360 / engraving x=0; poster bytes frozen; mobile-only wiring; desktop bytes exact; no alternate clips or frame-fillers; source proof only — not visual consumer verification)"
 );

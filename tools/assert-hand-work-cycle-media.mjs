@@ -4,11 +4,12 @@
  *
  * Proves both Lap→Engraving→Signets→Ornate cycle assets exist with contract shapes:
  * - desktop: 134 frames, ~4.466667s, 2160x1080, 30 fps, H.264/yuv420p, no audio
- * - portrait: 134 frames, ~4.466667s, 498x1080, 30 fps, H.264/yuv420p, no audio
+ * - portrait: 134 frames, ~4.466667s, 720x1560, 30 fps, H.264/yuv420p, no audio
  * and that decoded boundary frames match the intended source partition order closely
  * enough to reject wrong shot order or swapped inserts after H.264 re-encode.
- * Portrait source frames are normalized through the H.264 coded-frame display
- * crop (498x1080 at x=830,y=4 inside 2160x1088) before comparison.
+ * The mobile derivative letterboxes a 1200x1080 source window into 720x1560:
+ *   frames 0–33 (Lap): x=360; 34–67 (Engraving): x=0;
+ *   68–100 (Signets): x=0; 101–133 (Ornate): x=360.
  *
  * Intended order (source frames, inclusive ranges):
  *   [171..204] + [137..170] + [306..338] + [339..371]  → 134 frames
@@ -23,14 +24,23 @@
  * Activation: execute — node tools/assert-hand-work-cycle-media.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
  * Retirement: when the hand work-cycle asset contract is retired or superseded
+ *
+ * Companion maintained assets:
+ *   assets/studio-hand-work-cycle-portrait.mp4
+ *   assets/studio-poster-portrait.jpg
+ * Future consumer: mobile homepage Hand via selectResponsiveMedia()
+ * Activation: auto-load — index.html data-mobile-src / data-mobile-poster
+ * Behavioral check: execute — node tools/assert-hand-work-cycle-media.mjs
+ * Retirement: when this mobile hand-cycle derivative is retired
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const BASE = "8a8832c26eb55fec664c6cd884ce8eccd23c82cd";
 
 // Inclusive source ranges → derived order.
 const LAP_START = 171;
@@ -60,25 +70,37 @@ const NEW_SIGNETS_END = NEW_SIGNETS_START + SIGNETS_LEN - 1; // 100
 const NEW_ORNATE_START = NEW_SIGNETS_END + 1; // 101
 const NEW_ORNATE_END = TOTAL_FRAMES - 1; // 133
 
-const contracts = [
-  {
-    rel: "assets/studio-hand-work-cycle.mp4",
-    sourceRel: "assets/studio-banner.mp4",
-    width: 2160,
-    height: 1080,
-    label: "desktop",
-  },
-  {
-    rel: "assets/studio-hand-work-cycle-portrait.mp4",
-    sourceRel: "assets/studio-banner-portrait.mp4",
-    width: 498,
-    height: 1080,
-    label: "portrait",
-    // studio-banner-portrait stores a 498x1080 display window inside a 2160x1088
-    // coded frame (H.264 frame_crop left=830 right=832 top=4 bottom=4).
-    sourceCodedCrop: { w: 498, h: 1080, x: 830, y: 4 },
-  },
-];
+const desktopContract = {
+  rel: "assets/studio-hand-work-cycle.mp4",
+  sourceRel: "assets/studio-banner.mp4",
+  width: 2160,
+  height: 1080,
+  label: "desktop",
+};
+
+const portraitContract = {
+  rel: "assets/studio-hand-work-cycle-portrait.mp4",
+  sourceRel: "assets/studio-hand-work-cycle.mp4",
+  width: 720,
+  height: 1560,
+  label: "portrait",
+};
+
+const PORTRAIT_OUT_W = 720;
+const PORTRAIT_OUT_H = 1560;
+const PORTRAIT_BAND_H = 648;
+const PORTRAIT_BAND_Y = 456;
+const PORTRAIT_SOURCE_W = 1200;
+const PORTRAIT_SOURCE_H = 1080;
+const DESK_W = 2160;
+const DESK_H = 1080;
+const MATCH_W = 80;
+const MATCH_H = 72;
+
+function portraitWindowX(n) {
+  if (n <= NEW_LAP_END || n >= NEW_ORNATE_START) return 360;
+  return 0;
+}
 
 function fail(msg) {
   console.error("FAIL:", msg);
@@ -377,6 +399,204 @@ function assertOrder(contract) {
   }
 }
 
+function runFfmpeg(args) {
+  const r = spawnSync(ffmpeg, args, { encoding: "utf8" });
+  if (r.status !== 0) {
+    process.stderr.write(r.stderr || "");
+    fail(`ffmpeg failed: ${args.slice(0, 8).join(" ")}`);
+  }
+}
+
+function extractRgb(videoPath, frameIndex, outPath, width, height, vfExtra = "") {
+  const parts = [`select=eq(n\\,${frameIndex})`];
+  if (vfExtra) parts.push(vfExtra);
+  parts.push(`scale=${width}:${height}:flags=bilinear`, "setsar=1");
+  runFfmpeg([
+    "-y",
+    "-i",
+    videoPath,
+    "-vf",
+    parts.join(","),
+    "-vframes",
+    "1",
+    "-update",
+    "1",
+    "-f",
+    "rawvideo",
+    "-pix_fmt",
+    "rgb24",
+    outPath,
+  ]);
+}
+
+function meanAbsDiffBuf(a, b) {
+  if (a.length !== b.length) {
+    fail(`raw buffer size mismatch ${a.length} vs ${b.length}`);
+  }
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+  return sum / a.length;
+}
+
+function detectContentBand(rgb, width, height) {
+  const rows = [];
+  for (let y = 0; y < height; y++) {
+    let sum = 0;
+    let sumSq = 0;
+    const rowOff = y * width * 3;
+    for (let x = 0; x < width; x++) {
+      const i = rowOff + x * 3;
+      const luma = 0.299 * rgb[i] + 0.587 * rgb[i + 1] + 0.114 * rgb[i + 2];
+      sum += luma;
+      sumSq += luma * luma;
+    }
+    const mean = sum / width;
+    const variance = sumSq / width - mean * mean;
+    const std = Math.sqrt(Math.max(0, variance));
+    rows.push({ content: !(mean < 14 && std < 10) });
+  }
+  let y0 = 0;
+  while (y0 < height && !rows[y0].content) y0++;
+  let y1 = height;
+  while (y1 > y0 && !rows[y1 - 1].content) y1--;
+  return { y0, h: y1 - y0 };
+}
+
+function assertDesktopBytesFrozen() {
+  const rel = desktopContract.rel;
+  const base = execFileSync("git", ["rev-parse", BASE + ":" + rel], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  const now = execFileSync("git", ["hash-object", path.join(root, rel)], {
+    encoding: "utf8",
+  }).trim();
+  if (now !== base) {
+    fail(`${rel} desktop bytes changed vs base ${BASE} (${base} -> ${now})`);
+  }
+  console.log(`PASS: desktop hand-cycle bytes unchanged (${rel} ${base})`);
+}
+
+function assertPortraitWindows() {
+  const assetPath = path.join(root, portraitContract.rel);
+  const deskPath = path.join(root, portraitContract.sourceRel);
+  if (!fs.existsSync(deskPath)) fail(`missing source ${portraitContract.sourceRel}`);
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rana-hand-wide-"));
+  try {
+    const samples = [
+      { n: NEW_LAP_START, label: "lap-start" },
+      { n: NEW_LAP_END, label: "lap-end" },
+      { n: NEW_ENGRAVING_START, label: "engraving-start" },
+      { n: NEW_ENGRAVING_END, label: "engraving-end" },
+      { n: NEW_SIGNETS_START, label: "signets-start" },
+      { n: NEW_SIGNETS_END, label: "signets-end" },
+      { n: NEW_ORNATE_START, label: "ornate-start" },
+      { n: NEW_ORNATE_END, label: "ornate-end" },
+    ];
+    for (const sample of samples) {
+      const nativeRaw = path.join(tmp, `native_${sample.n}.raw`);
+      extractRgb(assetPath, sample.n, nativeRaw, 4, PORTRAIT_OUT_H);
+      const band = detectContentBand(fs.readFileSync(nativeRaw), 4, PORTRAIT_OUT_H);
+      if (Math.abs(band.h - PORTRAIT_BAND_H) > 8) {
+        fail(
+          `${portraitContract.rel} ${sample.label} content band ${band.h}px is not the 720x${PORTRAIT_BAND_H} letterbox (y0=${band.y0})`
+        );
+      }
+      if (Math.abs(band.y0 - PORTRAIT_BAND_Y) > 8) {
+        fail(
+          `${portraitContract.rel} ${sample.label} content band y0=${band.y0} is not centered at ${PORTRAIT_BAND_Y}`
+        );
+      }
+      const inferredSourceW = DESK_H * (PORTRAIT_OUT_W / band.h);
+      if (Math.abs(inferredSourceW - PORTRAIT_SOURCE_W) > 16) {
+        fail(
+          `${portraitContract.rel} ${sample.label} inferred source width ${inferredSourceW.toFixed(1)}px is not ${PORTRAIT_SOURCE_W}`
+        );
+      }
+      const expectX = portraitWindowX(sample.n);
+      const mobileRaw = path.join(tmp, `mob_${sample.n}.raw`);
+      const deskRaw = path.join(tmp, `desk_${sample.n}.raw`);
+      extractRgb(
+        assetPath,
+        sample.n,
+        mobileRaw,
+        MATCH_W,
+        MATCH_H,
+        `crop=${PORTRAIT_OUT_W}:${PORTRAIT_BAND_H}:0:${PORTRAIT_BAND_Y}`
+      );
+      extractRgb(
+        deskPath,
+        sample.n,
+        deskRaw,
+        MATCH_W,
+        MATCH_H,
+        `crop=${PORTRAIT_SOURCE_W}:${PORTRAIT_SOURCE_H}:${expectX}:0`
+      );
+      const mad = meanAbsDiffBuf(fs.readFileSync(mobileRaw), fs.readFileSync(deskRaw));
+      if (mad > 10) {
+        fail(
+          `${portraitContract.rel} ${sample.label} frame ${sample.n} does not match desktop 1200x1080 x=${expectX} (mad ${mad.toFixed(3)} > 10)`
+        );
+      }
+      console.log(
+        `  portrait ${sample.label} frame ${sample.n}: mad=${mad.toFixed(3)} band=${band.h}px y0=${band.y0} x=${expectX}`
+      );
+    }
+
+    const distinctPairs = [
+      [NEW_LAP_END, NEW_ENGRAVING_START, "Lap→Engraving"],
+      [NEW_ENGRAVING_END, NEW_SIGNETS_START, "Engraving→Signets"],
+      [NEW_SIGNETS_END, NEW_ORNATE_START, "Signets→Ornate"],
+    ];
+    for (const [a, b, label] of distinctPairs) {
+      const aRaw = path.join(tmp, `native_${a}.raw`);
+      const bRaw = path.join(tmp, `native_${b}.raw`);
+      const mad = meanAbsDiffBuf(fs.readFileSync(aRaw), fs.readFileSync(bRaw));
+      if (mad < 12) {
+        fail(`boundary ${label} looks like the same picture (mad ${mad.toFixed(3)} < 12)`);
+      }
+      console.log(`  boundary ${label}: mad=${mad.toFixed(3)}`);
+    }
+
+    const posterRel = "assets/studio-poster-portrait.jpg";
+    if (!fs.existsSync(path.join(root, posterRel))) fail(`missing ${posterRel}`);
+    const posterRaw = path.join(tmp, "poster.raw");
+    const film0Raw = path.join(tmp, "film0.raw");
+    runFfmpeg([
+      "-y",
+      "-i",
+      path.join(root, posterRel),
+      "-vf",
+      "scale=72:156:flags=fast_bilinear,setsar=1",
+      "-vframes",
+      "1",
+      "-update",
+      "1",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      posterRaw,
+    ]);
+    extractRgb(assetPath, 0, film0Raw, 72, 156);
+    const posterMad = meanAbsDiffBuf(fs.readFileSync(film0Raw), fs.readFileSync(posterRaw));
+    if (posterMad > 14) {
+      fail(`studio-poster-portrait does not match film frame 0 (mad ${posterMad.toFixed(3)} > 14)`);
+    }
+    console.log(`PASS: hand poster≈film0 mad=${posterMad.toFixed(3)}`);
+  } finally {
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup
+    }
+  }
+  console.log(
+    "PASS: portrait hand-cycle is 720x1560 letterboxed 1200x1080 (Lap/Ornate x=360; Engraving/Signets x=0) with Lap→Engraving→Signets→Ornate order"
+  );
+}
+
 function assertPlaybackWindowCoversAsset() {
   const siteJs = fs
     .readFileSync(path.join(root, "site.js"), "utf8")
@@ -424,13 +644,14 @@ function assertResponsiveWiringIntact() {
   );
 }
 
-for (const contract of contracts) {
-  assertMetadata(contract);
-  assertOrder(contract);
-}
+assertDesktopBytesFrozen();
+assertMetadata(desktopContract);
+assertOrder(desktopContract);
+assertMetadata(portraitContract);
+assertPortraitWindows();
 assertPlaybackWindowCoversAsset();
 assertResponsiveWiringIntact();
 
 console.log(
-  "PASS: hand work-cycle media (134 frames both derivatives; full duration; boundary order Lap→Engraving→Signets→Ornate; playback window + wiring intact; source proof only — not visual consumer verification)"
+  "PASS: hand work-cycle media (134 frames both derivatives; desktop 2160x1080 bytes frozen; portrait 720x1560 letterboxed 1200px windows; boundary order Lap→Engraving→Signets→Ornate; playback window + wiring intact; source proof only — not visual consumer verification)"
 );
