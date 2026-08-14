@@ -1267,18 +1267,22 @@
       workThoughtRest.style.opacity = String(restOp);
       if (mobile && restOp > 0.5) {
         workThoughtRest.style.transform = "none";
-      } else {
+      } else if (mobile) {
         workThoughtRest.style.transform =
           "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+      } else {
+        workThoughtRest.style.transform = "none";
       }
     }
     if (workThoughtRestB) {
       workThoughtRestB.style.opacity = String(restOp);
       if (mobile && restOp > 0.5) {
         workThoughtRestB.style.transform = "none";
-      } else {
+      } else if (mobile) {
         workThoughtRestB.style.transform =
           "translate3d(0," + lerp(2, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+      } else {
+        workThoughtRestB.style.transform = "none";
       }
     }
     if (work) {
@@ -1288,6 +1292,12 @@
     }
     if (workCopyDock) {
       workCopyDock.setAttribute("aria-hidden", restOp < 0.15 ? "true" : "false");
+      if (mobile) {
+        workCopyDock.style.transform = "none";
+      } else {
+        workCopyDock.style.transform =
+          "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+      }
     }
     if (workLinks) {
       workLinks.style.opacity = String(restOp);

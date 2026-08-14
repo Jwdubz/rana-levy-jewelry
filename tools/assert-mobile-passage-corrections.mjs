@@ -4,7 +4,7 @@
  *
  * Residue: mobile passage correction tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing homepage beats, Vegas montage, or mobile copy docks
+ * Future consumer: any operator editing homepage beats, Vegas montage, desktop terminal stack, or mobile copy docks
  * Activation: execute — node tools/assert-mobile-passage-corrections.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
  * Retirement: when the five-rest jewelry passage or its copy/media contract is retired
@@ -117,6 +117,88 @@ if (
 }
 if (!/id="workThoughtRest"[\s\S]{0,400}id="workThoughtRestB"/.test(index)) {
   fail("the two terminal lines must be distinct copy hosts, first then second");
+}
+
+const dockHost = index.match(
+  /<div class="work-copy-dock" id="workCopyDock">([\s\S]*?)<div class="work-links" id="workLinks">/
+);
+if (!dockHost) {
+  fail("both terminal paragraphs must be sequential children of #workCopyDock, then the three links");
+}
+if (
+  !/id="workThoughtRest"/.test(dockHost[1]) ||
+  !/id="workThoughtRestB"/.test(dockHost[1]) ||
+  dockHost[1].indexOf("workThoughtRestB") < dockHost[1].indexOf("workThoughtRest")
+) {
+  fail("#workCopyDock must host #workThoughtRest then #workThoughtRestB before #workLinks");
+}
+
+const stylesDesktop = styles.slice(0, styles.indexOf("@media (max-width: 700px)"));
+const desktopDock = (stylesDesktop.match(/\.work-copy-dock\s*\{([^}]+)\}/) || [])[1] || "";
+if (!/display:\s*flex/.test(desktopDock) || !/flex-direction:\s*column/.test(desktopDock)) {
+  fail("desktop .work-copy-dock must be one sequential flex-column layout block");
+}
+if (!/position:\s*absolute/.test(desktopDock)) {
+  fail("desktop .work-copy-dock must be one positioned stack, not a static passthrough");
+}
+if (!/left:\s*6vw/.test(desktopDock) || !/bottom:\s*7\.5svh/.test(desktopDock)) {
+  fail("desktop terminal stack must stay in the lower-left negative space");
+}
+if (!/gap:\s*0\.(?:[5-9]\d*|[1-9]\d*)rem/.test(desktopDock)) {
+  fail("desktop terminal stack must author a positive gap so the paragraphs cannot share a box");
+}
+
+const desktopRest = (stylesDesktop.match(
+  /\.work-thought-rest(?:,\s*\n?\s*\.work-thought-rest-b)?\s*\{([^}]+)\}/
+) || [])[1] || "";
+if (!/position:\s*static/.test(desktopRest)) {
+  fail("desktop terminal paragraphs must be static flow inside #workCopyDock, not independent layers");
+}
+if (/bottom:\s*\d/.test(desktopRest) && !/bottom:\s*auto/.test(desktopRest)) {
+  fail("desktop terminal paragraphs must not carry independent bottom offsets");
+}
+if (
+  /\.work-thought-rest\s*\{[^}]*bottom:\s*17svh/.test(stylesDesktop) ||
+  /\.work-thought-rest-b\s*\{[^}]*bottom:\s*11\.5svh/.test(stylesDesktop)
+) {
+  fail("retired independently bottom-pinned desktop terminal layers must be absent");
+}
+
+const desktopLinks = (stylesDesktop.match(/\.work-links\s*\{([^}]+)\}/) || [])[1] || "";
+if (!/position:\s*static/.test(desktopLinks)) {
+  fail("desktop .work-links must sit in the same sequential dock after the two paragraphs");
+}
+
+function modeledVerticalOverlap(bottomA, heightA, bottomB, heightB, viewportH) {
+  const topA = viewportH - bottomA - heightA;
+  const topB = viewportH - bottomB - heightB;
+  return Math.max(0, Math.min(topA + heightA, topB + heightB) - Math.max(topA, topB));
+}
+const retired1440Overlap = modeledVerticalOverlap(0.17 * 900, 95.125, 0.115 * 900, 142.6875, 900);
+if (!(retired1440Overlap > 90)) {
+  fail(
+    "desktop overlap oracle must still reconstruct the retired 1440x900 collision (got " +
+      retired1440Overlap +
+      "px)"
+  );
+}
+if (/position:\s*absolute/.test(desktopRest) || /position:\s*absolute/.test(desktopLinks)) {
+  fail("desktop terminal paragraphs/links must not be independently absolutely positioned layers");
+}
+
+const desktopRestFont = (desktopRest.match(/font-size:\s*([^;]+);/) || [])[1] || "";
+if (!/1(?:\.2)?rem|16px/.test(desktopRestFont)) {
+  fail("desktop terminal copy must stay at least 16 CSS pixels (got " + desktopRestFont + ")");
+}
+
+if (
+  !/workThoughtRest\.style\.transform = "none"/.test(siteJs) ||
+  !/workThoughtRestB\.style\.transform = "none"/.test(siteJs)
+) {
+  fail("desktop must keep both terminal paragraphs at transform none so they cannot drift over each other");
+}
+if (!/workCopyDock\.style\.transform/.test(siteJs)) {
+  fail("desktop terminal motion must belong to #workCopyDock as one sequential block");
 }
 
 if (/id:\s*"opening-final"/.test(helper.slice(helper.indexOf("function collectRests")))) {
@@ -418,5 +500,5 @@ if (!/workSpans:\s*\[\s*1\.00\s*,\s*0\.94\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; studio + two-line terminal copy; exact Custom Gems Turn Heads spacing; Vegas motion assets silent H.264/yuv420p; five rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; studio + two-line terminal copy; desktop sequential dock; exact Custom Gems Turn Heads spacing; Vegas motion assets silent H.264/yuv420p; five rests; no blur/vignette filler)"
 );
