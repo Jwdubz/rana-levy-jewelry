@@ -5,11 +5,15 @@
  * replaced approved product passages with different native-portrait clips.
  * The candidate must keep the exact approved 517-frame desktop recut
  * (content, order, timing) and reframe only — a uniquely named mobile
- * derivative whose frames use an 800px source crop (760–820 band;
- * ~1.61x the prior 498x1080 tight crop), letterboxed into 720x1560
- * with honest black negative space and no blur / echo / vignette /
- * substitution. The rejected 1080-wide square window is too short on
- * tall phones; this assertion pins the balanced crop, not max coverage.
+ * derivative letterboxed into 720x1560 with honest black negative
+ * space and no blur / echo / vignette / substitution.
+ *
+ * Two source windows, same film:
+ *   frames 0–111 (cluster): 1200px crop at x=280 (1140–1260 band) so
+ *   the first impression shows the jewelry arrangement, not the
+ *   rejected 800px x=680 tight crop of isolated pink/orange pieces.
+ *   frames 112–516: exact c495 later geometry — 800px (760–820) at
+ *   x=680 through frame 480 and x=140 for engraving 481–516.
  *
  * Usage: node tools/assert-mobile-opening-wider-frame-media.mjs
  *
@@ -60,9 +64,13 @@ const ALT_CLIPS = [
 const TOTAL_FRAMES = 517;
 const EXPECTED_DURATION = TOTAL_FRAMES / 30;
 const OLD_CROP_W = 498;
-const EXPECTED_SOURCE_W = 800;
-const MIN_SOURCE_W = 760;
-const MAX_SOURCE_W = 820;
+const FIRST_SOURCE_W = 1200;
+const FIRST_MIN_SOURCE_W = 1140;
+const FIRST_MAX_SOURCE_W = 1260;
+const FIRST_SOURCE_X = 280;
+const LATER_SOURCE_W = 800;
+const LATER_MIN_SOURCE_W = 760;
+const LATER_MAX_SOURCE_W = 820;
 const EXPECTED_SOURCE_X_DEFAULT = 680;
 const EXPECTED_SOURCE_X_ENGRAVING = 140;
 const SOURCE_X_TOL = 24;
@@ -294,6 +302,25 @@ function detectContentBand(rgb, width, height) {
 function even(n) {
   const v = Math.max(2, Math.round(n));
   return v % 2 === 0 ? v : v - 1;
+}
+
+function expectedWindow(n) {
+  if (n <= NEW_CLUSTER_END) {
+    return {
+      sourceW: FIRST_SOURCE_W,
+      minW: FIRST_MIN_SOURCE_W,
+      maxW: FIRST_MAX_SOURCE_W,
+      sourceX: FIRST_SOURCE_X,
+      label: "first-cluster",
+    };
+  }
+  return {
+    sourceW: LATER_SOURCE_W,
+    minW: LATER_MIN_SOURCE_W,
+    maxW: LATER_MAX_SOURCE_W,
+    sourceX: n >= NEW_ENGRAVING_START ? EXPECTED_SOURCE_X_ENGRAVING : EXPECTED_SOURCE_X_DEFAULT,
+    label: n >= NEW_ENGRAVING_START ? "engraving" : "later-shot",
+  };
 }
 
 function bestWindowMatch(content, contentW, contentH, desk, deskW, deskH) {
@@ -548,26 +575,25 @@ try {
         `${NEW_VIDEO} ${sample.label} frame ${sample.n} does not match ${DESKTOP_VIDEO} frame ${sample.n} (mad ${match.mad.toFixed(3)} > 12)`
       );
     }
-    if (inferredSourceW < MIN_SOURCE_W || inferredSourceW > MAX_SOURCE_W) {
+    const expect = expectedWindow(sample.n);
+    if (inferredSourceW < expect.minW || inferredSourceW > expect.maxW) {
       fail(
-        `${NEW_VIDEO} ${sample.label} frame ${sample.n} inferred source width ${inferredSourceW.toFixed(1)}px is outside the balanced ${MIN_SOURCE_W}-${MAX_SOURCE_W}px crop (old=${OLD_CROP_W}; rejected 1080-wide square)`
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} inferred source width ${inferredSourceW.toFixed(1)}px is outside the ${expect.label} ${expect.minW}-${expect.maxW}px crop (old=${OLD_CROP_W})`
       );
     }
-    if (Math.abs(inferredSourceW - EXPECTED_SOURCE_W) > 8) {
+    if (Math.abs(inferredSourceW - expect.sourceW) > 8) {
       fail(
-        `${NEW_VIDEO} ${sample.label} frame ${sample.n} inferred source width ${inferredSourceW.toFixed(1)}px is not the exact ${EXPECTED_SOURCE_W}px crop`
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} inferred source width ${inferredSourceW.toFixed(1)}px is not the exact ${expect.sourceW}px ${expect.label} crop`
       );
     }
-    if (match.sourceW < MIN_SOURCE_W || match.sourceW > MAX_SOURCE_W) {
+    if (match.sourceW < expect.minW || match.sourceW > expect.maxW) {
       fail(
-        `${NEW_VIDEO} ${sample.label} frame ${sample.n} matched source width ${match.sourceW.toFixed(1)}px is outside ${MIN_SOURCE_W}-${MAX_SOURCE_W}px`
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} matched source width ${match.sourceW.toFixed(1)}px is outside ${expect.label} ${expect.minW}-${expect.maxW}px`
       );
     }
-    const expectX =
-      sample.n >= NEW_ENGRAVING_START ? EXPECTED_SOURCE_X_ENGRAVING : EXPECTED_SOURCE_X_DEFAULT;
-    if (Math.abs(match.sourceX - expectX) > SOURCE_X_TOL) {
+    if (Math.abs(match.sourceX - expect.sourceX) > SOURCE_X_TOL) {
       fail(
-        `${NEW_VIDEO} ${sample.label} frame ${sample.n} sourceX ${match.sourceX.toFixed(1)}px is not the shot window (expected ${expectX}±${SOURCE_X_TOL})`
+        `${NEW_VIDEO} ${sample.label} frame ${sample.n} sourceX ${match.sourceX.toFixed(1)}px is not the ${expect.label} window (expected ${expect.sourceX}±${SOURCE_X_TOL})`
       );
     }
     coverage.push({
@@ -577,21 +603,42 @@ try {
       sourceW: match.sourceW,
       inferredSourceW,
       sourceX: match.sourceX,
+      expect,
     });
     console.log(
-      `  frame ${sample.n} ${sample.label}: mad=${match.mad.toFixed(3)} inferredW=${inferredSourceW.toFixed(1)} sourceW=${match.sourceW.toFixed(1)} sourceX=${match.sourceX.toFixed(1)}`
+      `  frame ${sample.n} ${sample.label} (${expect.label}): mad=${match.mad.toFixed(3)} inferredW=${inferredSourceW.toFixed(1)} sourceW=${match.sourceW.toFixed(1)} sourceX=${match.sourceX.toFixed(1)}`
     );
   }
 
-  const minW = Math.min(...coverage.map((c) => c.inferredSourceW));
-  const maxW = Math.max(...coverage.map((c) => c.inferredSourceW));
-  if (minW < MIN_SOURCE_W || maxW > MAX_SOURCE_W) {
+  const firstCov = coverage.filter((c) => c.n <= NEW_CLUSTER_END);
+  const laterCov = coverage.filter((c) => c.n > NEW_CLUSTER_END);
+  if (firstCov.length < 2) {
+    fail("must sample at least cluster-start and cluster-end for the first-segment window");
+  }
+  if (laterCov.length < 2) {
+    fail("must sample later-segment frames to prove the unchanged 800px window");
+  }
+  const firstMinW = Math.min(...firstCov.map((c) => c.inferredSourceW));
+  const firstMaxW = Math.max(...firstCov.map((c) => c.inferredSourceW));
+  const laterMinW = Math.min(...laterCov.map((c) => c.inferredSourceW));
+  const laterMaxW = Math.max(...laterCov.map((c) => c.inferredSourceW));
+  if (firstMinW < FIRST_MIN_SOURCE_W || firstMaxW > FIRST_MAX_SOURCE_W) {
     fail(
-      `sampled inferred source coverage ${minW.toFixed(1)}-${maxW.toFixed(1)}px outside ${MIN_SOURCE_W}-${MAX_SOURCE_W}`
+      `first-segment inferred source coverage ${firstMinW.toFixed(1)}-${firstMaxW.toFixed(1)}px outside ${FIRST_MIN_SOURCE_W}-${FIRST_MAX_SOURCE_W}`
+    );
+  }
+  if (laterMinW < LATER_MIN_SOURCE_W || laterMaxW > LATER_MAX_SOURCE_W) {
+    fail(
+      `later-segment inferred source coverage ${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)}px outside ${LATER_MIN_SOURCE_W}-${LATER_MAX_SOURCE_W}`
+    );
+  }
+  if (firstMinW <= laterMaxW) {
+    fail(
+      `first-segment window (${firstMinW.toFixed(1)}-${firstMaxW.toFixed(1)}) must be materially wider than the later 800px window (${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)})`
     );
   }
   console.log(
-    `PASS: frames derive from the approved 517-frame desktop recut with balanced ${EXPECTED_SOURCE_W}px coverage (inferred ${minW.toFixed(1)}-${maxW.toFixed(1)}; old crop=${OLD_CROP_W}; default x=${EXPECTED_SOURCE_X_DEFAULT}; engraving x=${EXPECTED_SOURCE_X_ENGRAVING})`
+    `PASS: frames derive from the approved 517-frame desktop recut; first 0-111 is ${FIRST_SOURCE_W}px at x=${FIRST_SOURCE_X} (inferred ${firstMinW.toFixed(1)}-${firstMaxW.toFixed(1)}; old=${OLD_CROP_W}); frames 112-516 keep c495 ${LATER_SOURCE_W}px (inferred ${laterMinW.toFixed(1)}-${laterMaxW.toFixed(1)}; shot x=${EXPECTED_SOURCE_X_DEFAULT}; engraving x=${EXPECTED_SOURCE_X_ENGRAVING})`
   );
 
   // Shot-boundary distinctness: adjacent partitions are different pictures.
@@ -693,5 +740,5 @@ if (index.includes("complete-silhouette") || styles.includes("complete-silhouett
 }
 
 console.log(
-  "PASS: mobile opening wider-frame media (unique 517-frame 720x1560 derivative of the approved recut; exact 800px source crop in the 760-820 band; shot x=680 / engraving x=140; mobile-only wiring; desktop bytes exact; no alternate clips or frame-fillers; source proof only — not visual consumer verification)"
+  "PASS: mobile opening wider-frame media (unique 517-frame 720x1560 derivative of the approved recut; frames 0-111 use 1200px x=280; frames 112-516 keep c495 800px x=680 / engraving x=140; mobile-only wiring; desktop bytes exact; no alternate clips or frame-fillers; source proof only — not visual consumer verification)"
 );
