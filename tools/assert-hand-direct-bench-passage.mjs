@@ -4,7 +4,7 @@
  *
  * Locks the owner-observed Hand correction:
  * - no studio-portrait world in Hand or Hand→Work
- * - responsive bench poster authority on the work bridge
+ * - no static workBridge / studio-poster Work destination
  * - exact scale 1 for the Hand bench carrier
  * - Cut by hand lives on the workbench, not the opening ring
  * - rejected facet / six-year copy is absent
@@ -95,18 +95,15 @@ if (/handBenchScaleStart|handBenchScaleEnd/.test(siteJs)) {
   fail("site.js must retire handBenchScaleStart/End lerped overscan");
 }
 
-// B. Work bridge uses responsive bench/lap still matching Hand carrier.
-const workBridgeBlock = workMarkup.match(/id="workBridge"[\s\S]*?<\/div>\s*<\/div>/);
-if (!workBridgeBlock) fail("workBridge markup must be present");
-const bridge = workBridgeBlock[0];
-if (!/data-desktop-src="assets\/studio-poster\.jpg"/.test(bridge)) {
-  fail('workBridge must declare data-desktop-src="assets/studio-poster.jpg"');
+// B. Static workbench poster bridge is retired on every viewport.
+if (/id="workBridge"/.test(workMarkup) || /work-bridge/.test(workMarkup)) {
+  fail("workBridge markup must be removed from the homepage Work passage");
 }
-if (!/data-mobile-src="assets\/studio-poster-portrait\.jpg"/.test(bridge)) {
-  fail('workBridge must declare data-mobile-src="assets/studio-poster-portrait.jpg"');
+if (/studio-poster/.test(workMarkup)) {
+  fail("Work markup must not keep a studio-poster paint or hydration path");
 }
-if (/rana-studio/.test(bridge)) {
-  fail("workBridge must not reference rana-studio");
+if (/workBridge/.test(siteJs)) {
+  fail("site.js must not retain workBridge choreography");
 }
 
 // Hand bench poster authority unchanged (phase-coherent with bridge).
@@ -183,5 +180,5 @@ for (let i = 0; i < samples.length; i++) {
 }
 
 console.log(
-  "PASS: hand direct bench passage (no portrait world; bench workBridge; scale 1; Cut by hand on workbench; rejected facet/six-year copy absent)"
+  "PASS: hand direct bench passage (no portrait world; no workBridge poster; scale 1; Cut by hand on workbench; rejected facet/six-year copy absent)"
 );

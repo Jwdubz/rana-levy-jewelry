@@ -14,8 +14,8 @@
     junctionFeatherFloor: 16,
     junctionLightPeak: 0.72,
     // Direct ring→bench carrier stays exact scale 1 for the whole Hand movement.
-    // Surviving work worlds: Vegas night, heirloom, pink-star terminal.
-    workSpans: [1.00, 0.86, 0.94],
+    // Surviving work worlds: Vegas night, pink-star terminal.
+    workSpans: [1.00, 0.94],
     workHoldFraction: 0.56,
     workScaleStart: 1.025,
     workScaleEnd: 1.0,
@@ -38,9 +38,9 @@
   // fully composed Hand / Work beat. Work is terminal.
   const BEAT_DWELL = {
     holdSvh: 60,
-    // Fully composed word beats: bench Cut-by-hand; Vegas decade; heirloom; pink terminal.
+    // Fully composed word beats: bench Cut-by-hand; Vegas studio line; pink terminal.
     hand: [0.50],
-    work: [0.28, 0.55, 0.88]
+    work: [0.28, 0.88]
   };
 
   // Expose for inspection / verification.
@@ -774,19 +774,17 @@
 
   const workWorlds = [
     document.getElementById("workWorld0"),
-    document.getElementById("workWorld1"),
-    document.getElementById("workWorld2")
+    document.getElementById("workWorld1")
   ];
   const workStacks = [
     document.getElementById("workStack0"),
-    document.getElementById("workStack1"),
-    document.getElementById("workStack2")
+    document.getElementById("workStack1")
   ];
-  const workBridge = document.getElementById("workBridge");
   const workJunction = document.getElementById("workJunction");
   const workRestWash = document.getElementById("workRestWash");
   const workThoughtVegas = document.getElementById("workThoughtVegas");
   const workThoughtRest = document.getElementById("workThoughtRest");
+  const workThoughtRestB = document.getElementById("workThoughtRestB");
   const workCopyDock = document.getElementById("workCopyDock");
   const vegasVideo = document.getElementById("vegasVideo");
   const workLinks = document.getElementById("workLinks");
@@ -1248,27 +1246,15 @@
     const edges = edgeParams();
     const hold = SITE_MOTION.workHoldFraction;
 
-    // First work still is the base authority. Desktop: bench bridge masks out into it.
-    // Mobile: no workBridge paint — Hand yields directly to workWorld0.
+    // Vegas film is the base authority. Hand yields directly to workWorld0
+    // on every viewport — no static bench poster bridge.
     const enterT = windowProgress(p, 0.0, 0.14);
     if (workWorlds[0]) {
       workWorlds[0].style.opacity = "1";
       clearMask(workWorlds[0]);
     }
-    if (mobile) {
-      retireBridgeLayer(workBridge);
-    } else {
-      applyBridgeOut(
-        workBridge,
-        enterT,
-        edges.angles[2],
-        edges.edgeStart,
-        edges.edgeEnd,
-        SITE_MOTION.junctionFeather
-      );
-    }
 
-    // Vegas decade line on the first work world; terminal sentence + links late.
+    // Vegas studio line on the first work world; terminal sentences + links late.
     const vegasOp = thoughtOpacity(p, 0.14, 0.26, 0.40, 0.52);
     const restOp = thoughtOpacity(p, 0.78, 0.88, null, null);
 
@@ -1284,6 +1270,15 @@
       } else {
         workThoughtRest.style.transform =
           "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+      }
+    }
+    if (workThoughtRestB) {
+      workThoughtRestB.style.opacity = String(restOp);
+      if (mobile && restOp > 0.5) {
+        workThoughtRestB.style.transform = "none";
+      } else {
+        workThoughtRestB.style.transform =
+          "translate3d(0," + lerp(2, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
       }
     }
     if (work) {
@@ -1307,13 +1302,6 @@
     let junctionT = 0;
     let junctionAngle = edges.angles[2];
 
-    // Desktop only: entry junction rides the work bridge Turn.
-    if (!mobile && enterT > 0 && enterT < 1) {
-      activeJunction = 0;
-      junctionT = enterT;
-      junctionAngle = edges.angles[2];
-    }
-
     for (let i = 0; i < workWorlds.length; i++) {
       const world = workWorlds[i];
       const stack = workStacks[i];
@@ -1328,10 +1316,7 @@
       if (i === 0) {
         reveal = 1;
         world.style.opacity = "1";
-        // Keep clear during/after entry Turn (bridge is the outgoing world).
-        if (enterT >= 1 || enterT <= 0) {
-          clearMask(world);
-        }
+        clearMask(world);
       } else {
         // Turn begins after hold of previous; span of this world opens with angled mask.
         const turnStart = workStarts[i];
@@ -1363,7 +1348,6 @@
         stack.style.transform = "translate3d(0,0,0) scale(" + scale + ")";
       }
 
-      // Stack below .work-bridge (z-index 8) so the Hand→Work Turn stays on top.
       world.style.zIndex = String(1 + i);
     }
 
@@ -1424,10 +1408,6 @@
     for (let i = 0; i < workStacks.length; i++) {
       setWillChange(workStacks[i], workActive ? "transform" : "");
     }
-    setWillChange(
-      workBridge,
-      !mobile && workActive && workP < 0.2 ? "opacity, mask-image" : ""
-    );
 
     // Videos: active only while their world owns the viewport; never seek from scroll.
     // No choreography cutoff — that unmasked the static studio-poster mid-Hand.

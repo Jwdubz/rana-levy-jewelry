@@ -33,8 +33,7 @@ const EXPECTED_IDS = [
   "opening-headline",
   "hand-0",
   "work-0",
-  "work-1",
-  "work-2"
+  "work-1"
 ];
 const PARENT_IDS = [
   "opening-start",
@@ -119,7 +118,7 @@ function installHarness(opts) {
     style: { touchAction: "", overflow: "", overflowX: "", overflowY: "" },
     classList: { contains: (name) => quiet && name === "is-quiet" },
     offsetHeight: 1,
-    scrollHeight: Math.round(inner * (legacy ? 9.3 : 8.2)),
+    scrollHeight: Math.round(inner * (legacy ? 9.3 : 7.5)),
     appendChild() {}
   };
   const body = {
@@ -138,7 +137,7 @@ function installHarness(opts) {
   const sections = {
     opening: makeSection("opening", 0, inner * openMul),
     hand: makeSection("hand", inner * handTopMul, inner * handMul),
-    work: makeSection("work", inner * workTopMul, inner * 4.5)
+    work: makeSection("work", inner * workTopMul, inner * (legacy ? 4.5 : 3.9))
   };
   const matchMedia = (query) => {
     const q = String(query);
@@ -188,7 +187,7 @@ function installHarness(opts) {
     },
     BEAT_DWELL: legacy
       ? { holdSvh: 60, hand: [0.28, 0.86], work: [0.28, 0.55, 0.88] }
-      : { holdSvh: 60, hand: [0.50], work: [0.28, 0.55, 0.88] },
+      : { holdSvh: 60, hand: [0.50], work: [0.28, 0.88] },
     OPENING_SPAN: {
       choreographySvh: span.choreographySvh,
       terminalHoldSvh: span.terminalHoldSvh,
@@ -362,7 +361,7 @@ GEOMETRIES.forEach((geo) => {
       geo.width +
         "x" +
         geo.height +
-        " must collect the six ordered rests (got " +
+        " must collect the five ordered rests (got " +
         JSON.stringify(ids) +
         ")"
     );
@@ -579,7 +578,7 @@ GEOMETRIES.forEach((geo) => {
   }
   const rests = candidateHelper.collectRests();
   if (!sameIds(idsOf(rests), EXPECTED_IDS)) {
-    fail("reduced-motion must retain the same six ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
+    fail("reduced-motion must retain the same five ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
   }
   window.scrollTo(0, rests[0].start);
   emitSwipe(harness.emit, 620, 40);
@@ -652,6 +651,6 @@ if (Math.abs(inverted.startP - HEADLINE_ANCHOR * candidateSpan.choreographyEnd) 
 }
 
 console.log(
-  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate six rests start opening-start, opening-headline, hand-0; 0.55 invert inside 0.48–0.62; opening-final retired; forward/reverse adjacency; reduce keeps ownership; quiet/desktop native)"
+  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate five rests start opening-start, opening-headline, hand-0; 0.55 invert inside 0.48–0.62; opening-final retired; forward/reverse adjacency; reduce keeps ownership; quiet/desktop native)"
 );
 console.log(JSON.stringify(reported));

@@ -514,7 +514,7 @@ if (/mobile\s*\?\s*1\.0[3-9]/i.test(fnBody) || /mobile\s*\?\s*1\.[1-9]/i.test(fn
 // --- Hand bridge: mobile paint retired (direct Opening→Hand authority) ---
 // Desktop keeps the angled ring bridge; phones must not paint the duplicate.
 if (
-  !/#handBridge[\s\S]{0,200}\.hand-bridge[\s\S]{0,200}#workBridge[\s\S]{0,200}\.work-bridge[\s\S]{0,320}visibility:\s*hidden\s*!important/i.test(
+  !/#handBridge[\s\S]{0,200}\.hand-bridge[\s\S]{0,320}visibility:\s*hidden\s*!important/i.test(
     stylesMobileOnly
   ) &&
   !/\.hand-bridge[\s\S]{0,400}visibility:\s*hidden\s*!important/i.test(stylesMobileOnly)

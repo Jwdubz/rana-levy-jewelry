@@ -1291,9 +1291,9 @@ function installHomepageHarness(options) {
     });
     sections.opening = makeSection("opening", 0, inner * 2.8);
     sections.hand = makeSection("hand", inner * 1.8, inner * 2.8);
-    sections.work = makeSection("work", inner * 3.6, inner * 4.5);
-    root.scrollHeight = inner * 8.2;
-    body.scrollHeight = inner * 8.2;
+    sections.work = makeSection("work", inner * 3.6, inner * 3.9);
+    root.scrollHeight = inner * 7.5;
+    body.scrollHeight = inner * 7.5;
     root.appendChild = () => {};
   }
   global.window = {
@@ -1313,7 +1313,7 @@ function installHomepageHarness(options) {
       this.pageYOffset = top;
     },
     BEAT_DWELL: opts.geometry
-      ? { holdSvh: 60, hand: [0.50], work: [0.28, 0.55, 0.88] }
+      ? { holdSvh: 60, hand: [0.50], work: [0.28, 0.88] }
       : undefined,
     OPENING_SPAN: opts.geometry
       ? { choreographySvh: 180, terminalHoldSvh: 0, choreographyEnd: 1, headlineChoreography: 0.55 }
@@ -1788,8 +1788,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     "opening-headline",
     "hand-0",
     "work-0",
-    "work-1",
-    "work-2"
+    "work-1"
   ];
   const geometryIds = (rests || []).map((rest) => rest.id);
   if (
@@ -1797,7 +1796,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     geometryIds.length !== authoredIds.length ||
     geometryIds.some((id, i) => id !== authoredIds[i])
   ) {
-    fail("geometry homepage must expose the six ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
+    fail("geometry homepage must expose the five ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
   }
   const origin = rests[0];
   const next = rests[1];
@@ -2107,15 +2106,14 @@ function emitVerticalSwipe(emit, startY, endY) {
     "opening-headline",
     "hand-0",
     "work-0",
-    "work-1",
-    "work-2"
+    "work-1"
   ];
   if (
     !rests ||
     reduceIds.length !== reduceWant.length ||
     reduceIds.some((id, i) => id !== reduceWant[i])
   ) {
-    fail("cold boot at <=700 with reduce=true must expose the six ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
+    fail("cold boot at <=700 with reduce=true must expose the five ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
   }
   const last = rests[rests.length - 1];
   window.scrollTo(0, rests[0].start);

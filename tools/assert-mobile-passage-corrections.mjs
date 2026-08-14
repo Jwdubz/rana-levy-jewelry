@@ -7,7 +7,7 @@
  * Future consumer: any operator editing homepage beats, Vegas montage, or mobile copy docks
  * Activation: execute — node tools/assert-mobile-passage-corrections.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the six-beat jewelry passage or its copy/media contract is retired
+ * Retirement: when the five-rest jewelry passage or its copy/media contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -77,17 +77,46 @@ if (/id="finalLine"/.test(index) || /id="workThoughtOpen"/.test(index) || /id="h
   fail("retired opening-final / work-open / hand-1 copy hosts must be absent");
 }
 
-if (!index.includes("Designing Jewelry for nearly a Decade.")) {
-  fail('exact sentence "Designing Jewelry for nearly a Decade." must be present');
+const VEGAS_COPY = "Crafted In Our Home Studio Here In Las Vegas";
+const TERMINAL_A = "Work with Rana to bring your Custom Design to Life";
+const TERMINAL_B = "Looking for Inspiration or Want something now? Click Ready Now Below";
+const SUPERSEDED_DECADE = "Designing Jewelry for nearly a Decade.";
+const SUPERSEDED_TERMINAL =
+  "See what's ready now or work with Rana to bring your Custom Design to Life.";
+
+if (index.includes(SUPERSEDED_DECADE) || siteJs.includes(SUPERSEDED_DECADE)) {
+  fail('superseded sentence "Designing Jewelry for nearly a Decade." must be absent from the homepage');
 }
-if (!/id="workThoughtVegas"/.test(index) || !/id="workThoughtVegas"[\s\S]{0,200}Designing Jewelry for nearly a Decade\./.test(index)) {
-  fail("decade line must live on the Vegas work beat (#workThoughtVegas)");
+if (!index.includes(VEGAS_COPY)) {
+  fail('exact Vegas line must be "Crafted In Our Home Studio Here In Las Vegas"');
+}
+if (!/id="workThoughtVegas"/.test(index) || !new RegExp('id="workThoughtVegas"[\\s\\S]{0,220}' + VEGAS_COPY).test(index)) {
+  fail("Vegas studio line must live on #workThoughtVegas");
+}
+if (/Crafted In Our Home Studio Here In Las Vegas\./.test(index)) {
+  fail("Vegas studio line must not add a period");
 }
 if (!/id="handThought0"[\s\S]{0,240}Cut by hand,[\s\S]{0,80}one at a time\./.test(index)) {
   fail("Cut by hand, one at a time. must live on the workbench thought");
 }
-if (!index.includes("See what's ready now or work with Rana to bring your Custom Design to Life.")) {
-  fail("exact terminal sentence must remain");
+if (index.includes(SUPERSEDED_TERMINAL)) {
+  fail("superseded terminal sentence must be absent");
+}
+if (!index.includes(TERMINAL_A) || !index.includes(TERMINAL_B)) {
+  fail("both exact terminal copy lines must be present");
+}
+if (!/id="workThoughtRest"[^>]*>Work with Rana to bring your Custom Design to Life<\/p>/.test(index)) {
+  fail("#workThoughtRest must be exactly the first terminal line, with no added punctuation");
+}
+if (
+  !/id="workThoughtRestB"[^>]*>Looking for Inspiration or Want something now\? Click Ready Now Below<\/p>/.test(
+    index
+  )
+) {
+  fail("#workThoughtRestB must be exactly the second terminal line");
+}
+if (!/id="workThoughtRest"[\s\S]{0,400}id="workThoughtRestB"/.test(index)) {
+  fail("the two terminal lines must be distinct copy hosts, first then second");
 }
 
 if (/id:\s*"opening-final"/.test(helper.slice(helper.indexOf("function collectRests")))) {
@@ -183,19 +212,184 @@ if (!/copy-dock-opening/.test(indexMobile) || !/--opening-copy-dock-h/.test(inde
 if (!/work-copy-dock/.test(stylesMobile) || !/--work-copy-dock-h/.test(stylesMobile)) {
   fail("mobile terminal must author a black copy region below the pink ring");
 }
-if (!/white-space:\s*nowrap/.test(indexMobile) || !/\.headline \.line\s*\{\s*display:\s*inline/.test(indexMobile)) {
+if (!/white-space:\s*nowrap/.test(indexMobile)) {
   fail("mobile Custom Gems must be one nowrap line");
 }
 const mobileHeadline = (indexMobile.match(/\.headline\s*\{[\s\S]*?\}/) || [""])[0];
 if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/.test(mobileHeadline)) {
   fail("mobile Custom Gems must be centered in the black dock");
 }
+if (!/display:\s*flex/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must stay a flex-centered dock line");
+}
 const headFont = (indexMobile.match(/\.headline\s*\{[\s\S]*?font-size:\s*([^;]+);/) || [])[1] || "";
 if (!/1rem|16px/.test(headFont)) {
   fail("mobile Custom Gems font must not drop below 16px (got " + headFont + ")");
 }
-if (!/workThoughtRest[\s\S]*workLinks/.test(index) || !/id="workCopyDock"/.test(index)) {
-  fail("terminal sentence and three choices must sit in the authored work copy dock");
+
+function headlineInner(html) {
+  const match = html.match(/<h1[^>]*id="headline"[^>]*>([\s\S]*?)<\/h1>/);
+  return match ? match[1] : "";
+}
+
+function stripTags(s) {
+  return String(s).replace(/<[^>]+>/g, "");
+}
+
+function collapseFlexItem(text) {
+  return String(text)
+    .replace(/[\t\n\r\f]+/g, " ")
+    .replace(/^ +/, "")
+    .replace(/ +$/, "");
+}
+
+function topLevelFlexItems(inner) {
+  const items = [];
+  let i = 0;
+  while (i < inner.length) {
+    if (inner.startsWith("<span", i)) {
+      const openEnd = inner.indexOf(">", i);
+      if (openEnd < 0) break;
+      let depth = 1;
+      let j = openEnd + 1;
+      let closeAt = -1;
+      while (j < inner.length && depth > 0) {
+        const nextOpen = inner.indexOf("<span", j);
+        const nextClose = inner.indexOf("</span>", j);
+        if (nextClose < 0) break;
+        if (nextOpen >= 0 && nextOpen < nextClose) {
+          depth += 1;
+          j = nextOpen + 5;
+        } else {
+          depth -= 1;
+          if (depth === 0) {
+            closeAt = nextClose;
+            break;
+          }
+          j = nextClose + 7;
+        }
+      }
+      if (closeAt < 0) break;
+      items.push(inner.slice(openEnd + 1, closeAt));
+      i = closeAt + 7;
+      continue;
+    }
+    if (inner.charAt(i) === "<") {
+      const gt = inner.indexOf(">", i);
+      i = gt < 0 ? inner.length : gt + 1;
+      continue;
+    }
+    const next = inner.indexOf("<", i);
+    const end = next < 0 ? inner.length : next;
+    items.push(inner.slice(i, end));
+    i = end;
+  }
+  return items;
+}
+
+function visibleHeadlineText(html, cssForBreakAndFlex) {
+  let inner = headlineInner(html);
+  if (!inner) return "";
+  const breakHidden = /\.headline\s+\.break[\s\S]{0,80}display:\s*none/.test(cssForBreakAndFlex);
+  if (breakHidden) {
+    inner = inner.replace(/<span[^>]*\bbreak\b[^>]*>[\s\S]*?<\/span>/gi, "");
+  }
+  const headlineRule = (cssForBreakAndFlex.match(/\.headline\s*\{[\s\S]*?\}/) || [""])[0];
+  const isFlex = /display:\s*flex/.test(headlineRule);
+  if (!isFlex) {
+    return stripTags(inner).replace(/[\t\n\r\f]+/g, " ").replace(/ {2,}/g, " ").trim();
+  }
+  return topLevelFlexItems(inner)
+    .map(function (item) {
+      return collapseFlexItem(stripTags(item));
+    })
+    .filter(Boolean)
+    .join("");
+}
+
+const REQUIRED_HEADLINE = "Custom Gems Turn Heads";
+const liveHeadlineInner = headlineInner(index);
+if (!/Custom Gems Turn /.test(liveHeadlineInner)) {
+  fail(
+    'headline source must contain the contiguous run "Custom Gems Turn " with a normal U+0020 space; splitting Gems/Turn across a hidden break collapses the space'
+  );
+}
+if (!/<span class="headline-run">Custom Gems Turn <span class="heads" id="heads">Heads<\/span><\/span>/.test(liveHeadlineInner)) {
+  fail(
+    "headline must keep Gems/Turn/Heads in one .headline-run flex item so mobile display:flex cannot eat the word spaces"
+  );
+}
+if (/Gems\s*<\/span>\s*(?:<span[^>]*\bbreak\b[\s\S]*?<\/span>\s*)?(?:<span[^>]*>\s*)?Turn/.test(liveHeadlineInner)) {
+  fail("Gems and Turn must not be split across a display:none .break or a second flex item");
+}
+
+const liveVisible = visibleHeadlineText(index, indexMobile);
+if (liveVisible !== REQUIRED_HEADLINE) {
+  fail(
+    'rendered mobile headline must be exactly "' +
+      REQUIRED_HEADLINE +
+      '" (got ' +
+      JSON.stringify(liveVisible) +
+      ")"
+  );
+}
+if (/GemsTurn/.test(liveVisible)) {
+  fail("rendered headline must not collapse to Custom GemsTurn Heads");
+}
+
+const retiredCollapsedHeadline =
+  '<h1 class="type headline" id="headline">\n' +
+  '          <span class="line">Custom Gems</span><span class="break"></span>\n' +
+  '          <span class="line"> Turn <span class="heads" id="heads">Heads</span></span>\n' +
+  "        </h1>";
+const retiredVisible = visibleHeadlineText(retiredCollapsedHeadline, indexMobile);
+if (retiredVisible === REQUIRED_HEADLINE) {
+  fail(
+    "headline oracle is too weak: the retired Gems/break/Turn split still reports the required spaced line"
+  );
+}
+if (retiredVisible !== "Custom GemsTurn Heads") {
+  fail(
+    "headline oracle must reconstruct the Chromium flex collapse as Custom GemsTurn Heads (got " +
+      JSON.stringify(retiredVisible) +
+      ")"
+  );
+}
+if (/\bCustom\b/.test(retiredCollapsedHeadline) && /\bGems\b/.test(retiredCollapsedHeadline) && /\bTurn\b/.test(retiredCollapsedHeadline) && retiredVisible === REQUIRED_HEADLINE) {
+  fail("headline oracle must not pass merely because Custom, Gems, and Turn exist independently");
+}
+
+if (!/workThoughtRest[\s\S]*workThoughtRestB[\s\S]*workLinks/.test(index) || !/id="workCopyDock"/.test(index)) {
+  fail("both terminal lines and the three choices must sit in the authored work copy dock");
+}
+if (
+  !/href="ready\.html">Ready Now</.test(index) ||
+  !/href="made\.html">Made To Order</.test(index) ||
+  !/href="consultation\.html">Custom Consultation</.test(index)
+) {
+  fail("the three terminal action links must remain Ready Now, Made To Order, and Custom Consultation");
+}
+if (!/\.work-thought-vegas[\s\S]{0,220}font-size:\s*max\(\s*1rem/.test(stylesMobile)) {
+  fail("Vegas copy must stay at least 16 CSS pixels on mobile");
+}
+if (!/\.work-thought-rest[\s\S]{0,280}font-size:\s*max\(\s*1rem/.test(stylesMobile)) {
+  fail("terminal copy must stay at least 16 CSS pixels on mobile");
+}
+if (/ring-heirloom/.test(index)) {
+  fail("rejected heirloom ring beat must be absent from homepage markup");
+}
+if (/id="workWorld2"/.test(index) || /work-world-2/.test(index) || /work-world-2/.test(styles)) {
+  fail("homepage work sequence must close Vegas into the pink terminal as work-1; no third work world");
+}
+if (!/id="workWorld1"[\s\S]{0,240}assets\/ring-pink-star\.webp/.test(index)) {
+  fail("work-1 must remain the terminal pink-star ring");
+}
+if (/id="workBridge"/.test(index) || /work-bridge/.test(index) || /workBridge/.test(siteJs)) {
+  fail("static workBridge / studio-poster work bench must be removed from homepage markup and choreography");
+}
+const workSection = (index.match(/id="work"[\s\S]*?<\/section>/) || [""])[0];
+if (/studio-poster/.test(workSection)) {
+  fail("Work section must not keep a studio-poster hydration or paint path");
 }
 
 for (const re of forbidden) {
@@ -213,10 +407,16 @@ if (/work-copy-dock[\s\S]{0,400}blur\(/.test(stylesMobile) || /copy-dock-opening
 if (!/setVideoActive\s*\(\s*vegasVideo/.test(siteJs)) {
   fail("Vegas video ownership must go through setVideoActive");
 }
-if (!/hand:\s*\[\s*0\.5/.test(siteJs) || !/work:\s*\[\s*0\.28\s*,\s*0\.55\s*,\s*0\.88\s*\]/.test(siteJs)) {
-  fail("BEAT_DWELL must model one Hand plateau and three Work plateaus");
+if (!/hand:\s*\[\s*0\.5/.test(siteJs) || !/work:\s*\[\s*0\.28\s*,\s*0\.88\s*\]/.test(siteJs)) {
+  fail("BEAT_DWELL must model one Hand plateau and two Work plateaus (Vegas, pink terminal)");
+}
+if (/work:\s*\[\s*0\.28\s*,\s*0\.55\s*,\s*0\.88\s*\]/.test(siteJs)) {
+  fail("retired heirloom Work plateau 0.55 must be absent");
+}
+if (!/workSpans:\s*\[\s*1\.00\s*,\s*0\.94\s*\]/.test(siteJs)) {
+  fail("workSpans must be the surviving Vegas + pink-terminal pair");
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests absent; decade + cut-by-hand on the right beats; Vegas motion assets silent H.264/yuv420p; one-line Custom Gems dock; below-ring terminal dock; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; studio + two-line terminal copy; exact Custom Gems Turn Heads spacing; Vegas motion assets silent H.264/yuv420p; five rests; no blur/vignette filler)"
 );

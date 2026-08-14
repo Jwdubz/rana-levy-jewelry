@@ -13,12 +13,12 @@ rebuilt without inventing a city or substituting a studio clip.
 
 Used (night / luxury Strip register):
 
-1. `welcome-to-fabulous-las-vegas-sign-47523.mp4` — 1.2s–3.8s  
+1. `welcome-to-fabulous-las-vegas-sign-47523.mp4` — 1.2s–3.8s
    https://mixkit.co/free-stock-video/welcome-to-fabulous-las-vegas-sign-47523/
-2. `las-vegas-panning-time-lapse-4144-1080.mp4` — 0.5s–3.3s (Paris hotel / tower)  
-   then 3.8s–6.2s (Paris hotel façade)  
+2. `las-vegas-panning-time-lapse-4144-1080.mp4` — 0.5s–3.3s (Paris hotel / tower)
+   then 3.8s–6.2s (Paris hotel façade)
    https://mixkit.co/free-stock-video/las-vegas-panning-time-lapse-4144/
-3. `neon-flashing-lights-sign-4160-1080.mp4` — 0.8s–3.8s (Flamingo neon)  
+3. `neon-flashing-lights-sign-4160-1080.mp4` — 0.8s–3.8s (Flamingo neon)
    https://mixkit.co/free-stock-video/neon-flashing-lights-sign-4160/
 
 Rejected as lowering the night/luxury register: daylight and traffic downloads

@@ -548,18 +548,18 @@ if (!/work-rest-wash[\s\S]{0,120}display\s*:\s*none/i.test(stylesMobile)) {
 if (!/\.hand-bridge[\s\S]{0,400}visibility:\s*hidden\s*!important/i.test(stylesMobile)) {
   fail("mobile full-site must retire .hand-bridge paint (visibility:hidden !important)");
 }
-if (!/\.work-bridge[\s\S]{0,400}visibility:\s*hidden\s*!important/i.test(stylesMobile)) {
-  fail("mobile full-site must retire .work-bridge paint (visibility:hidden !important)");
+if (/id="workBridge"/.test(index) || /work-bridge/.test(styles) || /workBridge/.test(siteJs)) {
+  fail("full-site must remove workBridge rather than hide a static workbench poster");
 }
-// Desktop bridge paths must remain in site.js (not deleted for the mobile fix).
+// Desktop opening→hand bridge paths must remain in site.js.
 if (!/function\s+applyBridgeOut\s*\(/.test(siteJs)) {
   fail("desktop applyBridgeOut must remain for angled bridge Turns");
 }
 if (!/function\s+armHandBridgePlayback\s*\(/.test(siteJs)) {
   fail("desktop armHandBridgePlayback must remain");
 }
-if (!/id="handBridgeVideo"/.test(index) || !/id="workBridge"/.test(index)) {
-  fail("desktop bridge markup (#handBridgeVideo / #workBridge) must remain present");
+if (!/id="handBridgeVideo"/.test(index)) {
+  fail("desktop opening→hand bridge markup (#handBridgeVideo) must remain present");
 }
 
 // --- site.js: Hand portrait world retired; direct bench passage + workbench Cut-by-hand ---
@@ -721,17 +721,17 @@ if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.75\s*,\s*0\.95\s*\
 if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.0\s*,\s*1\.8\s*\]/.test(siteJs)) {
   fail("retired BENCH_WINDOWS.hand [5.0, 1.8] must be absent from hand declaration");
 }
-const workThoughtExact =
-  "See what's ready now or work with Rana to bring your Custom Design to Life.";
-if (!index.includes(workThoughtExact)) {
-  fail("#workThoughtRest must use the exact owner-supplied terminal sentence");
+const workThoughtA = "Work with Rana to bring your Custom Design to Life";
+const workThoughtB = "Looking for Inspiration or Want something now? Click Ready Now Below";
+if (!index.includes(workThoughtA) || !index.includes(workThoughtB)) {
+  fail("#workThoughtRest / #workThoughtRestB must use the exact owner-supplied terminal lines");
 }
 if (
-  index.includes(
-    "See what's ready now, or choose a design Rana can make for you."
-  )
+  index.includes("See what's ready now or work with Rana to bring your Custom Design to Life.") ||
+  index.includes("See what's ready now, or choose a design Rana can make for you.") ||
+  index.includes("Designing Jewelry for nearly a Decade.")
 ) {
-  fail("retired #workThoughtRest sentence must be absent");
+  fail("superseded homepage Work sentences must be absent");
 }
 
 // --- Hand bench video leave / reverse re-entry lifecycle ---

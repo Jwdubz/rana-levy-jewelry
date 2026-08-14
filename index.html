@@ -239,6 +239,11 @@
       display: none;
     }
 
+    .headline-run {
+      display: inline;
+      white-space: nowrap;
+    }
+
     .heads {
       font-style: italic;
       font-weight: 400;
@@ -399,6 +404,11 @@
       .headline .break {
         display: none;
       }
+
+      .headline-run {
+        display: inline;
+        white-space: nowrap;
+      }
     }
 
     @media (pointer: coarse) {
@@ -543,10 +553,7 @@
 
         <div class="copy-dock-opening" id="openingCopyDock" aria-hidden="true"></div>
 
-        <h1 class="type headline" id="headline">
-          <span class="line">Custom Gems</span><span class="break"></span>
-          <span class="line"> Turn <span class="heads" id="heads">Heads</span></span>
-        </h1>
+        <h1 class="type headline" id="headline"><span class="headline-run">Custom Gems Turn <span class="heads" id="heads">Heads</span></span></h1>
       </div>
     </section>
 
@@ -660,28 +667,7 @@
 
         <div class="layer work-world work-world-1" id="workWorld1">
           <div class="layer-media" id="workStack1">
-            <img src="assets/ring-heirloom.webp" alt="" width="1440" height="1440" decoding="async">
-          </div>
-        </div>
-
-        <div class="layer work-world work-world-2" id="workWorld2">
-          <div class="layer-media" id="workStack2">
             <img src="assets/ring-pink-star.webp" alt="" width="1500" height="1500" decoding="async">
-          </div>
-        </div>
-
-        <!-- Outgoing Hand bench still already full-bleed; angled mask-out reveals the first work still. -->
-        <div class="layer work-bridge" id="workBridge" aria-hidden="true">
-          <div class="layer-media" id="workBridgeStack">
-            <img
-              src="assets/studio-poster.jpg"
-              data-desktop-src="assets/studio-poster.jpg"
-              data-mobile-src="assets/studio-poster-portrait.jpg"
-              alt=""
-              width="1920"
-              height="960"
-              decoding="async"
-            >
           </div>
         </div>
 
@@ -690,9 +676,10 @@
         <div class="work-rest-wash" id="workRestWash" aria-hidden="true"></div>
         <div class="movement-grain" aria-hidden="true"></div>
 
-        <p class="thought thought-md work-thought-vegas" id="workThoughtVegas">Designing Jewelry for nearly a Decade.</p>
+        <p class="thought thought-md work-thought-vegas" id="workThoughtVegas">Crafted In Our Home Studio Here In Las Vegas</p>
         <div class="work-copy-dock" id="workCopyDock">
-          <p class="thought thought-md work-thought-rest" id="workThoughtRest">See what's ready now or work with Rana to bring your Custom Design to Life.</p>
+          <p class="thought thought-md work-thought-rest" id="workThoughtRest">Work with Rana to bring your Custom Design to Life</p>
+          <p class="thought thought-md work-thought-rest-b" id="workThoughtRestB">Looking for Inspiration or Want something now? Click Ready Now Below</p>
           <div class="work-links" id="workLinks">
             <a class="choice-link" href="ready.html">Ready Now</a>
             <a class="choice-link" href="made.html">Made To Order</a>

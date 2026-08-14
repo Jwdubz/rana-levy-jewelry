@@ -394,8 +394,8 @@
 /* ——— M3 Work (terminal) ——— */
 
 .movement-work {
-  /* 280svh choreography travel + sticky + 3 × 60svh completed-state holds */
-  height: 500svh;
+  /* 220svh choreography travel + sticky + 2 × 60svh completed-state holds */
+  height: 440svh;
 }
 
 .work-world {
@@ -405,25 +405,6 @@
 
 .work-world.is-base {
   opacity: 1;
-}
-
-/* Hand bench still already full-bleed under the entry Turn into the first work still.
-   z-index stays above work worlds (JS stacks worlds at 1–4). */
-.work-bridge {
-  z-index: 8;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.work-bridge .layer-media {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.work-bridge .layer-media img {
-  object-fit: cover;
-  object-position: 42% 48%;
 }
 
 /* Fluid local darkening for rest type — caused light, not a card/panel. */
@@ -480,19 +461,13 @@
 }
 
 .work-world-1 {
-  --work-echo-src: url("assets/ring-heirloom.webp");
-  --work-subject-shift-y: 0svh;
-}
-
-.work-world-2 {
   --work-echo-src: url("assets/ring-pink-star.webp");
   --work-subject-shift-y: 2svh;
 }
 
 /* Echo underlay lives on the world so angled Turns / opacity mask one continuous field.
    work-world-0 is the Vegas film and must not grow a blurred duplicate field. */
-.work-world-1::before,
-.work-world-2::before {
+.work-world-1::before {
   content: "";
   position: absolute;
   inset: -8%;
@@ -510,16 +485,14 @@
 }
 
 .work-world-0 .layer-media,
-.work-world-1 .layer-media,
-.work-world-2 .layer-media {
+.work-world-1 .layer-media {
   z-index: 1;
 }
 
 /* Direct sharp subject only — square source canvas, contain, far-perimeter feather.
    Translate is on the image so the parent stack's breath transform stays intact.
    Vegas #workStack0 is a full-bleed film, not a contained jewelry still. */
-#workStack1 > img,
-#workStack2 > img {
+#workStack1 > img {
   position: absolute;
   inset: 0;
   margin: auto;
@@ -548,8 +521,10 @@
 
 .work-thought-vegas {
   left: 6vw;
+  right: 6vw;
   bottom: 12svh;
-  max-width: min(36rem, 82vw);
+  max-width: none;
+  text-align: center;
 }
 
 .work-copy-dock {
@@ -558,7 +533,18 @@
 
 .work-thought-rest {
   left: 6vw;
-  bottom: 12svh;
+  bottom: 17svh;
+  max-width: min(38rem, 82vw);
+  pointer-events: none;
+  text-shadow:
+    0 1px 2px rgba(2, 0, 5, 0.55),
+    0 2px 28px rgba(2, 0, 5, 0.55),
+    0 0 40px rgba(2, 0, 5, 0.35);
+}
+
+.work-thought-rest-b {
+  left: 6vw;
+  bottom: 11.5svh;
   max-width: min(38rem, 82vw);
   pointer-events: none;
   text-shadow:
@@ -639,12 +625,12 @@
     height: calc(100dvh + 180svh);
   }
 
-  /* Work: existing 450svh - 100svh sticky = 170svh choreography + 3 x 60svh holds. */
+  /* Work: 170svh choreography + 2 x 60svh holds. */
   .movement-work {
     margin-top: -100svh;
     margin-top: -100dvh;
-    height: 450svh;
-    height: calc(100dvh + 350svh);
+    height: 390svh;
+    height: calc(100dvh + 290svh);
   }
 
   .movement-sticky {
@@ -841,16 +827,14 @@
 
   /* Mobile subjects: full-viewport carriers, not contained square islands. */
   .work-world-0,
-  .work-world-1,
-  .work-world-2 {
+  .work-world-1 {
     --work-subject-shift-y: 0svh;
     background: #020005;
   }
 
   /* Kill blurred echo underlays on mobile — Frame-Filler Spiral residue. */
   .work-world-0::before,
-  .work-world-1::before,
-  .work-world-2::before {
+  .work-world-1::before {
     content: none;
     display: none;
     filter: none;
@@ -858,8 +842,7 @@
   }
 
   .work-world-0 .layer-media,
-  .work-world-1 .layer-media,
-  .work-world-2 .layer-media {
+  .work-world-1 .layer-media {
     inset: 0;
     width: 100%;
     height: 100%;
@@ -873,8 +856,7 @@
 
   #workStack0 > img,
   #workStack0 > video,
-  #workStack1 > img,
-  #workStack2 > img {
+  #workStack1 > img {
     position: absolute;
     inset: 0;
     margin: 0;
@@ -897,10 +879,6 @@
   }
 
   .work-world-1 #workStack1 > img {
-    object-position: 48% 50%;
-  }
-
-  .work-world-2 #workStack2 > img {
     object-position: 52% 48%;
   }
 
@@ -914,11 +892,10 @@
   }
 
   .movement-work {
-    --work-copy-dock-h: max(15.5rem, 32dvh);
+    --work-copy-dock-h: max(17.75rem, 36dvh);
   }
 
   .movement-work .work-world,
-  .movement-work .work-bridge,
   .movement-work .movement-veil,
   .movement-work .junction-light,
   .movement-work .movement-grain {
@@ -962,7 +939,8 @@
     filter: none;
   }
 
-  .work-thought-rest {
+  .work-thought-rest,
+  .work-thought-rest-b {
     position: static;
     left: auto;
     bottom: auto;
@@ -993,13 +971,12 @@
   /*
     Mobile media authority: one full-screen carrier at a time.
     Opening yields directly to the Hand montage; Hand yields directly to the
-    first Selected Work still. Duplicate bridge paint (ring replay / bench
-    replay) is retired on phones only — desktop keeps angled bridge Turns.
+    Vegas film. Duplicate ring-bridge paint is retired on phones only —
+    desktop keeps the angled opening→hand ring Turn. The static workbench
+    poster bridge is retired on every viewport.
   */
   #handBridge,
-  .hand-bridge,
-  #workBridge,
-  .work-bridge {
+  .hand-bridge {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
@@ -1007,9 +984,7 @@
 
   #handBridge .layer-media,
   #handBridge .layer-media img,
-  #handBridge .layer-media video,
-  #workBridge .layer-media,
-  #workBridge .layer-media img {
+  #handBridge .layer-media video {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;

@@ -4,7 +4,7 @@
  *
  * Locks the owner-observed stacked-video correction:
  * - mobile handBridgeVideo cannot hydrate/play/paint
- * - mobile workBridge cannot paint
+ * - workBridge / studio-poster Work bridge is absent on every viewport
  * - opening video retirement removes is-live and pauses
  * - reverse re-entry restores is-live only after playback resumes
  * - mobile Opening: exactly one of studioVideo|ringVideo unpaused+is-live
@@ -105,11 +105,15 @@ if (!/function\s+armHandBridgePlayback\s*\(/.test(siteJs)) {
 if (!/id="handBridge"/.test(index) || !/id="handBridgeVideo"/.test(index)) {
   fail("handBridge markup must remain present for desktop");
 }
-if (!/id="workBridge"/.test(index)) {
-  fail("workBridge markup must remain present for desktop");
+if (/id="workBridge"/.test(index) || /work-bridge/.test(index) || /workBridge/.test(siteJs)) {
+  fail("workBridge must be removed from homepage markup and site.js, not merely hidden");
+}
+const workSection = (index.match(/id="work"[\s\S]*?<\/section>/) || [""])[0];
+if (/studio-poster/.test(workSection)) {
+  fail("Work section must not keep a studio-poster paint or hydration path");
 }
 if (!/data-desktop-src="assets\/studio-poster\.jpg"/.test(index)) {
-  fail("workBridge / hand bench desktop poster sources must remain");
+  fail("hand bench desktop poster sources must remain on the live Hand carrier");
 }
 // Desktop render paths still call applyBridgeOut when not mobile.
 if (
@@ -119,12 +123,8 @@ if (
 ) {
   fail("renderHand must retire handBridge on mobile and applyBridgeOut on desktop");
 }
-if (
-  !/if\s*\(\s*mobile\s*\)\s*\{[\s\S]*?retireBridgeLayer\s*\(\s*workBridge\s*\)[\s\S]*?\}\s*else\s*\{[\s\S]*?applyBridgeOut\s*\(\s*workBridge/m.test(
-    siteJs
-  )
-) {
-  fail("renderWork must retire workBridge on mobile and applyBridgeOut on desktop");
+if (/applyBridgeOut\s*\(\s*workBridge/.test(siteJs) || /retireBridgeLayer\s*\(\s*workBridge/.test(siteJs)) {
+  fail("renderWork must not still choreograph workBridge");
 }
 
 // ——— Mobile CSS: bridges cannot paint ———
@@ -134,11 +134,8 @@ if (!/\.hand-bridge[\s\S]{0,500}visibility:\s*hidden\s*!important/i.test(stylesM
 if (!/\.hand-bridge[\s\S]{0,500}opacity:\s*0\s*!important/i.test(stylesMobile)) {
   fail("mobile CSS must hide .hand-bridge (opacity:0 !important)");
 }
-if (!/\.work-bridge[\s\S]{0,500}visibility:\s*hidden\s*!important/i.test(stylesMobile)) {
-  fail("mobile CSS must hide .work-bridge (visibility:hidden !important)");
-}
-if (!/\.work-bridge[\s\S]{0,500}opacity:\s*0\s*!important/i.test(stylesMobile)) {
-  fail("mobile CSS must hide .work-bridge (opacity:0 !important)");
+if (/\.work-bridge/.test(styles) || /#workBridge/.test(styles)) {
+  fail("styles must not keep a work-bridge paint path");
 }
 
 // ——— Mobile runtime: handBridgeVideo never hydrates/plays ———
@@ -446,5 +443,5 @@ if (!/function\s+retireBridgeLayer\s*\(/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile media authority (exclusive mobile opening decoder; no mobile bridge paint/play; honest is-live retirement; desktop two-world handoff retained; Hand montage unchanged)"
+  "PASS: mobile media authority (exclusive mobile opening decoder; no workBridge; no mobile hand-bridge paint/play; honest is-live retirement; desktop two-world opening handoff retained; Hand montage unchanged)"
 );
