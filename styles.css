@@ -781,9 +781,9 @@
   }
 
   .persistent-mark {
-    top: calc(env(safe-area-inset-top, 0px) + 3.4svh);
-    left: 5vw;
-    width: min(28vw, 7.5rem);
+    top: calc(env(safe-area-inset-top, 0px) + 1.6svh);
+    left: calc(50% - min(46vw, 11rem) / 2);
+    width: min(46vw, 11rem);
   }
 
   .thought {

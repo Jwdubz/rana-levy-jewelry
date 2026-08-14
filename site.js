@@ -1106,10 +1106,10 @@
     let leftPx;
 
     if (mobile) {
-      // Compact top-left identity after the rest header yields.
-      widthPx = Math.min(0.28 * vw, 120);
-      top = 3.4;
-      leftPx = 0.05 * vw;
+      // Same approved opening-rest geometry as applyMark — no compact drift.
+      widthPx = Math.min(0.46 * vw, 176);
+      top = 1.6;
+      leftPx = (vw - widthPx) / 2;
     } else {
       widthPx = Math.min(0.17 * vw, 240);
       top = 5.2;
@@ -1132,7 +1132,9 @@
     setPersistentMarkInteractive(interactive);
 
     if (show) {
-      if (openingMark && choreoP >= 0.34) {
+      // Mobile plates now share one box; hide the opening plate on any show.
+      // Desktop still yields only at the authored markEnd handoff.
+      if (openingMark && (mobile || choreoP >= 0.34)) {
         openingMark.style.opacity = "0";
       }
     } else if (openingMark) {

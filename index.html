@@ -1027,17 +1027,11 @@
         let translateX;
 
         if (mobile) {
-          // Band-one rest mark → compact top-left; yields with the header clock.
+          // Approved opening-rest geometry for the entire mobile passage.
           const startW = Math.min(0.46 * vw, 176);
-          const endW = Math.min(0.28 * vw, 120);
-          widthPx = lerp(startW, endW, t);
-          top = lerp(1.6, 3.4, t);
-          const startLeft = (vw - startW) / 2;
-          const endLeft = 0.05 * vw;
-          const startCenter = startLeft + startW / 2;
-          const endCenter = endLeft + endW / 2;
-          const center = lerp(startCenter, endCenter, t);
-          leftPx = center - widthPx / 2;
+          widthPx = startW;
+          top = 1.6;
+          leftPx = (vw - startW) / 2;
           translateX = 0;
         } else {
           const startW = Math.min(0.34 * vw, 460);
@@ -1296,38 +1290,30 @@
           return;
         }
 
-        // Yield full destinations as physical scroll leaves the opening rest.
-        const yieldT = windowProgress(progress, 0.03, 0.16);
-        state.headerYield = yieldT;
-        siteHeader.style.setProperty("--header-yield", String(yieldT));
-        siteHeader.classList.toggle("is-passage-active", yieldT > 0.55);
+        // Keep the approved opening-rest destinations for the whole mobile passage.
+        state.headerYield = 0;
+        siteHeader.classList.remove("is-passage-active");
+        siteHeader.style.removeProperty("--header-yield");
 
         if (sitePrimaryNav) {
-          const restOpacity = 1 - yieldT;
-          sitePrimaryNav.style.opacity = String(restOpacity);
-          sitePrimaryNav.style.visibility = restOpacity < 0.04 ? "hidden" : "visible";
-          sitePrimaryNav.style.pointerEvents = restOpacity < 0.5 ? "none" : "auto";
+          sitePrimaryNav.style.opacity = "1";
+          sitePrimaryNav.style.visibility = "visible";
+          sitePrimaryNav.style.pointerEvents = "auto";
         }
         if (siteChromeCompact) {
-          const compactOn = yieldT > 0.55;
-          siteChromeCompact.style.opacity = String(yieldT);
-          siteChromeCompact.style.visibility = compactOn ? "visible" : "hidden";
-          siteChromeCompact.style.pointerEvents = compactOn ? "auto" : "none";
-          if (siteIndexToggle) {
-            if (compactOn) siteIndexToggle.removeAttribute("tabindex");
-            else siteIndexToggle.setAttribute("tabindex", "-1");
-          }
+          siteChromeCompact.style.opacity = "0";
+          siteChromeCompact.style.visibility = "hidden";
+          siteChromeCompact.style.pointerEvents = "none";
         }
+        if (siteIndexToggle) siteIndexToggle.setAttribute("tabindex", "-1");
 
         // Opening mark remains authored until the persistent mark swap.
         if (markEl && progress < MOTION.markEnd) {
           markEl.style.opacity = String(0.94);
         }
 
-        // If the visitor reverse-scrolls to rest, close Index.
-        if (yieldT < 0.35 && state.indexOpen) {
-          setIndexOpen(false);
-        }
+        // Compact Index is never the mobile mode; close a leftover panel.
+        if (state.indexOpen) setIndexOpen(false);
       }
 
       function render(progress, px, py) {
