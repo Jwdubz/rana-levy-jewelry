@@ -14,8 +14,8 @@
     junctionFeatherFloor: 16,
     junctionLightPeak: 0.72,
     // Direct ring→bench carrier stays exact scale 1 for the whole Hand movement.
-    // Surviving work worlds: Vegas night, pink-star terminal.
-    workSpans: [1.00, 0.94],
+    // One terminal work world: pink-star custom-design scene.
+    workSpans: [1],
     workHoldFraction: 0.56,
     workScaleStart: 1.025,
     workScaleEnd: 1.0,
@@ -38,9 +38,9 @@
   // fully composed Hand / Work beat. Work is terminal.
   const BEAT_DWELL = {
     holdSvh: 60,
-    // Fully composed word beats: bench Cut-by-hand; Vegas studio line; pink terminal.
+    // Fully composed word beats: bench Cut-by-hand; pink terminal.
     hand: [0.50],
-    work: [0.28, 0.88]
+    work: [0.88]
   };
 
   // Expose for inspection / verification.
@@ -773,20 +773,16 @@
   const handThought0 = document.getElementById("handThought0");
 
   const workWorlds = [
-    document.getElementById("workWorld0"),
-    document.getElementById("workWorld1")
+    document.getElementById("workWorld0")
   ];
   const workStacks = [
-    document.getElementById("workStack0"),
-    document.getElementById("workStack1")
+    document.getElementById("workStack0")
   ];
   const workJunction = document.getElementById("workJunction");
   const workRestWash = document.getElementById("workRestWash");
-  const workThoughtVegas = document.getElementById("workThoughtVegas");
   const workThoughtRest = document.getElementById("workThoughtRest");
   const workThoughtRestB = document.getElementById("workThoughtRestB");
   const workCopyDock = document.getElementById("workCopyDock");
-  const vegasVideo = document.getElementById("vegasVideo");
   const workLinks = document.getElementById("workLinks");
   const workLinkAnchors = workLinks
     ? Array.prototype.slice.call(workLinks.querySelectorAll("a.choice-link"))
@@ -802,7 +798,6 @@
     workTarget: 0,
     workVisual: 0,
     handVideoArmed: false,
-    vegasVideoArmed: false,
     bridgePhaseSynced: false
   };
 
@@ -1246,30 +1241,24 @@
     const edges = edgeParams();
     const hold = SITE_MOTION.workHoldFraction;
 
-    // Vegas film is the base authority. Hand yields directly to workWorld0
-    // on every viewport — no static bench poster bridge.
-    const enterT = windowProgress(p, 0.0, 0.14);
+    // Pink-star terminal is the sole Work authority. Hand yields directly
+    // to workWorld0 on every viewport — no static bench poster bridge.
     if (workWorlds[0]) {
       workWorlds[0].style.opacity = "1";
       clearMask(workWorlds[0]);
     }
 
-    // Vegas studio line on the first work world; terminal sentences + links late.
-    const vegasOp = thoughtOpacity(p, 0.14, 0.26, 0.40, 0.52);
-    const restOp = thoughtOpacity(p, 0.78, 0.88, null, null);
+    // One terminal thought/link state. Compose early so the damped visual
+    // clock is fully on the pink rest by the time Hand yields.
+    const restOp = thoughtOpacity(p, 0.20, 0.36, null, null);
 
-    if (workThoughtVegas) {
-      workThoughtVegas.style.opacity = String(vegasOp);
-      workThoughtVegas.style.transform =
-        "translate3d(0," + lerp(3, 0, windowProgress(p, 0.14, 0.26)) + "svh,0)";
-    }
     if (workThoughtRest) {
       workThoughtRest.style.opacity = String(restOp);
       if (mobile && restOp > 0.5) {
         workThoughtRest.style.transform = "none";
       } else if (mobile) {
         workThoughtRest.style.transform =
-          "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+          "translate3d(0," + lerp(3, 0, windowProgress(p, 0.20, 0.36)) + "svh,0)";
       } else {
         workThoughtRest.style.transform = "none";
       }
@@ -1280,7 +1269,7 @@
         workThoughtRestB.style.transform = "none";
       } else if (mobile) {
         workThoughtRestB.style.transform =
-          "translate3d(0," + lerp(2, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+          "translate3d(0," + lerp(2, 0, windowProgress(p, 0.20, 0.36)) + "svh,0)";
       } else {
         workThoughtRestB.style.transform = "none";
       }
@@ -1296,7 +1285,7 @@
         workCopyDock.style.transform = "none";
       } else {
         workCopyDock.style.transform =
-          "translate3d(0," + lerp(3, 0, windowProgress(p, 0.78, 0.88)) + "svh,0)";
+          "translate3d(0," + lerp(3, 0, windowProgress(p, 0.20, 0.36)) + "svh,0)";
       }
     }
     if (workLinks) {
@@ -1422,11 +1411,6 @@
     // Videos: active only while their world owns the viewport; never seek from scroll.
     // No choreography cutoff — that unmasked the static studio-poster mid-Hand.
     setVideoActive(handVideo, handActive, "handVideoArmed");
-
-    const vegasHoldEnd =
-      workStarts.length > 1 ? workStarts[1] + workNorm[1] * 0.42 : 0.45;
-    const vegasActive = workActive && workP < vegasHoldEnd && (mobile ? handRetired : true);
-    setVideoActive(vegasVideo, vegasActive, "vegasVideoArmed");
 
     // Bridge ring video: desktop only during the opening→hand Turn.
     // Mobile never hydrates, plays, or paints the duplicate ring bridge.
@@ -1641,7 +1625,7 @@
 
   // Deferred elements never receive src here. Explicit quiet: keep paused posters.
   // Normal motion: start paused; siteTick hydrates + plays only when near.
-  [handVideo, handBridgeVideo, vegasVideo].forEach(function (v) {
+  [handVideo, handBridgeVideo].forEach(function (v) {
     if (!v) return;
     v.removeAttribute("autoplay");
     v.autoplay = false;

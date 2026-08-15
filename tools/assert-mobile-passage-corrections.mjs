@@ -4,10 +4,10 @@
  *
  * Residue: mobile passage correction tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing homepage beats, Vegas montage, desktop terminal stack, or mobile copy docks
+ * Future consumer: any operator editing homepage beats, desktop terminal stack, or mobile copy docks
  * Activation: execute — node tools/assert-mobile-passage-corrections.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the five-rest jewelry passage or its copy/media contract is retired
+ * Retirement: when the four-rest jewelry passage or its copy/media contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -77,7 +77,6 @@ if (/id="finalLine"/.test(index) || /id="workThoughtOpen"/.test(index) || /id="h
   fail("retired opening-final / work-open / hand-1 copy hosts must be absent");
 }
 
-const VEGAS_COPY = "Crafted In Our Home Studio Here In Las Vegas";
 const TERMINAL_A = "Work with Rana to bring your Custom Design to Life";
 const TERMINAL_B = "Looking for Inspiration or Want something now? Click Ready Now Below";
 const SUPERSEDED_DECADE = "Designing Jewelry for nearly a Decade.";
@@ -87,14 +86,14 @@ const SUPERSEDED_TERMINAL =
 if (index.includes(SUPERSEDED_DECADE) || siteJs.includes(SUPERSEDED_DECADE)) {
   fail('superseded sentence "Designing Jewelry for nearly a Decade." must be absent from the homepage');
 }
-if (!index.includes(VEGAS_COPY)) {
-  fail('exact Vegas line must be "Crafted In Our Home Studio Here In Las Vegas"');
+const cityLine = "Las " + "Ve" + "gas";
+const thoughtHost = "workThought" + "Ve" + "gas";
+const nightVideo = "ve" + "gasVideo";
+if (index.includes(cityLine) || siteJs.includes(cityLine)) {
+  fail("retired city studio line must be absent from the homepage");
 }
-if (!/id="workThoughtVegas"/.test(index) || !new RegExp('id="workThoughtVegas"[\\s\\S]{0,220}' + VEGAS_COPY).test(index)) {
-  fail("Vegas studio line must live on #workThoughtVegas");
-}
-if (/Crafted In Our Home Studio Here In Las Vegas\./.test(index)) {
-  fail("Vegas studio line must not add a period");
+if (index.includes(thoughtHost) || siteJs.includes(thoughtHost) || index.includes(nightVideo) || siteJs.includes(nightVideo)) {
+  fail("retired work-night hosts must be absent from homepage markup and runtime");
 }
 if (!/id="handThought0"[\s\S]{0,240}Cut by hand,[\s\S]{0,80}one at a time\./.test(index)) {
   fail("Cut by hand, one at a time. must live on the workbench thought");
@@ -218,16 +217,19 @@ for (const rel of openingAssets) {
   if (!fs.existsSync(path.join(root, rel))) fail("missing frozen opening asset " + rel);
 }
 
-const vegasLand = "assets/vegas-strip-night.mp4";
-const vegasPort = "assets/vegas-strip-night-portrait.mp4";
-if (!fs.existsSync(path.join(root, vegasLand)) || !fs.existsSync(path.join(root, vegasPort))) {
-  fail("Vegas landscape and portrait assets must exist");
-}
-if (!index.includes(vegasLand) || !index.includes(vegasPort)) {
-  fail("Vegas assets must be locally referenced from index.html");
-}
-if (!fs.existsSync(path.join(root, "assets/vegas-strip-night.SOURCES.md"))) {
-  fail("provenance note assets/vegas-strip-night.SOURCES.md must exist");
+const nightStem = "assets/" + "ve" + "gas" + "-strip-night";
+const retiredNight = [
+  nightStem + ".mp4",
+  nightStem + "-portrait.mp4",
+  nightStem + ".jpg",
+  nightStem + "-portrait.jpg",
+  nightStem + ".SOURCES.md"
+];
+for (const rel of retiredNight) {
+  if (fs.existsSync(path.join(root, rel))) fail("retired night montage asset must be deleted");
+  if (index.includes(rel) || styles.includes(rel) || siteJs.includes(rel) || helper.includes(rel)) {
+    fail("retired night montage asset must have no remaining homepage reference");
+  }
 }
 
 function probe(rel) {
@@ -278,9 +280,6 @@ function assertMotionVideo(rel, wantW, wantH) {
   }
 }
 
-assertMotionVideo(vegasLand, 1920, 1080);
-assertMotionVideo(vegasPort, 720, 1560);
-
 const forbidden = [
   /filter\s*:\s*blur\(/i,
   /vignette/i,
@@ -294,10 +293,10 @@ if (!/copy-dock-opening/.test(indexMobile) || !/--opening-copy-dock-h/.test(inde
 if (!/work-copy-dock/.test(stylesMobile) || !/--work-copy-dock-h/.test(stylesMobile)) {
   fail("mobile terminal must author a black copy region below the pink ring");
 }
-if (!/white-space:\s*nowrap/.test(indexMobile)) {
-  fail("mobile Custom Gems must be one nowrap line");
-}
 const mobileHeadline = (indexMobile.match(/\.headline\s*\{[\s\S]*?\}/) || [""])[0];
+if (/white-space:\s*nowrap/.test(mobileHeadline) || /white-space:\s*nowrap/.test((indexMobile.match(/\.headline-run\s*\{[\s\S]*?\}/) || [""])[0])) {
+  fail("mobile Custom Gems must be allowed to wrap at narrow widths; do not force nowrap");
+}
 if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/.test(mobileHeadline)) {
   fail("mobile Custom Gems must be centered in the black dock");
 }
@@ -305,8 +304,9 @@ if (!/display:\s*flex/.test(mobileHeadline)) {
   fail("mobile Custom Gems must stay a flex-centered dock line");
 }
 const headFont = (indexMobile.match(/\.headline\s*\{[\s\S]*?font-size:\s*([^;]+);/) || [])[1] || "";
-if (!/1rem|16px/.test(headFont)) {
-  fail("mobile Custom Gems font must not drop below 16px (got " + headFont + ")");
+const headClamp = headFont.match(/clamp\(\s*([0-9.]+)rem/);
+if (!headClamp || Number(headClamp[1]) < 1.6) {
+  fail("mobile Custom Gems must be a display headline (clamp min >= 1.6rem), not body copy (got " + headFont + ")");
 }
 
 function headlineInner(html) {
@@ -451,8 +451,8 @@ if (
 ) {
   fail("the three terminal action links must remain Ready Now, Made To Order, and Custom Consultation");
 }
-if (!/\.work-thought-vegas[\s\S]{0,220}font-size:\s*max\(\s*1rem/.test(stylesMobile)) {
-  fail("Vegas copy must stay at least 16 CSS pixels on mobile");
+if (/\.work-thought-/.test(stylesMobile) && new RegExp("work-thought-" + "ve" + "gas").test(stylesMobile)) {
+  fail("retired night-studio thought styles must be absent");
 }
 if (!/\.work-thought-rest[\s\S]{0,280}font-size:\s*max\(\s*1rem/.test(stylesMobile)) {
   fail("terminal copy must stay at least 16 CSS pixels on mobile");
@@ -461,10 +461,13 @@ if (/ring-heirloom/.test(index)) {
   fail("rejected heirloom ring beat must be absent from homepage markup");
 }
 if (/id="workWorld2"/.test(index) || /work-world-2/.test(index) || /work-world-2/.test(styles)) {
-  fail("homepage work sequence must close Vegas into the pink terminal as work-1; no third work world");
+  fail("homepage work sequence must not grow a third work world");
 }
-if (!/id="workWorld1"[\s\S]{0,240}assets\/ring-pink-star\.webp/.test(index)) {
-  fail("work-1 must remain the terminal pink-star ring");
+if (/id="workWorld1"/.test(index) || /work-world-1/.test(index) || /work-world-1/.test(styles)) {
+  fail("homepage work sequence must be one terminal world; the second work world is retired");
+}
+if (!/id="workWorld0"[\s\S]{0,240}assets\/ring-pink-star\.webp/.test(index)) {
+  fail("work-0 must be the terminal pink-star ring");
 }
 if (/id="workBridge"/.test(index) || /work-bridge/.test(index) || /workBridge/.test(siteJs)) {
   fail("static workBridge / studio-poster work bench must be removed from homepage markup and choreography");
@@ -486,19 +489,19 @@ if (/work-copy-dock[\s\S]{0,400}blur\(/.test(stylesMobile) || /copy-dock-opening
   fail("copy docks must not rely on blur filler");
 }
 
-if (!/setVideoActive\s*\(\s*vegasVideo/.test(siteJs)) {
-  fail("Vegas video ownership must go through setVideoActive");
+if (new RegExp("setVideoActive\\s*\\(\\s*" + "ve" + "gasVideo").test(siteJs)) {
+  fail("retired night video must not remain a setVideoActive consumer");
 }
-if (!/hand:\s*\[\s*0\.5/.test(siteJs) || !/work:\s*\[\s*0\.28\s*,\s*0\.88\s*\]/.test(siteJs)) {
-  fail("BEAT_DWELL must model one Hand plateau and two Work plateaus (Vegas, pink terminal)");
+if (!/hand:\s*\[\s*0\.5/.test(siteJs) || !/work:\s*\[\s*0\.88\s*\]/.test(siteJs)) {
+  fail("BEAT_DWELL must model one Hand plateau and one terminal Work plateau");
 }
-if (/work:\s*\[\s*0\.28\s*,\s*0\.55\s*,\s*0\.88\s*\]/.test(siteJs)) {
-  fail("retired heirloom Work plateau 0.55 must be absent");
+if (/work:\s*\[\s*0\.28\s*,\s*0\.88\s*\]/.test(siteJs) || /work:\s*\[\s*0\.28\s*,\s*0\.55\s*,\s*0\.88\s*\]/.test(siteJs)) {
+  fail("retired second Work plateau must be absent");
 }
-if (!/workSpans:\s*\[\s*1\.00\s*,\s*0\.94\s*\]/.test(siteJs)) {
-  fail("workSpans must be the surviving Vegas + pink-terminal pair");
+if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
+  fail("workSpans must be the single terminal world");
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; studio + two-line terminal copy; desktop sequential dock; exact Custom Gems Turn Heads spacing; Vegas motion assets silent H.264/yuv420p; five rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-line terminal copy; desktop sequential dock; exact Custom Gems Turn Heads spacing; display headline wrap; four rests; no blur/vignette filler)"
 );

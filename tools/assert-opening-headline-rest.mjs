@@ -32,8 +32,7 @@ const EXPECTED_IDS = [
   "opening-start",
   "opening-headline",
   "hand-0",
-  "work-0",
-  "work-1"
+  "work-0"
 ];
 const PARENT_IDS = [
   "opening-start",
@@ -187,7 +186,7 @@ function installHarness(opts) {
     },
     BEAT_DWELL: legacy
       ? { holdSvh: 60, hand: [0.28, 0.86], work: [0.28, 0.55, 0.88] }
-      : { holdSvh: 60, hand: [0.50], work: [0.28, 0.88] },
+      : { holdSvh: 60, hand: [0.50], work: [0.88] },
     OPENING_SPAN: {
       choreographySvh: span.choreographySvh,
       terminalHoldSvh: span.terminalHoldSvh,
@@ -361,7 +360,7 @@ GEOMETRIES.forEach((geo) => {
       geo.width +
         "x" +
         geo.height +
-        " must collect the five ordered rests (got " +
+        " must collect the four ordered rests (got " +
         JSON.stringify(ids) +
         ")"
     );
@@ -578,7 +577,7 @@ GEOMETRIES.forEach((geo) => {
   }
   const rests = candidateHelper.collectRests();
   if (!sameIds(idsOf(rests), EXPECTED_IDS)) {
-    fail("reduced-motion must retain the same five ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
+    fail("reduced-motion must retain the same four ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
   }
   window.scrollTo(0, rests[0].start);
   emitSwipe(harness.emit, 620, 40);
@@ -629,12 +628,19 @@ GEOMETRIES.forEach((geo) => {
     span: candidateSpan
   });
   candidateHelper.boot();
-  if (harness.body.style.overflowY === "hidden" || harness.root.style.touchAction) {
-    fail("desktop must remain native (no body lock / touch-action policy)");
+  if (harness.body.style.overflowY !== "hidden") {
+    fail("desktop normal motion must attach and lock body overflow");
+  }
+  if (harness.root.style.touchAction !== "pan-x pinch-zoom") {
+    fail("desktop normal motion must apply the document touch-action policy");
   }
   const desktopRests = candidateHelper.collectRests();
-  if (desktopRests && desktopRests.length) {
-    fail("desktop must not attach the beat controller (got " + JSON.stringify(idsOf(desktopRests)) + ")");
+  if (!sameIds(idsOf(desktopRests), EXPECTED_IDS)) {
+    fail(
+      "desktop normal motion must expose the four ordered rests (got " +
+        JSON.stringify(idsOf(desktopRests)) +
+        ")"
+    );
   }
   uninstall(candidateHelper);
 }
@@ -651,6 +657,6 @@ if (Math.abs(inverted.startP - HEADLINE_ANCHOR * candidateSpan.choreographyEnd) 
 }
 
 console.log(
-  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate five rests start opening-start, opening-headline, hand-0; 0.55 invert inside 0.48–0.62; opening-final retired; forward/reverse adjacency; reduce keeps ownership; quiet/desktop native)"
+  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate four rests start opening-start, opening-headline, hand-0; 0.55 invert inside 0.48–0.62; opening-final retired; forward/reverse adjacency; reduce keeps ownership; quiet native; desktop attached)"
 );
 console.log(JSON.stringify(reported));

@@ -1,18 +1,23 @@
-/* RANA LEVY mobile beat settle.
+/* RANA LEVY passage beat settle.
  *
- * One continuous single-finger vertical gesture that begins at authored
- * rest N may finish only at N-1, N, or N+1. Native touch momentum does
- * not own passage distance. The first-axis latch may hold native scroll
- * during contact; completed net motion owns the lift. While attached,
- * html and body keep touch-action: pan-x pinch-zoom. Body keeps a
- * standing overflow-y:hidden vertical lock so the document is not a
- * native vertical scroller (when root overflow-y stays visible, the
- * viewport takes body's overflow-y). Root overflow is left exactly as
- * authored so sticky scenes keep the viewport containing block; root
- * overflow-y hidden|clip unpins them. Only controller scrollTo may
- * move the passage. Detach restores the exact prior inline
- * touch-action and overflow values. A second contact interrupts
- * ownership but keeps the origin.
+ * One continuous vertical gesture that begins at authored rest N may
+ * finish only at N-1, N, or N+1. Native touch or wheel momentum does
+ * not own passage distance. Touch: the first-axis latch may hold
+ * native scroll during contact; completed net motion owns the lift.
+ * Wheel/trackpad: a burst, not an event — accumulate tiny deltas to a
+ * deliberate threshold, commit at most one adjacent rest, and latch
+ * that origin through the momentum tail until a genuine quiet
+ * interval. Keyboard: adjacent forward/back for ordinary scroll keys
+ * without key-repeat skipping; Home/End may target first/last.
+ * While attached, html and body keep touch-action: pan-x pinch-zoom.
+ * Body keeps a standing overflow-y:hidden vertical lock so the
+ * document is not a native vertical scroller (when root overflow-y
+ * stays visible, the viewport takes body's overflow-y). Root overflow
+ * is left exactly as authored so sticky scenes keep the viewport
+ * containing block; root overflow-y hidden|clip unpins them. Only
+ * controller scrollTo may move the passage. Detach restores the exact
+ * prior inline touch-action and overflow values. A second contact
+ * interrupts ownership but keeps the origin.
  * Destinations are the Opening headline composed frame,
  * BEAT_DWELL Hand/Work plateaus — inverted from the existing remap
  * mathematics, then snapped to
@@ -20,15 +25,16 @@
  * gesture landings aim at the composed plateau center so the damped
  * visual clock stays inside the hold, not on a black leading edge.
  * Quiet stays native. Reduced-motion may quiet idle settle animation
- * but never disables one-gesture adjacency ownership. Desktop stays
- * unbound. Not CSS scroll-snap.
+ * but never disables one-gesture adjacency ownership. Desktop normal
+ * motion attaches for wheel/keyboard ownership; touch intercept stays
+ * at max-width 700px. Not CSS scroll-snap.
  *
- * Residue: mobile beat settle
+ * Residue: passage beat settle
  * Disposition: maintained asset
- * Future consumer: homepage mobile visitor after a finger gesture; any operator editing passage beats
+ * Future consumer: homepage visitor after a wheel, key, or finger gesture; any operator editing passage beats
  * Activation: auto-load — index.html script after site.js
- * Behavioral check: node tools/assert-mobile-beat-settle.mjs && node tools/assert-mobile-composed-rest-landings.mjs && node tools/assert-opening-headline-rest.mjs
- * Retirement: when mobile per-beat settle is retired or superseded
+ * Behavioral check: node tools/assert-mobile-beat-settle.mjs && node tools/assert-mobile-composed-rest-landings.mjs && node tools/assert-opening-headline-rest.mjs && node tools/assert-desktop-wheel-burst.mjs
+ * Retirement: when per-beat settle is retired or superseded
  */
 (function () {
   "use strict";
@@ -37,11 +43,15 @@
   var IDLE_MS = 200;
   var SETTLE_MIN_MS = 280;
   var SETTLE_MAX_MS = 620;
+  var SETTLE_REDUCE_MS = 140;
   var NEAR_PX = 12;
   var SNAP_BACK_PX = 36;
   var DIRECTION_BOUND = 2.35;
   var OPENING_HOLD_KEEP = 0.88;
   var SWIPE_THRESHOLD_PX = 10;
+  var WHEEL_THRESHOLD_PX = 48;
+  var WHEEL_QUIET_MS = 180;
+  var WHEEL_LINE_PX = 16;
   var TOUCH_ACTION_POLICY = "pan-x pinch-zoom";
   var VERTICAL_OVERFLOW_LOCK = "hidden";
 
@@ -287,6 +297,86 @@
     };
   }
 
+  function normalizeWheelDeltaY(deltaY, deltaMode, linePx, pagePx) {
+    var dy = deltaY || 0;
+    if (deltaMode === 1) return dy * (linePx == null ? WHEEL_LINE_PX : linePx);
+    if (deltaMode === 2) return dy * (pagePx == null ? 800 : pagePx);
+    return dy;
+  }
+
+  function classifyWheelIntent(deltaX, deltaY) {
+    var adx = Math.abs(deltaX || 0);
+    var ady = Math.abs(deltaY || 0);
+    if (adx < 1 && ady < 1) return null;
+    if (adx > ady) return "horizontal";
+    return "vertical";
+  }
+
+  function createWheelBurst(originIndex, originY, now) {
+    return {
+      originIndex: originIndex,
+      originY: originY,
+      accum: 0,
+      committed: false,
+      destIndex: originIndex,
+      destY: null,
+      lastAt: now || 0
+    };
+  }
+
+  function wheelBurstIsExpired(burst, now, quietMs) {
+    if (!burst) return true;
+    var quiet = quietMs == null ? WHEEL_QUIET_MS : quietMs;
+    return now - burst.lastAt > quiet;
+  }
+
+  // Pure wheel-burst step. Wheel +deltaY is scroll-down / forward.
+  // chooseAdjacentDestination treats negative swipeDeltaY as forward,
+  // so the burst passes -accum. One burst commits at most one rest.
+  function advanceWheelBurst(burst, deltaY, rests, now, options) {
+    var quiet = options && options.quietMs != null ? options.quietMs : WHEEL_QUIET_MS;
+    var threshold =
+      options && options.thresholdPx != null
+        ? options.thresholdPx
+        : WHEEL_THRESHOLD_PX;
+    if (!burst || now - burst.lastAt > quiet) {
+      return { expired: true };
+    }
+    burst.lastAt = now;
+    if (burst.committed) {
+      return {
+        action: "tail",
+        destIndex: burst.destIndex,
+        destY: burst.destY,
+        originY: burst.originY
+      };
+    }
+    burst.accum += deltaY;
+    if (Math.abs(burst.accum) < threshold) {
+      return {
+        action: "accumulate",
+        destIndex: burst.originIndex,
+        destY: burst.originY,
+        originY: burst.originY
+      };
+    }
+    var dest = chooseAdjacentDestination(
+      burst.originIndex,
+      -burst.accum,
+      rests,
+      options
+    );
+    burst.committed = true;
+    burst.destIndex = dest.index;
+    burst.destY = dest.y;
+    return {
+      action: dest.y == null ? "hold" : "commit",
+      destIndex: dest.index,
+      destY: dest.y,
+      originY: burst.originY
+    };
+  }
+
   function mergeRests(rests, nearPx) {
     if (!rests.length) return rests;
     var near = nearPx == null ? NEAR_PX : nearPx;
@@ -317,6 +407,10 @@
     SNAP_BACK_PX: SNAP_BACK_PX,
     DIRECTION_BOUND: DIRECTION_BOUND,
     SWIPE_THRESHOLD_PX: SWIPE_THRESHOLD_PX,
+    WHEEL_THRESHOLD_PX: WHEEL_THRESHOLD_PX,
+    WHEEL_QUIET_MS: WHEEL_QUIET_MS,
+    WHEEL_LINE_PX: WHEEL_LINE_PX,
+    SETTLE_REDUCE_MS: SETTLE_REDUCE_MS,
     deriveOpeningHeadlinePhysical: deriveOpeningHeadlinePhysical,
     deriveOpeningFinalPhysical: deriveOpeningFinalPhysical,
     plateauPhysicalRange: plateauPhysicalRange,
@@ -328,6 +422,11 @@
     completedVerticalIntent: completedVerticalIntent,
     chooseBeatDestination: chooseBeatDestination,
     chooseAdjacentDestination: chooseAdjacentDestination,
+    normalizeWheelDeltaY: normalizeWheelDeltaY,
+    classifyWheelIntent: classifyWheelIntent,
+    createWheelBurst: createWheelBurst,
+    wheelBurstIsExpired: wheelBurstIsExpired,
+    advanceWheelBurst: advanceWheelBurst,
     mergeRests: mergeRests,
     restAimY: restAimY,
     aimAtRest: aimAtRest,
@@ -355,6 +454,8 @@
   var ignoreScrollUntil = 0;
   var settleTargetY = 0;
   var gesture = null;
+  var wheelBurst = null;
+  var wheelQuietTimer = 0;
   var mediaQuery = null;
   var reduceQuery = null;
   var priorRootTouchAction = "";
@@ -399,11 +500,11 @@
   }
 
   function live() {
-    return bound && isMobileViewport() && !!(opening && hand && work);
+    return bound && !!(opening && hand && work);
   }
 
   function shouldCaptureTouch() {
-    return live() && !quietModeActive();
+    return live() && isMobileViewport() && !quietModeActive();
   }
 
   function isNativeVerticalDocumentScrollLocked() {
@@ -599,6 +700,77 @@
     }
   }
 
+  function clearWheelQuiet() {
+    if (wheelQuietTimer) {
+      clearTimeout(wheelQuietTimer);
+      wheelQuietTimer = 0;
+    }
+  }
+
+  function resetWheelBurst() {
+    clearWheelQuiet();
+    wheelBurst = null;
+  }
+
+  function scheduleWheelQuiet() {
+    clearWheelQuiet();
+    if (!live()) return;
+    wheelQuietTimer = setTimeout(function () {
+      wheelQuietTimer = 0;
+      if (settling) {
+        scheduleWheelQuiet();
+        return;
+      }
+      wheelBurst = null;
+    }, WHEEL_QUIET_MS);
+  }
+
+  function isEditableTarget(node) {
+    var el = node;
+    while (el && el !== document && el !== document.documentElement) {
+      if (el.nodeType === 1) {
+        var tag = el.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+        if (el.isContentEditable) return true;
+        if (el.getAttribute && el.getAttribute("contenteditable") === "true") return true;
+      }
+      el = el.parentNode;
+    }
+    return false;
+  }
+
+  function isNestedVerticalScrollConsumer(node) {
+    var el = node;
+    while (el && el !== document.body && el !== document.documentElement) {
+      if (el.nodeType === 1 && el.scrollHeight > el.clientHeight + 1) {
+        var overflowY = "";
+        try {
+          if (window.getComputedStyle) {
+            overflowY = window.getComputedStyle(el).overflowY;
+          }
+        } catch (e) {
+          overflowY = (el.style && el.style.overflowY) || "";
+        }
+        if (overflowY === "auto" || overflowY === "scroll") return true;
+      }
+      el = el.parentNode;
+    }
+    return false;
+  }
+
+  function isOwnedScrollKey(key) {
+    return (
+      key === "ArrowUp" ||
+      key === "ArrowDown" ||
+      key === "PageUp" ||
+      key === "PageDown" ||
+      key === "Home" ||
+      key === "End" ||
+      key === " " ||
+      key === "Spacebar"
+    );
+  }
+
   function cancelSettle() {
     settleGen += 1;
     settling = false;
@@ -685,7 +857,9 @@
       finishSettle();
       return;
     }
-    var duration = clamp(SETTLE_MIN_MS + dist * 0.28, SETTLE_MIN_MS, SETTLE_MAX_MS);
+    var duration = prefersReducedMotion()
+      ? SETTLE_REDUCE_MS
+      : clamp(SETTLE_MIN_MS + dist * 0.28, SETTLE_MIN_MS, SETTLE_MAX_MS);
     var gen = settleGen;
     settling = true;
     var t0 = performance.now ? performance.now() : Date.now();
@@ -737,6 +911,7 @@
     if (!live()) return;
     cancelSettle();
     clearIdle();
+    resetWheelBurst();
     armed = false;
     fingerDown = true;
     if (gesture) {
@@ -850,14 +1025,58 @@
     fingerDown = false;
   }
 
-  function onWheel() {
-    if (!live()) return;
-    cancelSettle();
-    cancelGesture();
+  function onWheel(event) {
+    if (!live() || !event) return;
+    if (quietModeActive()) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isEditableTarget(event.target)) return;
+    if (isNestedVerticalScrollConsumer(event.target)) return;
+
+    var dx = event.deltaX || 0;
+    var dy = normalizeWheelDeltaY(event.deltaY || 0, event.deltaMode);
+    if (classifyWheelIntent(dx, dy) !== "vertical") return;
+
+    if (event.cancelable) event.preventDefault();
+    if (fingerDown) return;
+
+    var now = performance.now ? performance.now() : Date.now();
+    var rests = collectRests();
+    if (!rests.length) return;
+
+    if (!wheelBurst || wheelBurstIsExpired(wheelBurst, now)) {
+      cancelSettle();
+      cancelGesture();
+      wheelBurst = createWheelBurst(
+        restIndexForY(currentScrollY(), rests),
+        currentScrollY(),
+        now
+      );
+    }
+
+    var result = advanceWheelBurst(wheelBurst, dy, rests, now);
+    if (!result || result.expired) return;
+
     armed = true;
     suppress = false;
-    fingerDown = false;
-    scheduleIdle();
+
+    if (result.action === "tail") {
+      scheduleWheelQuiet();
+      return;
+    }
+    if (result.action === "accumulate" || result.action === "hold") {
+      if (Math.abs(currentScrollY() - result.originY) > 0) {
+        window.scrollTo(0, result.originY);
+      }
+      scheduleWheelQuiet();
+      return;
+    }
+    if (result.action === "commit" && result.destY != null) {
+      var destY = clamp(result.destY, 0, lastReachableScrollY(maxScrollY()));
+      if (Math.abs(destY - result.originY) > 0) {
+        startSettle(destY);
+      }
+    }
+    scheduleWheelQuiet();
   }
 
   var SCROLL_KEYS = {
@@ -876,10 +1095,44 @@
   function onKeyDown(event) {
     if (!live() || !event) return;
     if (!SCROLL_KEYS[event.key]) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isEditableTarget(event.target)) return;
+
+    var owns = isOwnedScrollKey(event.key);
+    if (owns && event.cancelable) event.preventDefault();
+    if (event.repeat) return;
+
     cancelSettle();
+    cancelGesture();
+    resetWheelBurst();
     armed = true;
     suppress = false;
-    scheduleIdle();
+    if (!owns) return;
+
+    var rests = collectRests();
+    if (!rests.length) return;
+    var originIndex = restIndexForY(currentScrollY(), rests);
+    var destIndex = originIndex;
+    var key = event.key;
+    if (key === "Home") {
+      destIndex = 0;
+    } else if (key === "End") {
+      destIndex = rests.length - 1;
+    } else if (key === "ArrowDown" || key === "PageDown") {
+      destIndex = Math.min(rests.length - 1, originIndex + 1);
+    } else if (key === "ArrowUp" || key === "PageUp") {
+      destIndex = Math.max(0, originIndex - 1);
+    } else if (key === " " || key === "Spacebar") {
+      destIndex = event.shiftKey
+        ? Math.max(0, originIndex - 1)
+        : Math.min(rests.length - 1, originIndex + 1);
+    }
+    if (destIndex === originIndex) return;
+    var destY = restAimY(rests[destIndex]);
+    if (destY == null) return;
+    destY = clamp(destY, 0, lastReachableScrollY(maxScrollY()));
+    if (!(Math.abs(destY - currentScrollY()) > 0)) return;
+    startSettle(destY);
   }
 
   function onResize() {
@@ -887,12 +1140,14 @@
     cancelSettle();
     clearIdle();
     cancelGesture();
+    resetWheelBurst();
   }
 
   function onPageHide() {
     cancelSettle();
     clearIdle();
     cancelGesture();
+    resetWheelBurst();
     armed = false;
     fingerDown = false;
   }
@@ -905,6 +1160,7 @@
     cancelSettle();
     clearIdle();
     cancelGesture();
+    resetWheelBurst();
     armed = false;
     suppress = true;
     fingerDown = false;
@@ -925,7 +1181,7 @@
 
   function attach() {
     if (bound) return;
-    if (!isMobileViewport() || quietModeActive()) return;
+    if (quietModeActive()) return;
     opening = document.getElementById("opening");
     hand = document.getElementById("hand");
     work = document.getElementById("work");
@@ -941,7 +1197,7 @@
     authoredSvhPxCache = 0;
     applyDocumentTouchAction();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd, { passive: false });
@@ -964,6 +1220,7 @@
     cancelSettle();
     clearIdle();
     cancelGesture();
+    resetWheelBurst();
     window.removeEventListener("scroll", onScroll);
     window.removeEventListener("wheel", onWheel);
     window.removeEventListener("touchstart", onTouchStart);
@@ -992,8 +1249,8 @@
   }
 
   function onBreakpointChange() {
-    if (isMobileViewport() && !quietModeActive()) attach();
-    else detach();
+    if (quietModeActive()) detach();
+    else attach();
   }
 
   function listenMedia(query, fn) {

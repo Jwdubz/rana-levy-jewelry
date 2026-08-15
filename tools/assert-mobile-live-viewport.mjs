@@ -181,8 +181,8 @@ if (!stylesMobile) fail("could not extract styles.css mobile slice");
 const OPENING_TRAVEL_SVH = 180;
 // Mobile Hand: 120 choreography + 1 × 60 hold.
 const HAND_MOBILE_TRAVEL_SVH = 180;
-// Mobile Work: 390svh − 100svh sticky → 170 choreography + 2 × 60 holds.
-const WORK_MOBILE_TRAVEL_SVH = 290;
+// Mobile Work: 330svh − 100svh sticky → 170 choreography + 1 × 60 hold.
+const WORK_MOBILE_TRAVEL_SVH = 230;
 
 // ——— Desktop geometry must remain the approved svh contract ———
 const desktopScene = joinedBlocks(indexDesktop, ".scene");
@@ -212,8 +212,8 @@ if (/dvh/.test(desktopSticky)) {
 if (lastDecl(desktopHand, "height") !== "320svh") {
   fail(`desktop .movement-hand height must remain 320svh (got ${lastDecl(desktopHand, "height")})`);
 }
-if (lastDecl(desktopWork, "height") !== "440svh") {
-  fail(`desktop .movement-work height must remain 440svh (got ${lastDecl(desktopWork, "height")})`);
+if (lastDecl(desktopWork, "height") !== "380svh") {
+  fail(`desktop .movement-work height must remain 380svh (got ${lastDecl(desktopWork, "height")})`);
 }
 if (lastDecl(desktopHand, "margin-top") !== "-100svh") {
   fail(`desktop .movement-hand overlap must remain -100svh (got ${lastDecl(desktopHand, "margin-top")})`);
@@ -274,8 +274,8 @@ if (parseLivePlusTravel(lastDecl(mobileHand, "height")) !== HAND_MOBILE_TRAVEL_S
 }
 
 if (!mobileWork) fail("mobile styles must override .movement-work");
-if (!hasDecl(mobileWork, "height", "390svh")) {
-  fail("mobile .movement-work must keep 390svh fallback (100svh + 290svh authored travel)");
+if (!hasDecl(mobileWork, "height", "330svh")) {
+  fail("mobile .movement-work must keep 330svh fallback (100svh + 230svh authored travel)");
 }
 if (parseLivePlusTravel(lastDecl(mobileWork, "height")) !== WORK_MOBILE_TRAVEL_SVH) {
   fail(

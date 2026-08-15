@@ -13,13 +13,14 @@
  * top=-446 / black half-height viewport). Programmatic scrollTo still
  * authors beat movement. A continuous single-finger vertical gesture
  * that begins at authored rest N may finish only at N-1, N, or N+1:
- * - helper is homepage-only, gated to max-width 700px
+ * - helper is homepage-only; touch intercept stays gated to max-width 700px
+ * - desktop normal motion attaches for wheel/keyboard ownership and the same document lock
  * - attached controller applies touch-action: pan-x pinch-zoom on html+body
  * - attached controller must not mutate root overflow/overflowY
  * - attached controller locks body overflow-y so native vertical overflow is unavailable
  * - programmatic settle still moves the document while that body lock is active
  * - detach restores the exact prior inline touch-action and overflow values
- * - quiet mode and desktop never leave that policy applied
+ * - quiet mode never leaves that policy applied
  * - prefers-reduced-motion must still attach, lock body overflow, and own
  *   one-gesture adjacency; it may refuse idle settle animation only
  * - touchmove is non-passive; the vertical path calls preventDefault()
@@ -38,7 +39,7 @@
  *
  * Residue: mobile-beat-settle tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing homepage mobile touch lock / settle / remap
+ * Future consumer: any operator editing homepage passage touch/wheel lock / settle / remap
  * Activation: execute — node tools/assert-mobile-beat-settle.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
  * Retirement: when the mobile one-adjacent-beat touch-lock contract is retired or superseded
@@ -116,7 +117,7 @@ if (!/function\s+isMobileViewport\s*\(/.test(helper)) {
   fail("helper must isolate the mobile viewport gate");
 }
 if (!/function\s+attach\s*\(/.test(helper) || !/function\s+detach\s*\(/.test(helper)) {
-  fail("helper must attach only on mobile and detach above 700px");
+  fail("helper must expose attach and detach");
 }
 if (!/onBreakpointChange/.test(helper)) {
   fail("helper must bind/unbind when crossing the 700px breakpoint");
@@ -155,7 +156,7 @@ if (!/quietModeActive\(\)\s*\|\|\s*prefersReducedMotion\(\)/.test(maybeFn)) {
 
 const captureFn = extractFn(helper, "shouldCaptureTouch");
 if (!captureFn) fail("could not isolate shouldCaptureTouch");
-if (!/live\(\)/.test(captureFn) || !/quietModeActive\(\)/.test(captureFn)) {
+if (!/live\(\)/.test(captureFn) || !/quietModeActive\(\)/.test(captureFn) || !/isMobileViewport\(\)/.test(captureFn)) {
   fail("shouldCaptureTouch must still require a live mobile homepage and refuse quiet mode");
 }
 if (/prefersReducedMotion\(\)/.test(captureFn)) {
@@ -170,11 +171,8 @@ if (!/quietModeActive\(\)/.test(bpFn)) {
 if (/prefersReducedMotion\(\)/.test(bpFn)) {
   fail("onBreakpointChange must not detach or refuse attach for prefers-reduced-motion");
 }
-if (!/isMobileViewport\(\)/.test(bpFn)) {
-  fail("desktop above 700px must not attach the touch controller or alter touch-action");
-}
-if (!/else\s+detach\(\)/.test(bpFn) && !/else\s*\{\s*detach\(\)/.test(bpFn)) {
-  fail("leaving the mobile normal-motion homepage must detach and restore prior touch-action");
+if (!/attach\(\)/.test(bpFn) || !/detach\(\)/.test(bpFn)) {
+  fail("leaving quiet for normal-motion must attach; quiet must detach and restore prior touch-action");
 }
 
 // ——— Document touch-action policy: keep vertical travel off the compositor ———
@@ -194,8 +192,11 @@ const listenAt = attachFn.indexOf("addEventListener");
 if (applyAt < 0 || listenAt < 0 || applyAt > listenAt) {
   fail("touch-action policy must be applied before listeners so it is in effect before any visitor gesture");
 }
-if (!/isMobileViewport\(\)/.test(attachFn) || !/quietModeActive\(\)/.test(attachFn)) {
-  fail("attach must refuse desktop and quiet so they never alter touch-action");
+if (!/quietModeActive\(\)/.test(attachFn)) {
+  fail("attach must refuse quiet so explicit quiet mode never alters touch-action");
+}
+if (/isMobileViewport\(\)/.test(attachFn)) {
+  fail("attach must not refuse desktop; normal-motion desktop owns wheel/keyboard and the document lock");
 }
 if (/prefersReducedMotion\(\)/.test(attachFn)) {
   fail("attach must not refuse prefers-reduced-motion; OS reduce must not disable adjacency ownership");
@@ -705,14 +706,14 @@ function expectOperational(rest, start, end, msg) {
   }
 }
 
-expectOperational({ id: "work-1", start: 4434.5, end: 4854.5 }, 4435, 4854, ".5-end plateau must shrink to first/last integer inside");
+expectOperational({ id: "hold-mid", start: 4434.5, end: 4854.5 }, 4435, 4854, ".5-end plateau must shrink to first/last integer inside");
 expectOperational({ id: "work-0", start: 4917.23, end: 5476.42575 }, 4918, 5476, ".23-start plateau must shrink to first/last integer inside");
 expectOperational({ id: "work-terminal", start: 6739.59375, end: 6739.59375 }, 6740, 6740, "375 fractional terminal must become the nearest reachable point");
 expectOperational({ id: "work-terminal", start: 7735.59375, end: 7735.59375 }, 7736, 7736, "430 fractional terminal must become the nearest reachable point");
 expectOperational({ id: "opening-final", start: 1000, end: 1400 }, 1000, 1400, "integer plateau must stay exact");
 expectOperational({ id: "opening-start", start: 0, end: 0 }, 0, 0, "integer point rest must stay exact");
 
-const once = settle.operationalRest({ id: "work-1", start: 4434.5, end: 4854.5 });
+const once = settle.operationalRest({ id: "hold-mid", start: 4434.5, end: 4854.5 });
 const twice = settle.operationalRest(once);
 if (twice.start !== once.start || twice.end !== once.end) {
   fail("operationalRest must be idempotent");
@@ -755,7 +756,7 @@ if (termSnapped[0].start !== 6087 || termSnapped[0].end !== 6573) {
 
 const fracRests = [
   { id: "opening-start", start: 0, end: 0 },
-  { id: "work-1", start: 4434.5, end: 4854.5 },
+  { id: "hold-mid", start: 4434.5, end: 4854.5 },
   { id: "work-0", start: 4917.23, end: 5476.42575 },
   { id: "work-terminal", start: 6739.59375, end: 6739.59375 }
 ];
@@ -811,8 +812,8 @@ for (const gap of [1, 5, nearPx]) {
 
 const consumerCases = [
   {
-    label: "320 work-1 .5 end",
-    rests: [{ id: "work-1", start: 4434.5, end: 4854.5 }],
+    label: "320 hold-mid .5 end",
+    rests: [{ id: "hold-mid", start: 4434.5, end: 4854.5 }],
     observedY: 4855,
     wantTarget: 4854
   },
@@ -1313,7 +1314,7 @@ function installHomepageHarness(options) {
       this.pageYOffset = top;
     },
     BEAT_DWELL: opts.geometry
-      ? { holdSvh: 60, hand: [0.50], work: [0.28, 0.88] }
+      ? { holdSvh: 60, hand: [0.50], work: [0.88] }
       : undefined,
     OPENING_SPAN: opts.geometry
       ? { choreographySvh: 180, terminalHoldSvh: 0, choreographyEnd: 1, headlineChoreography: 0.55 }
@@ -1555,11 +1556,9 @@ function expectOverflowRestore(root, body, prior, msg) {
 
 {
   const refused = [
-    { width: 701, quiet: false, reduced: false, label: "desktop above 700px" },
-    { width: 1024, quiet: false, reduced: false, label: "desktop 1024px" },
-    { width: 701, quiet: false, reduced: true, label: "desktop + prefers-reduced-motion" },
     { width: 375, quiet: true, reduced: false, label: "quiet mode" },
-    { width: 320, quiet: true, reduced: true, label: "quiet + reduced-motion" }
+    { width: 320, quiet: true, reduced: true, label: "quiet + reduced-motion" },
+    { width: 1024, quiet: true, reduced: false, label: "desktop quiet mode" }
   ];
   refused.forEach((item) => {
     const { root, body } = installHomepageHarness({
@@ -1592,6 +1591,51 @@ function expectOverflowRestore(root, body, prior, msg) {
       { rootOverflow: "", bodyOverflow: "", rootOverflowX: "", bodyOverflowX: "", rootOverflowY: "", bodyOverflowY: "" },
       item.label + " detach must not invent an overflow restore when attach never owned the style"
     );
+    uninstallHomepageHarness();
+  });
+}
+
+{
+  const desktopCases = [
+    { width: 701, reduced: false, label: "desktop above 700px" },
+    { width: 1024, reduced: false, label: "desktop 1024px" },
+    { width: 701, reduced: true, label: "desktop + prefers-reduced-motion" }
+  ];
+  desktopCases.forEach((item) => {
+    const prior = {
+      rootOverflow: "",
+      bodyOverflow: "",
+      rootOverflowX: "",
+      bodyOverflowX: "",
+      rootOverflowY: "",
+      bodyOverflowY: ""
+    };
+    const { root, body } = installHomepageHarness({
+      width: item.width,
+      quiet: false,
+      reduced: item.reduced,
+      rootTouchAction: "manipulation",
+      bodyTouchAction: "auto"
+    });
+    settle.attach();
+    expectTouchAction(
+      root,
+      body,
+      TOUCH_ACTION_POLICY,
+      TOUCH_ACTION_POLICY,
+      item.label + " must attach the controller and apply pan-x pinch-zoom"
+    );
+    expectRootOverflowUnchanged(root, prior, item.label + " must not mutate root overflow");
+    expectVerticalOverflowLock(root, body, true, item.label + " must lock body native vertical overflow");
+    settle.detach();
+    expectTouchAction(
+      root,
+      body,
+      "manipulation",
+      "auto",
+      item.label + " detach must restore the exact prior inline touch-action values"
+    );
+    expectOverflowRestore(root, body, prior, item.label + " detach must restore the exact prior inline overflow values");
     uninstallHomepageHarness();
   });
 }
@@ -1640,11 +1684,12 @@ function expectOverflowRestore(root, body, prior, msg) {
   expectTouchAction(
     root,
     body,
-    "manipulation",
-    "pan-y",
-    "crossing above 700px must restore the exact prior inline touch-action values"
+    TOUCH_ACTION_POLICY,
+    TOUCH_ACTION_POLICY,
+    "crossing above 700px must keep the controller attached for desktop wheel ownership"
   );
-  expectOverflowRestore(root, body, prior, "crossing above 700px must restore the exact prior inline overflow values");
+  expectRootOverflowUnchanged(root, prior, "crossing above 700px must not mutate root overflow");
+  expectVerticalOverflowLock(root, body, true, "crossing above 700px must keep the body vertical lock");
   state.width = 375;
   settle.onBreakpointChange();
   expectTouchAction(
@@ -1652,7 +1697,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     body,
     TOUCH_ACTION_POLICY,
     TOUCH_ACTION_POLICY,
-    "returning to the mobile normal-motion homepage must re-apply the policy"
+    "returning to the mobile normal-motion homepage must remain attached"
   );
   expectRootOverflowUnchanged(root, prior, "returning to the mobile normal-motion homepage must not mutate root overflow");
   expectVerticalOverflowLock(root, body, true, "returning to the mobile normal-motion homepage must re-lock body vertical overflow");
@@ -1787,8 +1832,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     "opening-start",
     "opening-headline",
     "hand-0",
-    "work-0",
-    "work-1"
+    "work-0"
   ];
   const geometryIds = (rests || []).map((rest) => rest.id);
   if (
@@ -1796,7 +1840,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     geometryIds.length !== authoredIds.length ||
     geometryIds.some((id, i) => id !== authoredIds[i])
   ) {
-    fail("geometry homepage must expose the five ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
+    fail("geometry homepage must expose the four ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
   }
   const origin = rests[0];
   const next = rests[1];
@@ -2105,15 +2149,14 @@ function emitVerticalSwipe(emit, startY, endY) {
     "opening-start",
     "opening-headline",
     "hand-0",
-    "work-0",
-    "work-1"
+    "work-0"
   ];
   if (
     !rests ||
     reduceIds.length !== reduceWant.length ||
     reduceIds.some((id, i) => id !== reduceWant[i])
   ) {
-    fail("cold boot at <=700 with reduce=true must expose the five ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
+    fail("cold boot at <=700 with reduce=true must expose the four ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
   }
   const last = rests[rests.length - 1];
   window.scrollTo(0, rests[0].start);
@@ -2244,5 +2287,5 @@ function emitVerticalSwipe(emit, startY, endY) {
 }
 
 console.log(
-  "PASS: mobile one-adjacent-beat touch lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; reduce keeps adjacency ownership; quiet/desktop restore; ±1 rest helper; reachable invert; no CSS scroll-snap)"
+  "PASS: passage one-adjacent-beat lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; reduce keeps adjacency ownership; desktop normal-motion attaches; quiet restore; four rests; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );
