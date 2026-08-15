@@ -735,13 +735,10 @@ body.shell-body.is-locked {
 
 .gallery-item__frame {
   position: absolute;
-  inset: -8% -6%;
-  -webkit-mask-image: var(--piece-mask);
-  mask-image: var(--piece-mask);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
+  inset: 0;
+  overflow: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .gallery-item__image {
@@ -750,7 +747,8 @@ body.shell-body.is-locked {
   height: 100%;
   object-fit: cover;
   object-position: 50% 48%;
-  transform: scale(1.05);
+  transform: none;
+  filter: none;
 }
 
 .gallery-item__meta {
@@ -859,12 +857,9 @@ body.shell-body.is-locked {
   position: relative;
   width: 100%;
   aspect-ratio: 5 / 4;
-  -webkit-mask-image: var(--piece-mask);
-  mask-image: var(--piece-mask);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
+  overflow: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .prose-figure img {
@@ -873,7 +868,8 @@ body.shell-body.is-locked {
   height: 100%;
   object-fit: cover;
   object-position: 50% 40%;
-  transform: scale(1.04);
+  transform: none;
+  filter: none;
 }
 
 .prose-figure figcaption {
@@ -1243,6 +1239,20 @@ body.shell-body.is-locked {
 
 .shell-held__image.is-ready {
   opacity: 1;
+}
+
+/* Gallery Held shares .shell-held with inventory; keep Ready/Made vignette
+   on the unscoped frame and make only this route a sharp rectangle. */
+.page-gallery .shell-held__frame {
+  inset: 0;
+  overflow: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.page-gallery .shell-held__image {
+  transform: none;
+  filter: none;
 }
 
 .shell-held__meta {

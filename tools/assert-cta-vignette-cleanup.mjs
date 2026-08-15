@@ -288,6 +288,68 @@ if (!consultImage || !/filter\s*:\s*none/i.test(consultImage)) {
   fail("consultation sketch must remain a sharp carrier");
 }
 
+// f) Services figures and Gallery cards/Held are sharp rectangles, not piece-mask islands
+const proseFrame = extractBlock(shellCss, ".prose-figure__frame");
+if (!proseFrame) fail("missing .prose-figure__frame");
+if (/--piece-mask/.test(proseFrame) || /mask-image\s*:\s*[^;]*radial/i.test(proseFrame)) {
+  fail("services .prose-figure__frame must not use --piece-mask or a radial mask");
+}
+if (!/mask-image\s*:\s*none/i.test(proseFrame)) {
+  fail("services .prose-figure__frame must set mask-image: none");
+}
+if (!/overflow\s*:\s*hidden/i.test(proseFrame)) {
+  fail("services .prose-figure__frame must clip as a rectangle (overflow: hidden)");
+}
+const proseImg = extractBlock(shellCss, ".prose-figure img");
+if (!proseImg) fail("missing .prose-figure img");
+if (/transform\s*:\s*scale/i.test(proseImg)) {
+  fail("services figure images must not use scale overscan/halo");
+}
+
+const galleryFrames = extractAllBlocks(shellCss, ".gallery-item__frame");
+if (!galleryFrames.length) fail("missing .gallery-item__frame");
+for (const block of galleryFrames) {
+  if (/--piece-mask/.test(block) || /mask-image\s*:\s*var\(--piece-mask\)/.test(block)) {
+    fail("gallery-item__frame must not use --piece-mask at any viewport");
+  }
+  if (/inset\s*:\s*-/.test(block)) {
+    fail("gallery-item__frame must not use negative overscan inset");
+  }
+  if (!/mask-image\s*:\s*none/i.test(block)) {
+    fail("gallery-item__frame must set mask-image: none at every viewport");
+  }
+}
+const galleryFrameDesktop = extractBlock(shellCss, ".gallery-item__frame", 0);
+if (!galleryFrameDesktop || !/inset\s*:\s*0/.test(galleryFrameDesktop)) {
+  fail("desktop .gallery-item__frame must be inset 0 (direct rectangle, no overscan)");
+}
+if (!/overflow\s*:\s*hidden/i.test(galleryFrameDesktop)) {
+  fail("desktop .gallery-item__frame must overflow: hidden");
+}
+
+const galleryHeldFrame = extractBlock(shellCss, ".page-gallery .shell-held__frame");
+if (!galleryHeldFrame) fail("missing .page-gallery .shell-held__frame override");
+if (!/inset\s*:\s*0/.test(galleryHeldFrame)) {
+  fail("gallery Held frame must be inset 0");
+}
+if (!/overflow\s*:\s*hidden/.test(galleryHeldFrame)) {
+  fail("gallery Held frame must overflow: hidden");
+}
+if (!/mask-image\s*:\s*none/i.test(galleryHeldFrame)) {
+  fail("gallery Held frame must set mask-image: none");
+}
+if (/--piece-mask/.test(galleryHeldFrame)) {
+  fail("gallery Held frame must not use --piece-mask");
+}
+const galleryHeldImage = extractBlock(shellCss, ".page-gallery .shell-held__image");
+if (!galleryHeldImage) fail("missing .page-gallery .shell-held__image override");
+if (!/transform\s*:\s*none/.test(galleryHeldImage)) {
+  fail("gallery Held image must set transform: none");
+}
+if (!/filter\s*:\s*none/.test(galleryHeldImage)) {
+  fail("gallery Held image must set filter: none");
+}
+
 // e) ready/made inventory vignette and piece-mask rules remain present
 if (!/--piece-mask\s*:\s*radial-gradient/.test(shellCss)) {
   fail("inventory --piece-mask radial dissolve must remain");
@@ -300,6 +362,13 @@ const pieceAfterDesktop = extractBlock(shellCss, ".piece__frame::after", 0);
 if (!pieceAfterDesktop || !/radial-gradient/i.test(pieceAfterDesktop)) {
   fail("desktop inventory piece wash must remain");
 }
+const heldFrameDesktop = extractBlock(shellCss, ".shell-held__frame", 0);
+if (!heldFrameDesktop || !/mask-image\s*:\s*var\(--piece-mask\)/.test(heldFrameDesktop)) {
+  fail("desktop inventory Held .shell-held__frame must keep --piece-mask");
+}
+if (!/inset\s*:\s*-7%\s+-5\.5%/.test(heldFrameDesktop)) {
+  fail("desktop inventory Held frame must keep the existing overscan inset");
+}
 const sharedGround = extractBlock(shellCss, ".shell-ground", 0);
 if (!sharedGround || !/radial-gradient/i.test(sharedGround)) {
   fail("shared inventory shell-ground atmosphere must remain for ready/made");
@@ -307,10 +376,13 @@ if (!sharedGround || !/radial-gradient/i.test(sharedGround)) {
 if (/\.page-ready\s+\.piece__frame/.test(shellCss) || /\.page-made\s+\.piece__frame/.test(shellCss)) {
   fail("ready/made must not grow page-scoped piece-frame overrides that could strip the mask");
 }
+if (/\.page-ready\s+\.shell-held/.test(shellCss) || /\.page-made\s+\.shell-held/.test(shellCss)) {
+  fail("ready/made must not grow page-scoped Held overrides; inventory Held stays on the unscoped frame");
+}
 if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shell-ground\s*\{/.test(shellCss)) {
   fail("ready/made must keep the shared inventory ground rather than a page-scoped rewrite");
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (owner invitation + design-path gradient links; inspiration/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; ready/made piece-mask remains)"
+  "PASS: CTA hierarchy and vignette cleanup (owner invitation + design-path gradient links; inspiration/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );
