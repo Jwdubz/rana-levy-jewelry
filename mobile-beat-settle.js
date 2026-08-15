@@ -318,16 +318,38 @@
       originY: originY,
       accum: 0,
       committed: false,
+      settling: false,
+      settledAt: null,
       destIndex: originIndex,
       destY: null,
       lastAt: now || 0
     };
   }
 
+  function markWheelBurstSettling(burst) {
+    if (!burst) return burst;
+    burst.settling = true;
+    return burst;
+  }
+
+  function markWheelBurstSettled(burst, now) {
+    if (!burst) return burst;
+    burst.settling = false;
+    burst.settledAt = now || 0;
+    return burst;
+  }
+
+  // A committed burst stays owned through the in-flight settle. Quiet is
+  // measured from the later of last wheel event and settle completion.
   function wheelBurstIsExpired(burst, now, quietMs) {
     if (!burst) return true;
+    if (burst.settling) return false;
     var quiet = quietMs == null ? WHEEL_QUIET_MS : quietMs;
-    return now - burst.lastAt > quiet;
+    var quietFrom = burst.lastAt;
+    if (burst.settledAt != null && burst.settledAt > quietFrom) {
+      quietFrom = burst.settledAt;
+    }
+    return now - quietFrom > quiet;
   }
 
   // Pure wheel-burst step. Wheel +deltaY is scroll-down / forward.
@@ -339,7 +361,7 @@
       options && options.thresholdPx != null
         ? options.thresholdPx
         : WHEEL_THRESHOLD_PX;
-    if (!burst || now - burst.lastAt > quiet) {
+    if (!burst || wheelBurstIsExpired(burst, now, quiet)) {
       return { expired: true };
     }
     burst.lastAt = now;
@@ -425,6 +447,8 @@
     normalizeWheelDeltaY: normalizeWheelDeltaY,
     classifyWheelIntent: classifyWheelIntent,
     createWheelBurst: createWheelBurst,
+    markWheelBurstSettling: markWheelBurstSettling,
+    markWheelBurstSettled: markWheelBurstSettled,
     wheelBurstIsExpired: wheelBurstIsExpired,
     advanceWheelBurst: advanceWheelBurst,
     mergeRests: mergeRests,
@@ -778,6 +802,12 @@
       cancelAnimationFrame(raf);
       raf = 0;
     }
+    if (wheelBurst && wheelBurst.settling) {
+      markWheelBurstSettled(
+        wheelBurst,
+        performance.now ? performance.now() : Date.now()
+      );
+    }
   }
 
   function scheduleIdle() {
@@ -840,6 +870,12 @@
     raf = 0;
     direction = 0;
     ignoreScrollUntil = (performance.now ? performance.now() : Date.now()) + 80;
+    if (wheelBurst && wheelBurst.committed) {
+      markWheelBurstSettled(
+        wheelBurst,
+        performance.now ? performance.now() : Date.now()
+      );
+    }
     stopNativeMomentum(settleTargetY);
   }
 
@@ -862,6 +898,9 @@
       : clamp(SETTLE_MIN_MS + dist * 0.28, SETTLE_MIN_MS, SETTLE_MAX_MS);
     var gen = settleGen;
     settling = true;
+    if (wheelBurst && wheelBurst.committed) {
+      markWheelBurstSettling(wheelBurst);
+    }
     var t0 = performance.now ? performance.now() : Date.now();
 
     function step(now) {

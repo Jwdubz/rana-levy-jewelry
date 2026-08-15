@@ -4,8 +4,11 @@
  *
  * A wheel gesture is a burst, not an event. One huge delta, a burst of
  * many small deltas, and a momentum tail must commit at most one adjacent
- * authored rest. Reverse is symmetric. A genuine quiet interval starts a
- * new burst. Native vertical wheel is owned while attached; Ctrl/zoom,
+ * authored rest. Reverse is symmetric. Once committed, the burst stays
+ * tail-owned through the entire in-flight settle even if a later tail
+ * arrives after WHEEL_QUIET_MS; quiet is measured only after settle
+ * completes. A genuine subsequent gesture after that release may advance
+ * one more rest. Native vertical wheel is owned while attached; Ctrl/zoom,
  * horizontal pan, and editable targets stay native.
  *
  * Usage: node tools/assert-desktop-wheel-burst.mjs
@@ -66,6 +69,12 @@ if (typeof settle.advanceWheelBurst !== "function") {
 if (typeof settle.createWheelBurst !== "function") {
   fail("helper must export createWheelBurst");
 }
+if (typeof settle.markWheelBurstSettling !== "function" || typeof settle.markWheelBurstSettled !== "function") {
+  fail("helper must export markWheelBurstSettling / markWheelBurstSettled so settle owns the committed tail");
+}
+if (typeof settle.wheelBurstIsExpired !== "function") {
+  fail("helper must export wheelBurstIsExpired");
+}
 if (typeof settle.normalizeWheelDeltaY !== "function") {
   fail("helper must export normalizeWheelDeltaY");
 }
@@ -88,6 +97,27 @@ if (!/isEditableTarget/.test(onWheelFn)) {
 }
 if (!/advanceWheelBurst/.test(onWheelFn)) {
   fail("onWheel must run the burst state machine rather than treating each event as a beat");
+}
+if (!/wheelBurstIsExpired/.test(onWheelFn)) {
+  fail("onWheel must consult wheelBurstIsExpired before opening a new burst");
+}
+
+const expiredFn = extractFn(helper, "wheelBurstIsExpired");
+if (!expiredFn) fail("could not isolate wheelBurstIsExpired");
+if (!/burst\.settling/.test(expiredFn)) {
+  fail("wheelBurstIsExpired must refuse to expire a burst while its settle is in flight");
+}
+if (!/settledAt/.test(expiredFn)) {
+  fail("quiet must be measured from settle completion, not only from the last pre-settle wheel event");
+}
+
+const finishFn = extractFn(helper, "finishSettle");
+const startFn = extractFn(helper, "startSettle");
+if (!finishFn || !/markWheelBurstSettled/.test(finishFn)) {
+  fail("finishSettle must mark the committed wheel burst settled so quiet starts after the animation");
+}
+if (!startFn || !/markWheelBurstSettling/.test(startFn)) {
+  fail("startSettle must mark the committed wheel burst settling so delayed tails cannot open a new burst");
 }
 
 const wheelBinds = [...helper.matchAll(/addEventListener\(\s*"wheel"\s*,\s*([^,]+)\s*,\s*(\{[^}]*\})/g)];
@@ -201,6 +231,263 @@ function runBurst(deltas, originIndex) {
   }
 }
 
+{
+  const inflight = settle.createWheelBurst(0, 0, 0);
+  const commit = settle.advanceWheelBurst(inflight, 2000, rests, 10);
+  if (commit.action !== "commit" || commit.destIndex !== 1) {
+    fail("in-flight tail setup commit failed");
+  }
+  settle.markWheelBurstSettling(inflight);
+  [100, 150, 170, 185, 220, 300].forEach(function (gap) {
+    const tail = settle.advanceWheelBurst(inflight, 2400, rests, 10 + gap);
+    if (tail.expired) {
+      fail("a " + gap + "ms delayed tail must not expire a committed burst while settle is in flight");
+    }
+    if (tail.action !== "tail" || tail.destIndex !== 1) {
+      fail(
+        "a " +
+          gap +
+          "ms delayed tail must remain owned by the first adjacent rest (got " +
+          JSON.stringify(tail) +
+          ")"
+      );
+    }
+  });
+  settle.markWheelBurstSettled(inflight, 10 + 400);
+  const afterSettle = settle.advanceWheelBurst(inflight, 2400, rests, 10 + 400 + 150);
+  if (afterSettle.expired || afterSettle.destIndex !== 1) {
+    fail(
+      "a 150ms tail after settle must still be the same burst until quiet elapses (got " +
+        JSON.stringify(afterSettle) +
+        ")"
+    );
+  }
+  const released = settle.advanceWheelBurst(
+    inflight,
+    2400,
+    rests,
+    10 + 400 + 150 + settle.WHEEL_QUIET_MS + 1
+  );
+  if (!released.expired) {
+    fail("after settle and a genuine quiet interval the burst must release");
+  }
+  const follow = settle.createWheelBurst(1, 700, 10 + 400 + 150 + settle.WHEEL_QUIET_MS + 2);
+  const followStep = settle.advanceWheelBurst(
+    follow,
+    2400,
+    rests,
+    10 + 400 + 150 + settle.WHEEL_QUIET_MS + 2
+  );
+  if (followStep.action !== "commit" || followStep.destIndex !== 2) {
+    fail("a genuine subsequent burst after release may advance exactly one more rest");
+  }
+}
+
+function installDesktopWheelHarness() {
+  const width = 1440;
+  const inner = 900;
+  let nowMs = 0;
+  const rafQueue = [];
+  const root = {
+    style: { touchAction: "", overflow: "", overflowX: "", overflowY: "" },
+    classList: { contains: () => false },
+    offsetHeight: 1,
+    scrollHeight: Math.round(inner * 7.5),
+    appendChild() {}
+  };
+  const body = {
+    style: { touchAction: "", overflow: "", overflowX: "", overflowY: "" },
+    offsetHeight: 1,
+    scrollHeight: root.scrollHeight
+  };
+  const makeSection = (id, documentTop, height) => ({
+    id,
+    offsetHeight: height,
+    getBoundingClientRect: () => ({
+      top: documentTop - (global.window ? global.window.scrollY : 0),
+      height: inner
+    })
+  });
+  const sections = {
+    opening: makeSection("opening", 0, inner * 2.8),
+    hand: makeSection("hand", inner * 1.8, inner * 2.8),
+    work: makeSection("work", inner * 3.6, inner * 3.3)
+  };
+  const listeners = new Map();
+  function addListener(target, name, fn) {
+    const key = target + ":" + name;
+    if (!listeners.has(key)) listeners.set(key, []);
+    listeners.get(key).push(fn);
+  }
+  function emit(target, name, event) {
+    (listeners.get(target + ":" + name) || []).forEach((fn) => fn(event));
+  }
+  const matchMedia = (query) => ({
+    matches: String(query).indexOf("prefers-reduced-motion") >= 0 ? false : width <= 700,
+    addEventListener() {},
+    addListener() {},
+    removeEventListener() {},
+    removeListener() {}
+  });
+  global.performance = { now: () => nowMs };
+  global.requestAnimationFrame = (fn) => {
+    rafQueue.push(fn);
+    return rafQueue.length;
+  };
+  global.cancelAnimationFrame = () => {
+    rafQueue.length = 0;
+  };
+  global.window = {
+    matchMedia,
+    addEventListener(name, fn) {
+      addListener("window", name, fn);
+    },
+    removeEventListener(name, fn) {
+      const key = "window:" + name;
+      listeners.set(
+        key,
+        (listeners.get(key) || []).filter((item) => item !== fn)
+      );
+    },
+    scrollY: 0,
+    pageYOffset: 0,
+    innerHeight: inner,
+    innerWidth: width,
+    scrollTo(a, b) {
+      const top = a && typeof a === "object" ? a.top || 0 : b || 0;
+      this.scrollY = top;
+      this.pageYOffset = top;
+    },
+    BEAT_DWELL: { holdSvh: 60, hand: [0.5], work: [0.88] },
+    OPENING_SPAN: {
+      choreographySvh: 180,
+      terminalHoldSvh: 0,
+      choreographyEnd: 1,
+      headlineChoreography: 0.55
+    }
+  };
+  global.document = {
+    documentElement: root,
+    body,
+    getElementById: (id) => sections[id] || null,
+    addEventListener(name, fn) {
+      addListener("document", name, fn);
+    },
+    removeEventListener() {},
+    hidden: false,
+    createElement: () => ({
+      setAttribute() {},
+      style: { cssText: "" },
+      getBoundingClientRect: () => ({ height: inner }),
+      remove() {}
+    })
+  };
+  global.window.document = global.document;
+  global.location = { search: "" };
+  return {
+    emit,
+    rafQueue,
+    setNow(value) {
+      nowMs = value;
+    },
+    getNow() {
+      return nowMs;
+    },
+    flushSettle(at) {
+      nowMs = at;
+      const fn = rafQueue.shift();
+      if (fn) fn(at);
+    }
+  };
+}
+
+function emitVerticalWheel(emit, dy) {
+  emit("window", "wheel", {
+    deltaX: 0,
+    deltaY: dy,
+    deltaMode: 0,
+    cancelable: true,
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    target: { nodeType: 1, tagName: "BODY", parentNode: null, isContentEditable: false },
+    preventDefault() {
+      this.prevented = true;
+    }
+  });
+}
+
+function restIndexAt(y, liveRests) {
+  return settle.restIndexForY(y, liveRests);
+}
+
+{
+  const harness = installDesktopWheelHarness();
+  settle.attach();
+  const liveRests = settle.collectRests();
+  if (!liveRests || liveRests.length !== 4) {
+    fail("desktop wheel lifecycle harness must expose four authored rests (got " + JSON.stringify((liveRests || []).map((r) => r.id)) + ")");
+  }
+  window.scrollTo(0, liveRests[0].start);
+  harness.setNow(0);
+  emitVerticalWheel(harness.emit, 2400);
+  if (!harness.rafQueue.length) {
+    fail("a huge desktop wheel from opening-start must start an in-flight settle");
+  }
+  harness.flushSettle(250);
+  if (restIndexAt(window.scrollY, liveRests) > 1) {
+    fail("250ms into the first settle must not already be past opening-headline");
+  }
+  emitVerticalWheel(harness.emit, 2400);
+  if (restIndexAt(window.scrollY, liveRests) >= 2) {
+    fail(
+      "a 250ms delayed tail during settle must not open a second burst onto hand-0 (y=" +
+        window.scrollY +
+        ")"
+    );
+  }
+  while (harness.rafQueue.length) {
+    harness.flushSettle(harness.getNow() + 400);
+  }
+  if (restIndexAt(window.scrollY, liveRests) !== 1) {
+    fail(
+      "the first committed settle must finish on opening-headline (got index " +
+        restIndexAt(window.scrollY, liveRests) +
+        ", y=" +
+        window.scrollY +
+        ")"
+    );
+  }
+  const afterSettle = harness.getNow();
+  harness.setNow(afterSettle + 150);
+  emitVerticalWheel(harness.emit, 2400);
+  if (restIndexAt(window.scrollY, liveRests) !== 1) {
+    fail(
+      "a 150ms tail after settle must not start a second adjacent commit (got index " +
+        restIndexAt(window.scrollY, liveRests) +
+        ")"
+    );
+  }
+  harness.setNow(afterSettle + 150 + settle.WHEEL_QUIET_MS + 1);
+  emitVerticalWheel(harness.emit, 2400);
+  while (harness.rafQueue.length) {
+    harness.flushSettle(harness.getNow() + 400);
+  }
+  if (restIndexAt(window.scrollY, liveRests) !== 2) {
+    fail(
+      "after settle and a genuine quiet interval the next wheel may advance exactly one rest to hand-0 (got index " +
+        restIndexAt(window.scrollY, liveRests) +
+        ")"
+    );
+  }
+  try {
+    settle.detach();
+  } catch (err) {}
+  delete global.window;
+  delete global.document;
+  delete global.location;
+}
+
 if (settle.normalizeWheelDeltaY(3, 1) !== 3 * settle.WHEEL_LINE_PX) {
   fail("line-mode wheel deltas must normalize through WHEEL_LINE_PX");
 }
@@ -216,5 +503,5 @@ if (settle.classifyWheelIntent(2, 40) !== "vertical") {
 }
 
 console.log(
-  "PASS: desktop wheel-burst adjacency (huge delta and tiny-delta burst commit ±1 rest only; tail latches; quiet interval starts a new burst; zoom/horizontal/editable stay unowned)"
+  "PASS: desktop wheel-burst adjacency (huge delta and tiny-delta burst commit ±1 rest only; in-flight 100-300ms tails cannot open a second burst; quiet after settle starts a new burst; zoom/horizontal/editable stay unowned)"
 );
