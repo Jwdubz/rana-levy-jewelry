@@ -721,12 +721,13 @@ if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.75\s*,\s*0\.95\s*\
 if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.0\s*,\s*1\.8\s*\]/.test(siteJs)) {
   fail("retired BENCH_WINDOWS.hand [5.0, 1.8] must be absent from hand declaration");
 }
-const workThoughtA = "Work with Rana to bring your Custom Design to Life";
-const workThoughtB = "Looking for Inspiration or Want something now? Click Ready Now Below";
-if (!index.includes(workThoughtA) || !index.includes(workThoughtB)) {
-  fail("#workThoughtRest / #workThoughtRestB must use the exact owner-supplied terminal lines");
+const workThoughtA = "Bring your Custom Design to Life with Rana";
+if (!index.includes(workThoughtA)) {
+  fail("#workThoughtRest must use the exact owner-supplied invitation");
 }
 if (
+  index.includes("Work with Rana to bring your Custom Design to Life") ||
+  index.includes("Looking for Inspiration or Want something now? Click Ready Now Below") ||
   index.includes("See what's ready now or work with Rana to bring your Custom Design to Life.") ||
   index.includes("See what's ready now, or choose a design Rana can make for you.") ||
   index.includes("Designing Jewelry for nearly a Decade.")

@@ -779,9 +779,7 @@
     document.getElementById("workStack0")
   ];
   const workJunction = document.getElementById("workJunction");
-  const workRestWash = document.getElementById("workRestWash");
   const workThoughtRest = document.getElementById("workThoughtRest");
-  const workThoughtRestB = document.getElementById("workThoughtRestB");
   const workCopyDock = document.getElementById("workCopyDock");
   const workLinks = document.getElementById("workLinks");
   const workLinkAnchors = workLinks
@@ -1263,17 +1261,6 @@
         workThoughtRest.style.transform = "none";
       }
     }
-    if (workThoughtRestB) {
-      workThoughtRestB.style.opacity = String(restOp);
-      if (mobile && restOp > 0.5) {
-        workThoughtRestB.style.transform = "none";
-      } else if (mobile) {
-        workThoughtRestB.style.transform =
-          "translate3d(0," + lerp(2, 0, windowProgress(p, 0.20, 0.36)) + "svh,0)";
-      } else {
-        workThoughtRestB.style.transform = "none";
-      }
-    }
     if (work) {
       const dockT = mobile ? restOp : 0;
       work.style.setProperty("--work-copy-dock-t", String(dockT));
@@ -1291,10 +1278,6 @@
     if (workLinks) {
       workLinks.style.opacity = String(restOp);
       setLinkInteractive(workLinks, workLinkAnchors, restOp > 0.15);
-    }
-    if (workRestWash) {
-      // Fluid local darkening tracks the rest composition — no card/panel.
-      workRestWash.style.opacity = String(restOp * 0.92);
     }
 
     let activeJunction = 0;

@@ -135,16 +135,12 @@
     }
 
     .veil {
+      display: none;
       position: absolute;
       inset: 0;
       z-index: 4;
       pointer-events: none;
-      background: linear-gradient(
-        180deg,
-        rgba(2, 0, 5, 0.06) 0%,
-        rgba(2, 0, 5, 0) 42%,
-        rgba(2, 0, 5, 0.28) 100%
-      );
+      background: none;
     }
 
     .light-wash {
@@ -645,16 +641,16 @@
 
         <div class="movement-veil" aria-hidden="true"></div>
         <div class="junction-light" id="workJunction" aria-hidden="true"></div>
-        <div class="work-rest-wash" id="workRestWash" aria-hidden="true"></div>
         <div class="movement-grain" aria-hidden="true"></div>
 
         <div class="work-copy-dock" id="workCopyDock">
-          <p class="thought thought-md work-thought-rest" id="workThoughtRest">Work with Rana to bring your Custom Design to Life</p>
-          <p class="thought thought-md work-thought-rest-b" id="workThoughtRestB">Looking for Inspiration or Want something now? Click Ready Now Below</p>
+          <p class="thought thought-md work-thought-rest" id="workThoughtRest">Bring your Custom Design to Life with Rana</p>
           <div class="work-links" id="workLinks">
-            <a class="choice-link" href="ready.html">Ready Now</a>
-            <a class="choice-link" href="made.html">Made To Order</a>
-            <a class="choice-link" href="consultation.html">Custom Consultation</a>
+            <div class="work-design-paths" id="workDesignPaths">
+              <a class="choice-link choice-link--design" href="made.html">Made To Order</a>
+              <a class="choice-link choice-link--design" href="consultation.html">Custom Consultation</a>
+            </div>
+            <a class="choice-link choice-link--ready" href="ready.html">See What's Ready Now</a>
           </div>
         </div>
       </div>

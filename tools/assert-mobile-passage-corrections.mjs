@@ -77,8 +77,10 @@ if (/id="finalLine"/.test(index) || /id="workThoughtOpen"/.test(index) || /id="h
   fail("retired opening-final / work-open / hand-1 copy hosts must be absent");
 }
 
-const TERMINAL_A = "Work with Rana to bring your Custom Design to Life";
-const TERMINAL_B = "Looking for Inspiration or Want something now? Click Ready Now Below";
+const TERMINAL_A = "Bring your Custom Design to Life with Rana";
+const SUPERSEDED_INVITATION = "Work with Rana to bring your Custom Design to Life";
+const SUPERSEDED_INSPIRATION =
+  "Looking for Inspiration or Want something now? Click Ready Now Below";
 const SUPERSEDED_DECADE = "Designing Jewelry for nearly a Decade.";
 const SUPERSEDED_TERMINAL =
   "See what's ready now or work with Rana to bring your Custom Design to Life.";
@@ -101,35 +103,30 @@ if (!/id="handThought0"[\s\S]{0,240}Cut by hand,[\s\S]{0,80}one at a time\./.tes
 if (index.includes(SUPERSEDED_TERMINAL)) {
   fail("superseded terminal sentence must be absent");
 }
-if (!index.includes(TERMINAL_A) || !index.includes(TERMINAL_B)) {
-  fail("both exact terminal copy lines must be present");
+if (index.includes(SUPERSEDED_INVITATION)) {
+  fail("superseded invitation must be absent from the homepage");
 }
-if (!/id="workThoughtRest"[^>]*>Work with Rana to bring your Custom Design to Life<\/p>/.test(index)) {
-  fail("#workThoughtRest must be exactly the first terminal line, with no added punctuation");
+if (index.includes(SUPERSEDED_INSPIRATION)) {
+  fail("superseded inspiration sentence must be absent from the homepage");
 }
-if (
-  !/id="workThoughtRestB"[^>]*>Looking for Inspiration or Want something now\? Click Ready Now Below<\/p>/.test(
-    index
-  )
-) {
-  fail("#workThoughtRestB must be exactly the second terminal line");
+if (!index.includes(TERMINAL_A)) {
+  fail("exact owner invitation must be present");
 }
-if (!/id="workThoughtRest"[\s\S]{0,400}id="workThoughtRestB"/.test(index)) {
-  fail("the two terminal lines must be distinct copy hosts, first then second");
+if (!/id="workThoughtRest"[^>]*>Bring your Custom Design to Life with Rana<\/p>/.test(index)) {
+  fail("#workThoughtRest must be exactly the owner invitation, with no added punctuation");
+}
+if (/id="workThoughtRestB"/.test(index) || /work-thought-rest-b/.test(index)) {
+  fail("retired #workThoughtRestB host must be absent from homepage markup");
 }
 
 const dockHost = index.match(
   /<div class="work-copy-dock" id="workCopyDock">([\s\S]*?)<div class="work-links" id="workLinks">/
 );
 if (!dockHost) {
-  fail("both terminal paragraphs must be sequential children of #workCopyDock, then the three links");
+  fail("the invitation must be a sequential child of #workCopyDock, then the links");
 }
-if (
-  !/id="workThoughtRest"/.test(dockHost[1]) ||
-  !/id="workThoughtRestB"/.test(dockHost[1]) ||
-  dockHost[1].indexOf("workThoughtRestB") < dockHost[1].indexOf("workThoughtRest")
-) {
-  fail("#workCopyDock must host #workThoughtRest then #workThoughtRestB before #workLinks");
+if (!/id="workThoughtRest"/.test(dockHost[1]) || /workThoughtRestB/.test(dockHost[1])) {
+  fail("#workCopyDock must host #workThoughtRest only, then #workLinks");
 }
 
 const stylesDesktop = styles.slice(0, styles.indexOf("@media (max-width: 700px)"));
@@ -165,7 +162,7 @@ if (
 
 const desktopLinks = (stylesDesktop.match(/\.work-links\s*\{([^}]+)\}/) || [])[1] || "";
 if (!/position:\s*static/.test(desktopLinks)) {
-  fail("desktop .work-links must sit in the same sequential dock after the two paragraphs");
+  fail("desktop .work-links must sit in the same sequential dock after the invitation");
 }
 
 function modeledVerticalOverlap(bottomA, heightA, bottomB, heightB, viewportH) {
@@ -190,11 +187,11 @@ if (!/1(?:\.2)?rem|16px/.test(desktopRestFont)) {
   fail("desktop terminal copy must stay at least 16 CSS pixels (got " + desktopRestFont + ")");
 }
 
-if (
-  !/workThoughtRest\.style\.transform = "none"/.test(siteJs) ||
-  !/workThoughtRestB\.style\.transform = "none"/.test(siteJs)
-) {
-  fail("desktop must keep both terminal paragraphs at transform none so they cannot drift over each other");
+if (!/workThoughtRest\.style\.transform = "none"/.test(siteJs)) {
+  fail("desktop must keep the terminal invitation at transform none so it cannot drift");
+}
+if (/workThoughtRestB/.test(siteJs) || /workRestWash/.test(siteJs)) {
+  fail("retired workThoughtRestB / workRestWash runtime must be absent from site.js");
 }
 if (!/workCopyDock\.style\.transform/.test(siteJs)) {
   fail("desktop terminal motion must belong to #workCopyDock as one sequential block");
@@ -477,15 +474,19 @@ if (/\bCustom\b/.test(retiredCollapsedHeadline) && /\bGems\b/.test(retiredCollap
   fail("headline oracle must not pass merely because Custom, Gems, and Turn exist independently");
 }
 
-if (!/workThoughtRest[\s\S]*workThoughtRestB[\s\S]*workLinks/.test(index) || !/id="workCopyDock"/.test(index)) {
-  fail("both terminal lines and the three choices must sit in the authored work copy dock");
+if (!/workThoughtRest[\s\S]*workLinks/.test(index) || !/id="workCopyDock"/.test(index)) {
+  fail("the invitation and the design-path / ready choices must sit in the authored work copy dock");
 }
+const workSectionMarkup = (index.match(/id="work"[\s\S]*?<\/section>/) || [""])[0];
 if (
-  !/href="ready\.html">Ready Now</.test(index) ||
-  !/href="made\.html">Made To Order</.test(index) ||
-  !/href="consultation\.html">Custom Consultation</.test(index)
+  !/id="workCopyDock"[\s\S]*id="workThoughtRest"[\s\S]*id="workLinks"[\s\S]*work-design-paths[\s\S]*href="made\.html">Made To Order<[\s\S]*href="consultation\.html">Custom Consultation<[\s\S]*href="ready\.html">See What's Ready Now</.test(
+    workSectionMarkup
+  )
 ) {
-  fail("the three terminal action links must remain Ready Now, Made To Order, and Custom Consultation");
+  fail("terminal dock must be invitation, then Made To Order, Custom Consultation, then See What's Ready Now");
+}
+if (/id="workLinks"[\s\S]*href="ready\.html">Ready Now</.test(workSectionMarkup)) {
+  fail("terminal dock must not keep the old Ready Now label");
 }
 if (/\.work-thought-/.test(stylesMobile) && new RegExp("work-thought-" + "ve" + "gas").test(stylesMobile)) {
   fail("retired night-studio thought styles must be absent");
@@ -539,5 +540,5 @@ if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-line terminal copy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline; four rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; owner terminal invitation + design-path hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline; four rests; no blur/vignette filler)"
 );
