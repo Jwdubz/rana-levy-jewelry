@@ -294,8 +294,15 @@ if (!/work-copy-dock/.test(stylesMobile) || !/--work-copy-dock-h/.test(stylesMob
   fail("mobile terminal must author a black copy region below the pink ring");
 }
 const mobileHeadline = (indexMobile.match(/\.headline\s*\{[\s\S]*?\}/) || [""])[0];
-if (/white-space:\s*nowrap/.test(mobileHeadline) || /white-space:\s*nowrap/.test((indexMobile.match(/\.headline-run\s*\{[\s\S]*?\}/) || [""])[0])) {
-  fail("mobile Custom Gems must be allowed to wrap at narrow widths; do not force nowrap");
+const mobileHeadlineRun = (indexMobile.match(/\.headline-run\s*\{[\s\S]*?\}/) || [""])[0];
+if (!/white-space:\s*nowrap/.test(mobileHeadlineRun)) {
+  fail("mobile .headline-run must stay one nowrap line");
+}
+if (/max-width:\s*18ch/.test(mobileHeadlineRun) || /max-width:\s*18ch/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must not use an artificial 18ch wrap cap");
+}
+if (!/white-space:\s*nowrap/.test(mobileHeadline)) {
+  fail("mobile .headline dock must keep the line nowrap");
 }
 if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/.test(mobileHeadline)) {
   fail("mobile Custom Gems must be centered in the black dock");
@@ -303,10 +310,39 @@ if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/
 if (!/display:\s*flex/.test(mobileHeadline)) {
   fail("mobile Custom Gems must stay a flex-centered dock line");
 }
+if (!/padding:\s*0\s+0\.85rem/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must keep safe horizontal dock padding");
+}
 const headFont = (indexMobile.match(/\.headline\s*\{[\s\S]*?font-size:\s*([^;]+);/) || [])[1] || "";
-const headClamp = headFont.match(/clamp\(\s*([0-9.]+)rem/);
-if (!headClamp || Number(headClamp[1]) < 1.6) {
-  fail("mobile Custom Gems must be a display headline (clamp min >= 1.6rem), not body copy (got " + headFont + ")");
+if (!/clamp\(\s*1\.75rem\s*,\s*8\.6vw\s*,\s*2\.55rem\s*\)/.test(headFont)) {
+  fail("mobile Custom Gems must keep the display headline clamp 1.75rem / 8.6vw / 2.55rem (got " + headFont + ")");
+}
+
+function modeledHeadlinePx(width) {
+  const rem = 16;
+  const min = 1.75 * rem;
+  const max = 2.55 * rem;
+  const fluid = 0.086 * width;
+  return Math.max(min, Math.min(max, fluid));
+}
+const oneLineFit = [
+  { width: 320, maxPx: 32.5 },
+  { width: 375, maxPx: 37.5 },
+  { width: 430, maxPx: 43.5 }
+];
+for (const row of oneLineFit) {
+  const px = modeledHeadlinePx(row.width);
+  if (px > row.maxPx) {
+    fail(
+      "mobile Custom Gems clamp at " +
+        row.width +
+        "px is " +
+        px.toFixed(2) +
+        "px and would overflow the measured one-line maximum " +
+        row.maxPx +
+        "px"
+    );
+  }
 }
 
 function headlineInner(html) {
@@ -503,5 +539,5 @@ if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-line terminal copy; desktop sequential dock; exact Custom Gems Turn Heads spacing; display headline wrap; four rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-line terminal copy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline; four rests; no blur/vignette filler)"
 );
