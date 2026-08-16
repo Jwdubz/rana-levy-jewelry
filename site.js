@@ -17,8 +17,6 @@
     // One terminal work world: pink-star custom-design scene.
     workSpans: [1],
     workHoldFraction: 0.56,
-    workScaleStart: 1.025,
-    workScaleEnd: 1.0,
     restFloorLuma: 0.10,
     mobileMaxWidth: 700,
     mobileSpanScale: 0.82,
@@ -1227,12 +1225,6 @@
     }
   }
 
-  function workLocal(p, index) {
-    const start = workStarts[index];
-    const len = workNorm[index];
-    return clamp((p - start) / len, 0, 1);
-  }
-
   function renderWork(p) {
     if (!work) return;
     const mobile = state.isMobile;
@@ -1289,7 +1281,6 @@
       const stack = workStacks[i];
       if (!world) continue;
 
-      const local = workLocal(p, i);
       const start = workStarts[i];
       const len = workNorm[i];
 
@@ -1323,11 +1314,9 @@
         }
       }
 
-      // Uneven still scale: each world breathes slightly within its span.
+      // Terminal still stays exact scale 1 for the whole Work movement.
       if (stack) {
-        const scaleT = smoothstep(local);
-        const scale = lerp(SITE_MOTION.workScaleStart, SITE_MOTION.workScaleEnd, scaleT);
-        stack.style.transform = "translate3d(0,0,0) scale(" + scale + ")";
+        stack.style.transform = "translate3d(0,0,0) scale(1)";
       }
 
       world.style.zIndex = String(1 + i);
@@ -1380,7 +1369,6 @@
     const handActive = mobile
       ? handNear && openingRetired && !handRetired
       : handNear && !handRetired;
-    const workActive = work && sectionProximity(work).near;
 
     setWillChange(handBenchStack, "");
     setWillChange(
@@ -1388,7 +1376,7 @@
       !mobile && handActive && handP < 0.2 ? "opacity, mask-image" : ""
     );
     for (let i = 0; i < workStacks.length; i++) {
-      setWillChange(workStacks[i], workActive ? "transform" : "");
+      setWillChange(workStacks[i], "");
     }
 
     // Videos: active only while their world owns the viewport; never seek from scroll.

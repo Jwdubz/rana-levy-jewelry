@@ -444,7 +444,7 @@
   height: 100%;
 }
 
-/* Direct sharp subject. Breath scale stays on the parent stack. */
+/* Direct sharp subject. Parent stack stays exact scale 1. */
 #workStack0 > img {
   position: absolute;
   inset: 0;

@@ -2,12 +2,12 @@
 /**
  * Focused source assertion for the 2026-08-15 CTA hierarchy and vignette cleanup.
  *
- * Residue: homepage CTA hierarchy + desktop square-terminal contain exception + non-inventory vignette-kill tripwire
+ * Residue: homepage CTA hierarchy + desktop square-terminal contain exception + no terminal zoom + non-inventory vignette-kill tripwire
  * Disposition: focused test or tripwire
  * Future consumer: any operator editing the homepage terminal dock, desktop terminal still, or route grounds
  * Activation: execute — node tools/assert-cta-vignette-cleanup.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the owner-supplied terminal hierarchy, desktop contain exception, or no-vignette non-inventory contract is retired
+ * Retirement: when the owner-supplied terminal hierarchy, desktop contain exception, no-zoom contract, or no-vignette non-inventory contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -326,6 +326,21 @@ if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(mobileJewel || "")) {
 if (/workRestWash/.test(siteJs) || /workThoughtRestB/.test(siteJs)) {
   fail("site.js must not animate workRestWash or the retired second terminal line");
 }
+if (/workScaleStart|workScaleEnd/.test(siteJs)) {
+  fail("site.js must retire terminal workScaleStart/workScaleEnd rather than interpolate a work scale");
+}
+if (/function\s+workLocal\s*\(/.test(siteJs)) {
+  fail("site.js must retire workLocal; it existed only to drive the terminal scale breath");
+}
+if (!/stack\.style\.transform\s*=\s*["']translate3d\(0,0,0\) scale\(1\)["']/.test(siteJs)) {
+  fail("terminal work stack must pin translate3d(0,0,0) scale(1) for the whole movement");
+}
+if (/scale\("\s*\+\s*scale\s*\+/.test(siteJs) || /lerp\s*\([^;]*workScale/.test(siteJs)) {
+  fail("terminal work stack must not interpolate a scale value into the transform");
+}
+if (/setWillChange\(\s*workStacks\[i\]\s*,\s*workActive\s*\?\s*["']transform["']/.test(siteJs)) {
+  fail("terminal work stack must not promote will-change:transform for a retired zoom");
+}
 
 // d) non-inventory route overrides compute from source without radial/blur/mask filler
 const inkPages = ["faq", "gallery", "privacy", "terms"];
@@ -488,5 +503,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop square terminal contains the whole ring without overscan; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop square terminal contains the whole ring without overscan; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );
