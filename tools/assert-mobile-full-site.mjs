@@ -721,12 +721,17 @@ if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.75\s*,\s*0\.95\s*\
 if (/const\s+BENCH_WINDOWS\s*=\s*\{[\s\S]*?hand\s*:\s*\[\s*5\.0\s*,\s*1\.8\s*\]/.test(siteJs)) {
   fail("retired BENCH_WINDOWS.hand [5.0, 1.8] must be absent from hand declaration");
 }
-const workThoughtA = "Bring your Custom Design to Life with Rana";
+const workThoughtA = "Bring Your Vision To Life With Rana";
+const workThoughtB = "Looking for Inspiration or Want something now?";
 if (!index.includes(workThoughtA)) {
-  fail("#workThoughtRest must use the exact owner-supplied invitation");
+  fail("#workThoughtRest must use the exact first terminal headline");
+}
+if (!index.includes(workThoughtB)) {
+  fail("#workThoughtReady must use the exact second terminal headline");
 }
 if (
   index.includes("Work with Rana to bring your Custom Design to Life") ||
+  index.includes("Bring your Custom Design to Life with Rana") ||
   index.includes("Looking for Inspiration or Want something now? Click Ready Now Below") ||
   index.includes("See what's ready now or work with Rana to bring your Custom Design to Life.") ||
   index.includes("See what's ready now, or choose a design Rana can make for you.") ||

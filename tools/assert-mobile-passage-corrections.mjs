@@ -77,8 +77,10 @@ if (/id="finalLine"/.test(index) || /id="workThoughtOpen"/.test(index) || /id="h
   fail("retired opening-final / work-open / hand-1 copy hosts must be absent");
 }
 
-const TERMINAL_A = "Bring your Custom Design to Life with Rana";
+const TERMINAL_A = "Bring Your Vision To Life With Rana";
+const TERMINAL_B = "Looking for Inspiration or Want something now?";
 const SUPERSEDED_INVITATION = "Work with Rana to bring your Custom Design to Life";
+const SUPERSEDED_SINGLE = "Bring your Custom Design to Life with Rana";
 const SUPERSEDED_INSPIRATION =
   "Looking for Inspiration or Want something now? Click Ready Now Below";
 const SUPERSEDED_DECADE = "Designing Jewelry for nearly a Decade.";
@@ -103,20 +105,26 @@ if (!/id="handThought0"[\s\S]{0,240}Cut by hand,[\s\S]{0,80}one at a time\./.tes
 if (index.includes(SUPERSEDED_TERMINAL)) {
   fail("superseded terminal sentence must be absent");
 }
-if (index.includes(SUPERSEDED_INVITATION)) {
-  fail("superseded invitation must be absent from the homepage");
+if (index.includes(SUPERSEDED_INVITATION) || index.includes(SUPERSEDED_SINGLE)) {
+  fail("superseded single-line invitation must be absent from the homepage");
 }
 if (index.includes(SUPERSEDED_INSPIRATION)) {
   fail("superseded inspiration sentence must be absent from the homepage");
 }
 if (!index.includes(TERMINAL_A)) {
-  fail("exact owner invitation must be present");
+  fail("exact first terminal headline must be present");
 }
-if (!/id="workThoughtRest"[^>]*>Bring your Custom Design to Life with Rana<\/p>/.test(index)) {
-  fail("#workThoughtRest must be exactly the owner invitation, with no added punctuation");
+if (!index.includes(TERMINAL_B)) {
+  fail("exact second terminal headline must be present");
+}
+if (!/id="workThoughtRest"[^>]*>Bring Your Vision To Life With Rana<\/p>/.test(index)) {
+  fail("#workThoughtRest must be exactly the first display headline, with no added punctuation");
+}
+if (!/id="workThoughtReady"[^>]*>Looking for Inspiration or Want something now\?<\/p>/.test(index)) {
+  fail("#workThoughtReady must be exactly the second display headline, with no added punctuation");
 }
 if (/id="workThoughtRestB"/.test(index) || /work-thought-rest-b/.test(index)) {
-  fail("retired #workThoughtRestB host must be absent from homepage markup");
+  fail("retired independently-pinned #workThoughtRestB host must be absent from homepage markup");
 }
 
 const dockHost = index.match(
@@ -126,7 +134,10 @@ if (!dockHost) {
   fail("the invitation must be a sequential child of #workCopyDock, then the links");
 }
 if (!/id="workThoughtRest"/.test(dockHost[1]) || /workThoughtRestB/.test(dockHost[1])) {
-  fail("#workCopyDock must host #workThoughtRest only, then #workLinks");
+  fail("#workCopyDock must host #workThoughtRest, then #workLinks");
+}
+if (/id="workThoughtReady"/.test(dockHost[1])) {
+  fail("second headline must sit with the ready path inside #workLinks, not before it");
 }
 
 const stylesDesktop = styles.slice(0, styles.indexOf("@media (max-width: 700px)"));
@@ -183,8 +194,11 @@ if (/position:\s*absolute/.test(desktopRest) || /position:\s*absolute/.test(desk
 }
 
 const desktopRestFont = (desktopRest.match(/font-size:\s*([^;]+);/) || [])[1] || "";
-if (!/1(?:\.2)?rem|16px/.test(desktopRestFont)) {
-  fail("desktop terminal copy must stay at least 16 CSS pixels (got " + desktopRestFont + ")");
+if (!/clamp\(\s*2\.2rem\s*,\s*3\.05vw\s*,\s*3\.35rem\s*\)/.test(desktopRestFont)) {
+  fail("desktop terminal headlines must use display clamp 2.2rem / 3.05vw / 3.35rem (got " + desktopRestFont + ")");
+}
+if (!/font-weight:\s*400/.test(desktopRest) || !/letter-spacing:\s*-0\.01em/.test(desktopRest)) {
+  fail("desktop terminal rest hosts must keep display weight 400 and negative tracking");
 }
 
 if (!/workThoughtRest\.style\.transform = "none"/.test(siteJs)) {
@@ -479,11 +493,11 @@ if (!/workThoughtRest[\s\S]*workLinks/.test(index) || !/id="workCopyDock"/.test(
 }
 const workSectionMarkup = (index.match(/id="work"[\s\S]*?<\/section>/) || [""])[0];
 if (
-  !/id="workCopyDock"[\s\S]*id="workThoughtRest"[\s\S]*id="workLinks"[\s\S]*work-design-paths[\s\S]*href="made\.html">Made To Order<[\s\S]*href="consultation\.html">Custom Consultation<[\s\S]*href="ready\.html">See What's Ready Now</.test(
+  !/id="workCopyDock"[\s\S]*id="workThoughtRest"[\s\S]*id="workLinks"[\s\S]*work-design-paths[\s\S]*href="made\.html">Made To Order<[\s\S]*href="consultation\.html">Custom Consultation<[\s\S]*id="workThoughtReady"[\s\S]*href="ready\.html">See What's Ready Now</.test(
     workSectionMarkup
   )
 ) {
-  fail("terminal dock must be invitation, then Made To Order, Custom Consultation, then See What's Ready Now");
+  fail("terminal dock must be first headline, Made To Order, Custom Consultation, second headline, then See What's Ready Now");
 }
 if (/id="workLinks"[\s\S]*href="ready\.html">Ready Now</.test(workSectionMarkup)) {
   fail("terminal dock must not keep the old Ready Now label");
@@ -491,8 +505,11 @@ if (/id="workLinks"[\s\S]*href="ready\.html">Ready Now</.test(workSectionMarkup)
 if (/\.work-thought-/.test(stylesMobile) && new RegExp("work-thought-" + "ve" + "gas").test(stylesMobile)) {
   fail("retired night-studio thought styles must be absent");
 }
-if (!/\.work-thought-rest[\s\S]{0,280}font-size:\s*max\(\s*1rem/.test(stylesMobile)) {
-  fail("terminal copy must stay at least 16 CSS pixels on mobile");
+if (!/\.work-thought-rest[\s\S]{0,280}font-size:\s*clamp\(\s*1\.48rem\s*,\s*6\.1vw\s*,\s*1\.88rem\s*\)/.test(stylesMobile)) {
+  fail("mobile terminal headlines must use display clamp 1.48rem / 6.1vw / 1.88rem");
+}
+if (!/\.work-terminal-headline[\s\S]{0,280}font-size:\s*clamp\(\s*1\.48rem\s*,\s*6\.1vw\s*,\s*1\.88rem\s*\)/.test(stylesMobile)) {
+  fail("mobile .work-terminal-headline must use the same display clamp");
 }
 if (/ring-heirloom/.test(index)) {
   fail("rejected heirloom ring beat must be absent from homepage markup");
@@ -540,5 +557,5 @@ if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; owner terminal invitation + design-path hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline; four rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline; four rests; no blur/vignette filler)"
 );

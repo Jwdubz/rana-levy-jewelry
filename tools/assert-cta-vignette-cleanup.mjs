@@ -119,8 +119,10 @@ const indexMobile = extractMobileSlice(index);
 const stylesDesktop = styles.slice(0, styles.indexOf("@media (max-width: 700px)"));
 const indexDesktop = index.slice(0, index.indexOf("@media (max-width: 700px)"));
 
-const INVITE = "Bring your Custom Design to Life with Rana";
+const HEADLINE_A = "Bring Your Vision To Life With Rana";
+const HEADLINE_B = "Looking for Inspiration or Want something now?";
 const SUPERSEDED_INVITE = "Work with Rana to bring your Custom Design to Life";
+const SUPERSEDED_SINGLE = "Bring your Custom Design to Life with Rana";
 const SUPERSEDED_INSPIRE =
   "Looking for Inspiration or Want something now? Click Ready Now Below";
 const workSection = (index.match(/id="work"[\s\S]*?<\/section>/) || [""])[0];
@@ -128,18 +130,67 @@ const workDock = (workSection.match(
   /<div class="work-copy-dock" id="workCopyDock">[\s\S]*$/
 ) || [""])[0];
 
-// a) exact CTA copy / order / grouping and gradient design-path classes
-if (!/id="workThoughtRest"[^>]*>Bring your Custom Design to Life with Rana<\/p>/.test(workDock)) {
-  fail("terminal invitation must be exactly: " + INVITE);
+// a) exact two-headline CTA copy / order / grouping and gradient design-path classes
+if (!/id="workThoughtRest"[^>]*>Bring Your Vision To Life With Rana<\/p>/.test(workDock)) {
+  fail("first terminal headline must be exactly: " + HEADLINE_A);
 }
 if (
-  !/id="workLinks"[\s\S]*work-design-paths[\s\S]*choice-link--design[\s\S]*href="made\.html">Made To Order<[\s\S]*choice-link--design[\s\S]*href="consultation\.html">Custom Consultation<[\s\S]*choice-link--ready[\s\S]*href="ready\.html">See What's Ready Now</.test(
+  !/id="workThoughtReady"[^>]*>Looking for Inspiration or Want something now\?<\/p>/.test(workDock)
+) {
+  fail("second terminal headline must be exactly: " + HEADLINE_B);
+}
+if (
+  !/id="workThoughtRest"[\s\S]*id="workLinks"[\s\S]*work-design-paths[\s\S]*choice-link--design[\s\S]*href="made\.html">Made To Order<[\s\S]*choice-link--design[\s\S]*href="consultation\.html">Custom Consultation<[\s\S]*id="workThoughtReady"[\s\S]*choice-link--ready[\s\S]*href="ready\.html">See What's Ready Now</.test(
     workDock
   )
 ) {
   fail(
-    "terminal dock must group Made To Order then Custom Consultation as design-path links, then See What's Ready Now"
+    "terminal dock must be first headline, Made To Order + Custom Consultation, second headline, then See What's Ready Now"
   );
+}
+if (/id="workThoughtRest"[^>]*class="[^"]*\bheads\b/.test(workDock)) {
+  fail("first terminal headline must not carry the italic Heads gradient class");
+}
+if (/id="workThoughtReady"[^>]*class="[^"]*\bheads\b/.test(workDock)) {
+  fail("second terminal headline must not carry the italic Heads gradient class");
+}
+if (!/class="[^"]*\bwork-terminal-headline\b[^"]*"[^>]*>Bring Your Vision To Life With Rana</.test(workDock)) {
+  fail("first terminal sentence must use the derived .work-terminal-headline display class");
+}
+if (
+  !/class="[^"]*\bwork-terminal-headline\b[^"]*"[^>]*>Looking for Inspiration or Want something now\?</.test(
+    workDock
+  )
+) {
+  fail("second terminal sentence must use the derived .work-terminal-headline display class");
+}
+const desktopHeadline = extractBlock(stylesDesktop, ".work-terminal-headline");
+if (!desktopHeadline) fail("desktop .work-terminal-headline rule missing");
+if (!/font-weight\s*:\s*400/.test(desktopHeadline)) {
+  fail("terminal headlines must use display weight 400");
+}
+if (!/letter-spacing\s*:\s*-0\.01em/.test(desktopHeadline)) {
+  fail("terminal headlines must use the Custom Gems negative tracking");
+}
+if (!/line-height\s*:\s*0\.9/.test(desktopHeadline)) {
+  fail("terminal headlines must use tight display leading");
+}
+if (!/clamp\(\s*2\.2rem\s*,\s*3\.05vw\s*,\s*3\.35rem\s*\)/.test(desktopHeadline)) {
+  fail("desktop terminal headlines must use display clamp 2.2rem / 3.05vw / 3.35rem");
+}
+if (/font-style\s*:\s*italic/.test(desktopHeadline)) {
+  fail("terminal headlines must not be italic");
+}
+if (/background-clip\s*:\s*text/i.test(desktopHeadline)) {
+  fail("terminal headlines must not clip a gradient to text");
+}
+const mobileHeadlineRule = extractBlock(stylesMobile, ".work-terminal-headline");
+if (!mobileHeadlineRule) fail("mobile .work-terminal-headline rule missing");
+if (!/clamp\(\s*1\.48rem\s*,\s*6\.1vw\s*,\s*1\.88rem\s*\)/.test(mobileHeadlineRule)) {
+  fail("mobile terminal headlines must use display clamp 1.48rem / 6.1vw / 1.88rem");
+}
+if (!/font-weight\s*:\s*400/.test(desktopHeadline + mobileHeadlineRule)) {
+  fail("terminal headlines must stay 400 weight on every viewport");
 }
 const designRule = extractBlock(styles, ".choice-link--design");
 if (!designRule) fail(".choice-link--design gradient class missing");
@@ -164,21 +215,21 @@ if (!/\.choice-link--ready/.test(styles)) {
   fail("ready alternative must have a subordinate .choice-link--ready class");
 }
 
-// b) removed sentence / old Ready label absent from the terminal dock
+// b) superseded single-line copy / old Ready label absent from the terminal dock
 if (workDock.includes(SUPERSEDED_INSPIRE) || workSection.includes(SUPERSEDED_INSPIRE)) {
   fail("superseded inspiration sentence must be absent from the terminal dock");
 }
-if (workDock.includes(SUPERSEDED_INVITE)) {
-  fail("superseded invitation must be absent from the terminal dock");
+if (workDock.includes(SUPERSEDED_INVITE) || workSection.includes(SUPERSEDED_SINGLE)) {
+  fail("superseded single-line invitation must be absent from the terminal dock");
 }
 if (/id="workThoughtRestB"/.test(index) || /work-thought-rest-b/.test(index + styles)) {
-  fail("retired second terminal sentence host must be absent");
+  fail("retired independently-pinned #workThoughtRestB host must be absent");
 }
 if (/href="ready\.html">Ready Now</.test(workDock)) {
   fail("old Ready Now label must be absent from the terminal dock");
 }
-if (/Looking for Inspiration/.test(workDock) || /Click Ready Now Below/.test(workDock)) {
-  fail("removed inspiration sentence fragments must not remain in the terminal dock");
+if (/Click Ready Now Below/.test(workDock)) {
+  fail("retired Click Ready Now Below instruction must be absent from the terminal dock");
 }
 
 // c) homepage vignette / echo / mask mechanisms disabled across desktop and mobile
@@ -384,5 +435,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (owner invitation + design-path gradient links; inspiration/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (two display headlines + design-path gradient links; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );

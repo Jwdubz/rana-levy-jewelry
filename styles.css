@@ -455,8 +455,9 @@
   mask-image: none;
 }
 
-/* Desktop terminal copy is one sequential lower-left stack, not two
-   independently bottom-pinned layers. Mobile re-authors this dock. */
+/* Desktop terminal copy is one sequential lower-left stack: display
+   headline, its design-path links, display headline, its ready link.
+   Not two independently bottom-pinned layers. Mobile re-authors this dock. */
 .work-copy-dock {
   position: absolute;
   z-index: 32;
@@ -465,10 +466,35 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.95rem;
-  max-width: min(42rem, 52vw);
+  gap: 0.5rem;
+  max-width: min(46rem, 58vw);
   pointer-events: none;
   will-change: transform, opacity;
+}
+
+/* Same Garamond display voice as Custom Gems Turn Heads: 400, tight
+   leading, negative tracking. Cream only — no italic Heads gradient. */
+.work-terminal-headline {
+  position: static;
+  left: auto;
+  bottom: auto;
+  max-width: none;
+  pointer-events: none;
+  color: var(--cream);
+  font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  font-size: clamp(2.2rem, 3.05vw, 3.35rem);
+  font-weight: 400;
+  font-style: normal;
+  line-height: 0.94;
+  letter-spacing: -0.01em;
+  background: none;
+  -webkit-text-fill-color: var(--cream);
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  text-shadow:
+    0 1px 2px rgba(2, 0, 5, 0.55),
+    0 2px 28px rgba(2, 0, 5, 0.55),
+    0 0 40px rgba(2, 0, 5, 0.35);
 }
 
 .work-thought-rest {
@@ -477,12 +503,10 @@
   bottom: auto;
   max-width: none;
   pointer-events: none;
-  font-size: clamp(1.2rem, 1.7vw, 1.7rem);
-  line-height: 1.28;
-  text-shadow:
-    0 1px 2px rgba(2, 0, 5, 0.55),
-    0 2px 28px rgba(2, 0, 5, 0.55),
-    0 0 40px rgba(2, 0, 5, 0.35);
+  font-size: clamp(2.2rem, 3.05vw, 3.35rem);
+  font-weight: 400;
+  line-height: 0.94;
+  letter-spacing: -0.01em;
 }
 
 .work-links {
@@ -494,7 +518,7 @@
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: flex-start;
-  gap: 0.85rem;
+  gap: 1.25rem;
   opacity: 0;
   pointer-events: none;
   filter: drop-shadow(0 1px 10px rgba(2, 0, 5, 0.55));
@@ -505,6 +529,13 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.75rem 1.7rem;
+}
+
+.work-ready-path {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .work-links.is-interactive {
@@ -840,7 +871,7 @@
   }
 
   .movement-work {
-    --work-copy-dock-h: max(19rem, 38dvh);
+    --work-copy-dock-h: max(21.25rem, 43dvh);
   }
 
   .movement-work .work-world,
@@ -867,8 +898,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.95rem;
-    padding: 0.9rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    gap: 0.45rem;
+    padding: 0.7rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     pointer-events: none;
     overflow: hidden;
@@ -885,7 +916,7 @@
     bottom: auto;
     flex-direction: column;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.85rem;
     filter: none;
   }
 
@@ -895,14 +926,32 @@
     gap: 0.3rem;
   }
 
+  .work-ready-path {
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .work-terminal-headline {
+    position: static;
+    left: auto;
+    bottom: auto;
+    max-width: min(22rem, 94vw);
+    text-align: center;
+    font-size: clamp(1.48rem, 6.1vw, 1.88rem);
+    line-height: 1.02;
+    letter-spacing: -0.012em;
+    text-shadow: none;
+  }
+
   .work-thought-rest {
     position: static;
     left: auto;
     bottom: auto;
-    max-width: 88vw;
+    max-width: min(22rem, 94vw);
     text-align: center;
-    font-size: max(1rem, min(4.6vw, 1.2rem));
-    line-height: 1.28;
+    font-size: clamp(1.48rem, 6.1vw, 1.88rem);
+    line-height: 1.02;
+    letter-spacing: -0.012em;
     text-shadow: none;
   }
 
