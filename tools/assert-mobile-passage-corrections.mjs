@@ -331,6 +331,9 @@ if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/
 if (!/display:\s*flex/.test(mobileHeadline)) {
   fail("mobile Custom Gems must stay a flex-centered dock line");
 }
+if (!/translate:\s*0\s+-8\.25dvh/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must be optically centered across the complete visible black field");
+}
 if (!/padding:\s*0\s+0\.85rem/.test(mobileHeadline)) {
   fail("mobile Custom Gems must keep safe horizontal dock padding");
 }
