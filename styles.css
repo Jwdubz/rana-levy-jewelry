@@ -421,8 +421,8 @@
   object-position: 50% 48%;
 }
 
-/* Terminal jewelry still: square source on the solid #020005 ground.
-   Desktop cancels inherited overscan and contains the whole ring.
+/* Terminal jewelry still: full-bleed on the solid #020005 ground.
+   Desktop cancels inherited overscan but keeps the viewport-filling cover crop.
    Mobile keeps its existing cover crop. No echo, mask, or island. */
 .work-world-0 {
   --work-subject-shift-y: 0svh;
@@ -453,7 +453,7 @@
   height: 100%;
   max-width: none;
   max-height: none;
-  object-fit: contain;
+  object-fit: cover;
   object-position: 50% 50%;
   transform: none;
   -webkit-mask-image: none;

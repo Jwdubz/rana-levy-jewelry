@@ -2,12 +2,12 @@
 /**
  * Focused source assertion for the 2026-08-15 CTA hierarchy and vignette cleanup.
  *
- * Residue: homepage CTA hierarchy + desktop square-terminal contain exception + no terminal zoom + non-inventory vignette-kill tripwire
+ * Residue: homepage CTA hierarchy + full-bleed terminal cover framing + no terminal overscan/zoom + non-inventory vignette-kill tripwire
  * Disposition: focused test or tripwire
  * Future consumer: any operator editing the homepage terminal dock, desktop terminal still, or route grounds
  * Activation: execute — node tools/assert-cta-vignette-cleanup.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the owner-supplied terminal hierarchy, desktop contain exception, no-zoom contract, or no-vignette non-inventory contract is retired
+ * Retirement: when the owner-supplied terminal hierarchy, full-bleed cover framing, no-overscan/zoom contract, or no-vignette non-inventory contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -291,11 +291,11 @@ if (
 if (/inset\s*:\s*-/.test(desktopJewelMedia) || /width\s*:\s*112%/.test(desktopJewelMedia) || /height\s*:\s*112%/.test(desktopJewelMedia)) {
   fail("desktop terminal media must not keep the inherited overscan pad");
 }
-if (!desktopJewel || !/object-fit\s*:\s*contain/i.test(desktopJewel)) {
-  fail("desktop #workStack0 > img must contain the square ring still on the solid terminal ground");
+if (!desktopJewel || !/object-fit\s*:\s*cover/i.test(desktopJewel)) {
+  fail("desktop #workStack0 > img must remain a full-bleed cover carrier without inherited overscan");
 }
-if (/object-fit\s*:\s*cover/i.test(desktopJewel)) {
-  fail("desktop #workStack0 > img must not cover-crop the square terminal still");
+if (/object-fit\s*:\s*contain/i.test(desktopJewel)) {
+  fail("desktop #workStack0 > img must not collapse into a contained portrait island");
 }
 if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(desktopJewel) || /filter\s*:\s*[^;]*blur/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must not use a radial mask or blur/echo filler");
@@ -503,5 +503,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop square terminal contains the whole ring without overscan; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop terminal stays full-bleed cover without inherited overscan; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );
