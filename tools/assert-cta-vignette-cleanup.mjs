@@ -4,6 +4,7 @@
  *
  * Residue: homepage CTA hierarchy + authored desktop terminal image/copy split + no terminal overscan/zoom + non-inventory vignette-kill tripwire
  * Disposition: focused test or tripwire
+ * Canonical path: tools/assert-cta-vignette-cleanup.mjs
  * Future consumer: any operator editing the homepage terminal dock, desktop terminal still, or route grounds
  * Activation: execute — node tools/assert-cta-vignette-cleanup.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0

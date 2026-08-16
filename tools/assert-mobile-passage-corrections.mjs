@@ -4,6 +4,7 @@
  *
  * Residue: mobile passage correction tripwire
  * Disposition: focused test or tripwire
+ * Canonical path: tools/assert-mobile-passage-corrections.mjs
  * Future consumer: any operator editing homepage beats, desktop terminal stack, or mobile copy docks
  * Activation: execute — node tools/assert-mobile-passage-corrections.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
@@ -334,21 +335,21 @@ if (!/padding:\s*0\s+0\.85rem/.test(mobileHeadline)) {
   fail("mobile Custom Gems must keep safe horizontal dock padding");
 }
 const headFont = (indexMobile.match(/\.headline\s*\{[\s\S]*?font-size:\s*([^;]+);/) || [])[1] || "";
-if (!/clamp\(\s*1\.75rem\s*,\s*8\.6vw\s*,\s*2\.55rem\s*\)/.test(headFont)) {
-  fail("mobile Custom Gems must keep the display headline clamp 1.75rem / 8.6vw / 2.55rem (got " + headFont + ")");
+if (!/clamp\(\s*1\.45rem\s*,\s*7\.4vw\s*,\s*2\.25rem\s*\)/.test(headFont)) {
+  fail("mobile Custom Gems must keep the viewport-safe display clamp 1.45rem / 7.4vw / 2.25rem (got " + headFont + ")");
 }
 
 function modeledHeadlinePx(width) {
   const rem = 16;
-  const min = 1.75 * rem;
-  const max = 2.55 * rem;
-  const fluid = 0.086 * width;
+  const min = 1.45 * rem;
+  const max = 2.25 * rem;
+  const fluid = 0.074 * width;
   return Math.max(min, Math.min(max, fluid));
 }
 const oneLineFit = [
-  { width: 320, maxPx: 32.5 },
-  { width: 375, maxPx: 37.5 },
-  { width: 430, maxPx: 43.5 }
+  { width: 320, maxPx: 24 },
+  { width: 375, maxPx: 28 },
+  { width: 430, maxPx: 32 }
 ];
 for (const row of oneLineFit) {
   const px = modeledHeadlinePx(row.width);
