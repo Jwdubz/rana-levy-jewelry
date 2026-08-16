@@ -2,12 +2,12 @@
 /**
  * Focused source assertion for the 2026-08-15 CTA hierarchy and vignette cleanup.
  *
- * Residue: homepage CTA hierarchy + non-inventory vignette-kill tripwire
+ * Residue: homepage CTA hierarchy + desktop square-terminal contain exception + non-inventory vignette-kill tripwire
  * Disposition: focused test or tripwire
- * Future consumer: any operator editing the homepage terminal dock or route grounds
+ * Future consumer: any operator editing the homepage terminal dock, desktop terminal still, or route grounds
  * Activation: execute — node tools/assert-cta-vignette-cleanup.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the owner-supplied terminal hierarchy or no-vignette non-inventory contract is retired
+ * Retirement: when the owner-supplied terminal hierarchy, desktop contain exception, or no-vignette non-inventory contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -119,7 +119,7 @@ const indexMobile = extractMobileSlice(index);
 const stylesDesktop = styles.slice(0, styles.indexOf("@media (max-width: 700px)"));
 const indexDesktop = index.slice(0, index.indexOf("@media (max-width: 700px)"));
 
-const HEADLINE_A = "Bring Your Vision To Life With Rana";
+const HEADLINE_A = "Bring Your Vision To Life";
 const HEADLINE_B = "Looking for Inspiration or Want something now?";
 const SUPERSEDED_INVITE = "Work with Rana to bring your Custom Design to Life";
 const SUPERSEDED_SINGLE = "Bring your Custom Design to Life with Rana";
@@ -131,8 +131,11 @@ const workDock = (workSection.match(
 ) || [""])[0];
 
 // a) exact two-headline CTA copy / order / grouping and gradient design-path classes
-if (!/id="workThoughtRest"[^>]*>Bring Your Vision To Life With Rana<\/p>/.test(workDock)) {
+if (!/id="workThoughtRest"[^>]*>Bring Your Vision To Life<\/p>/.test(workDock)) {
   fail("first terminal headline must be exactly: " + HEADLINE_A);
+}
+if (/id="workThoughtRest"[^>]*>Bring Your Vision To Life With Rana</.test(workDock)) {
+  fail("first terminal headline must drop only the trailing With Rana");
 }
 if (
   !/id="workThoughtReady"[^>]*>Looking for Inspiration or Want something now\?<\/p>/.test(workDock)
@@ -154,7 +157,7 @@ if (/id="workThoughtRest"[^>]*class="[^"]*\bheads\b/.test(workDock)) {
 if (/id="workThoughtReady"[^>]*class="[^"]*\bheads\b/.test(workDock)) {
   fail("second terminal headline must not carry the italic Heads gradient class");
 }
-if (!/class="[^"]*\bwork-terminal-headline\b[^"]*"[^>]*>Bring Your Vision To Life With Rana</.test(workDock)) {
+if (!/class="[^"]*\bwork-terminal-headline\b[^"]*"[^>]*>Bring Your Vision To Life</.test(workDock)) {
   fail("first terminal sentence must use the derived .work-terminal-headline display class");
 }
 if (
@@ -212,7 +215,30 @@ if (!/\.choice-link:focus[\s\S]{0,120}outline\s*:\s*2px solid/.test(stylesDeskto
   fail("choice links must keep an accessible focus outline");
 }
 if (!/\.choice-link--ready/.test(styles)) {
-  fail("ready alternative must have a subordinate .choice-link--ready class");
+  fail("ready alternative must keep a semantic .choice-link--ready hook class");
+}
+const readyRule = extractAllBlocks(stylesDesktop, ".choice-link--ready").join("\n");
+if (!readyRule) fail(".choice-link--ready visual rule missing");
+if (
+  !/#d7b9ff/.test(readyRule) ||
+  !/#a98cff/.test(readyRule) ||
+  !/#ff9cc9/.test(readyRule) ||
+  !/#f4ddb0/.test(readyRule)
+) {
+  fail(".choice-link--ready must share the violet-rose-gold gradient language");
+}
+if (!/background-clip\s*:\s*text/i.test(readyRule) || !/-webkit-background-clip\s*:\s*text/i.test(readyRule)) {
+  fail(".choice-link--ready must clip the same gradient to text as .choice-link--design");
+}
+if (/font-size\s*:/.test(readyRule) || /font-weight\s*:/.test(readyRule) || /line-height\s*:/.test(readyRule) || /font-family\s*:/.test(readyRule)) {
+  fail(".choice-link--ready must inherit .choice-link family/size/weight/line-height rather than override them");
+}
+if (/opacity\s*:\s*(0(?:\.\d+)?)\b/.test(readyRule) || /color\s*:\s*var\(--cream\)/.test(readyRule)) {
+  fail(".choice-link--ready must not remain cream or reduced-opacity");
+}
+const mobileReadyRule = extractAllBlocks(stylesMobile, ".choice-link--ready").join("\n");
+if (/font-size\s*:/.test(mobileReadyRule) || /opacity\s*:\s*(0(?:\.\d+)?)\b/.test(mobileReadyRule)) {
+  fail("mobile .choice-link--ready must not remain smaller or reduced-opacity");
 }
 
 // b) superseded single-line copy / old Ready label absent from the terminal dock
@@ -250,22 +276,49 @@ if (/background-image/i.test(desktopEcho)) {
   fail("desktop work-world-0::before must not keep a duplicate wallpaper image");
 }
 
+const desktopJewelMedia = extractBlock(stylesDesktop, ".work-world-0 .layer-media");
 const desktopJewel = extractBlock(stylesDesktop, "#workStack0 > img");
+const mobileJewelMedia = extractBlock(stylesMobile, ".work-world-0 .layer-media");
 const mobileJewel = extractBlock(stylesMobile, "#workStack0 > img");
-if (!desktopJewel || !/object-fit\s*:\s*cover/i.test(desktopJewel)) {
-  fail("desktop #workStack0 > img must be a cover full-viewport carrier");
+if (
+  !desktopJewelMedia ||
+  !/inset\s*:\s*0/.test(desktopJewelMedia) ||
+  !/width\s*:\s*100%/.test(desktopJewelMedia) ||
+  !/height\s*:\s*100%/.test(desktopJewelMedia)
+) {
+  fail("desktop .work-world-0 .layer-media must cancel inherited 112% overscan");
 }
-if (/object-fit\s*:\s*contain/i.test(desktopJewel)) {
-  fail("desktop #workStack0 > img must not remain a contain island");
+if (/inset\s*:\s*-/.test(desktopJewelMedia) || /width\s*:\s*112%/.test(desktopJewelMedia) || /height\s*:\s*112%/.test(desktopJewelMedia)) {
+  fail("desktop terminal media must not keep the inherited overscan pad");
 }
-if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(desktopJewel)) {
-  fail("desktop #workStack0 > img must not use a radial media mask");
+if (!desktopJewel || !/object-fit\s*:\s*contain/i.test(desktopJewel)) {
+  fail("desktop #workStack0 > img must contain the square ring still on the solid terminal ground");
+}
+if (/object-fit\s*:\s*cover/i.test(desktopJewel)) {
+  fail("desktop #workStack0 > img must not cover-crop the square terminal still");
+}
+if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(desktopJewel) || /filter\s*:\s*[^;]*blur/i.test(desktopJewel)) {
+  fail("desktop #workStack0 > img must not use a radial mask or blur/echo filler");
+}
+if (/transform\s*:\s*[^;]*scale/i.test(desktopJewel)) {
+  fail("desktop #workStack0 > img must not add a zoom/scale transform");
 }
 if (!/object-position/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must keep an art-directed object-position");
 }
+if (
+  !mobileJewelMedia ||
+  !/inset\s*:\s*0/.test(mobileJewelMedia) ||
+  !/width\s*:\s*100%/.test(mobileJewelMedia) ||
+  !/height\s*:\s*100%/.test(mobileJewelMedia)
+) {
+  fail("mobile .work-world-0 .layer-media must remain a full media well above the copy dock");
+}
 if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
   fail("mobile #workStack0 > img must remain a cover full-viewport carrier");
+}
+if (/object-fit\s*:\s*contain/i.test(mobileJewel || "")) {
+  fail("mobile #workStack0 > img must not inherit the desktop contain exception");
 }
 if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must not use a radial media mask");
@@ -435,5 +488,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (two display headlines + design-path gradient links; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop square terminal contains the whole ring without overscan; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );

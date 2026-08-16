@@ -77,7 +77,7 @@ if (/id="finalLine"/.test(index) || /id="workThoughtOpen"/.test(index) || /id="h
   fail("retired opening-final / work-open / hand-1 copy hosts must be absent");
 }
 
-const TERMINAL_A = "Bring Your Vision To Life With Rana";
+const TERMINAL_A = "Bring Your Vision To Life";
 const TERMINAL_B = "Looking for Inspiration or Want something now?";
 const SUPERSEDED_INVITATION = "Work with Rana to bring your Custom Design to Life";
 const SUPERSEDED_SINGLE = "Bring your Custom Design to Life with Rana";
@@ -114,10 +114,13 @@ if (index.includes(SUPERSEDED_INSPIRATION)) {
 if (!index.includes(TERMINAL_A)) {
   fail("exact first terminal headline must be present");
 }
+if (index.includes("Bring Your Vision To Life With Rana")) {
+  fail("first terminal headline must not keep the trailing With Rana");
+}
 if (!index.includes(TERMINAL_B)) {
   fail("exact second terminal headline must be present");
 }
-if (!/id="workThoughtRest"[^>]*>Bring Your Vision To Life With Rana<\/p>/.test(index)) {
+if (!/id="workThoughtRest"[^>]*>Bring Your Vision To Life<\/p>/.test(index)) {
   fail("#workThoughtRest must be exactly the first display headline, with no added punctuation");
 }
 if (!/id="workThoughtReady"[^>]*>Looking for Inspiration or Want something now\?<\/p>/.test(index)) {
