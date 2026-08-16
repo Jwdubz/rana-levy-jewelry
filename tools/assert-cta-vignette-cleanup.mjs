@@ -2,12 +2,12 @@
 /**
  * Focused source assertion for the 2026-08-15 CTA hierarchy and vignette cleanup.
  *
- * Residue: homepage CTA hierarchy + full-bleed terminal cover framing + no terminal overscan/zoom + non-inventory vignette-kill tripwire
+ * Residue: homepage CTA hierarchy + authored desktop terminal image/copy split + no terminal overscan/zoom + non-inventory vignette-kill tripwire
  * Disposition: focused test or tripwire
  * Future consumer: any operator editing the homepage terminal dock, desktop terminal still, or route grounds
  * Activation: execute — node tools/assert-cta-vignette-cleanup.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the owner-supplied terminal hierarchy, full-bleed cover framing, no-overscan/zoom contract, or no-vignette non-inventory contract is retired
+ * Retirement: when the owner-supplied terminal hierarchy, desktop image/copy split, no-overscan/zoom contract, or no-vignette non-inventory contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -278,21 +278,25 @@ if (/background-image/i.test(desktopEcho)) {
 
 const desktopJewelMedia = extractBlock(stylesDesktop, ".work-world-0 .layer-media");
 const desktopJewel = extractBlock(stylesDesktop, "#workStack0 > img");
+const desktopWorkDock = extractBlock(stylesDesktop, ".work-copy-dock");
 const mobileJewelMedia = extractBlock(stylesMobile, ".work-world-0 .layer-media");
 const mobileJewel = extractBlock(stylesMobile, "#workStack0 > img");
 if (
   !desktopJewelMedia ||
-  !/inset\s*:\s*0/.test(desktopJewelMedia) ||
-  !/width\s*:\s*100%/.test(desktopJewelMedia) ||
-  !/height\s*:\s*100%/.test(desktopJewelMedia)
+  !/top\s*:\s*0/.test(desktopJewelMedia) ||
+  !/bottom\s*:\s*32svh/.test(desktopJewelMedia) ||
+  !/left\s*:\s*50%/.test(desktopJewelMedia) ||
+  !/width\s*:\s*min\(\s*84vw\s*,\s*130svh\s*\)/.test(desktopJewelMedia) ||
+  !/height\s*:\s*auto/.test(desktopJewelMedia) ||
+  !/translate\s*:\s*-50%\s+0/.test(desktopJewelMedia)
 ) {
-  fail("desktop .work-world-0 .layer-media must cancel inherited 112% overscan");
+  fail("desktop terminal media must use the authored 68svh upper frame and centered, height-bounded width");
 }
-if (/inset\s*:\s*-/.test(desktopJewelMedia) || /width\s*:\s*112%/.test(desktopJewelMedia) || /height\s*:\s*112%/.test(desktopJewelMedia)) {
+if (/inset\s*:\s*-/.test(desktopJewelMedia) || /width\s*:\s*112%/.test(desktopJewelMedia) || /height\s*:\s*112%/.test(desktopJewelMedia) || /transform\s*:\s*[^;]*scale/i.test(desktopJewelMedia)) {
   fail("desktop terminal media must not keep the inherited overscan pad");
 }
 if (!desktopJewel || !/object-fit\s*:\s*cover/i.test(desktopJewel)) {
-  fail("desktop #workStack0 > img must remain a full-bleed cover carrier without inherited overscan");
+  fail("desktop #workStack0 > img must remain a sharp cover inside the authored upper frame");
 }
 if (/object-fit\s*:\s*contain/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must not collapse into a contained portrait island");
@@ -305,6 +309,19 @@ if (/transform\s*:\s*[^;]*scale/i.test(desktopJewel)) {
 }
 if (!/object-position/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must keep an art-directed object-position");
+}
+if (
+  !desktopWorkDock ||
+  !/left\s*:\s*0/.test(desktopWorkDock) ||
+  !/right\s*:\s*0/.test(desktopWorkDock) ||
+  !/bottom\s*:\s*0/.test(desktopWorkDock) ||
+  !/min-height\s*:\s*32svh/.test(desktopWorkDock) ||
+  !/background\s*:\s*#020005/.test(desktopWorkDock)
+) {
+  fail("desktop terminal copy must occupy the full-width solid #020005 field beneath the image");
+}
+if (/radial-gradient|filter\s*:\s*[^;]*blur|mask-image\s*:\s*[^;]*(?!none)/i.test(desktopWorkDock)) {
+  fail("desktop terminal copy field must be solid black without vignette, blur, or mask filler");
 }
 if (
   !mobileJewelMedia ||
@@ -503,5 +520,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop terminal stays full-bleed cover without inherited overscan; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop terminal uses the authored upper image/lower solid-black copy split without overscan; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );

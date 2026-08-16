@@ -151,10 +151,16 @@ if (!/display:\s*flex/.test(desktopDock) || !/flex-direction:\s*column/.test(des
 if (!/position:\s*absolute/.test(desktopDock)) {
   fail("desktop .work-copy-dock must be one positioned stack, not a static passthrough");
 }
-if (!/left:\s*6vw/.test(desktopDock) || !/bottom:\s*7\.5svh/.test(desktopDock)) {
-  fail("desktop terminal stack must stay in the lower-left negative space");
+if (
+  !/left:\s*0/.test(desktopDock) ||
+  !/right:\s*0/.test(desktopDock) ||
+  !/bottom:\s*0/.test(desktopDock) ||
+  !/min-height:\s*32svh/.test(desktopDock) ||
+  !/background:\s*#020005/.test(desktopDock)
+) {
+  fail("desktop terminal stack must occupy the solid full-width reading field beneath the image");
 }
-if (!/gap:\s*0\.(?:[5-9]\d*|[1-9]\d*)rem/.test(desktopDock)) {
+if (!/gap:\s*0\.45rem/.test(desktopDock)) {
   fail("desktop terminal stack must author a positive gap so the paragraphs cannot share a box");
 }
 
