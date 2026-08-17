@@ -2,7 +2,7 @@
 /**
  * Focused source assertion for the 2026-08-15 CTA hierarchy and vignette cleanup.
  *
- * Residue: homepage CTA hierarchy + authored desktop terminal image/copy split + no terminal overscan/zoom + non-inventory vignette-kill tripwire
+ * Residue: homepage CTA hierarchy + desktop full-bleed wide terminal / centered action floor + no terminal overscan/zoom + non-inventory vignette-kill tripwire
  * Disposition: focused test or tripwire
  * Canonical path: tools/assert-cta-vignette-cleanup.mjs
  * Future consumer: any operator editing the homepage terminal dock, desktop terminal still, or route grounds
@@ -10,6 +10,7 @@
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
  * Retirement: when the owner-supplied terminal hierarchy, desktop image/copy split, no-overscan/zoom contract, or no-vignette non-inventory contract is retired
  */
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -280,27 +281,75 @@ if (/background-image/i.test(desktopEcho)) {
 const desktopJewelMedia = extractBlock(stylesDesktop, ".work-world-0 .layer-media");
 const desktopJewel = extractBlock(stylesDesktop, "#workStack0 > img");
 const desktopWorkDock = extractBlock(stylesDesktop, ".work-copy-dock");
+const desktopWorkLinks = extractBlock(stylesDesktop, ".work-links");
 const mobileJewelMedia = extractBlock(stylesMobile, ".work-world-0 .layer-media");
 const mobileJewel = extractBlock(stylesMobile, "#workStack0 > img");
 if (
   !desktopJewelMedia ||
   !/top\s*:\s*0/.test(desktopJewelMedia) ||
   !/bottom\s*:\s*32svh/.test(desktopJewelMedia) ||
-  !/left\s*:\s*50%/.test(desktopJewelMedia) ||
-  !/width\s*:\s*min\(\s*84vw\s*,\s*130svh\s*\)/.test(desktopJewelMedia) ||
-  !/height\s*:\s*auto/.test(desktopJewelMedia) ||
-  !/translate\s*:\s*-50%\s+0/.test(desktopJewelMedia)
+  !/left\s*:\s*0/.test(desktopJewelMedia) ||
+  !/right\s*:\s*0/.test(desktopJewelMedia) ||
+  !/width\s*:\s*100%/.test(desktopJewelMedia) ||
+  !/height\s*:\s*auto/.test(desktopJewelMedia)
 ) {
-  fail("desktop terminal media must use the authored 68svh upper frame and centered, height-bounded width");
+  fail("desktop terminal media must use the authored 68svh upper frame at full viewport width");
+}
+if (
+  /left\s*:\s*50%/.test(desktopJewelMedia) ||
+  /translate\s*:\s*-50%/.test(desktopJewelMedia) ||
+  /width\s*:\s*min\(/i.test(desktopJewelMedia) ||
+  /max-width\s*:/.test(desktopJewelMedia) ||
+  /84vw/.test(desktopJewelMedia) ||
+  /130svh/.test(desktopJewelMedia)
+) {
+  fail("desktop terminal media must not restore a capped or centered contained width");
 }
 if (/inset\s*:\s*-/.test(desktopJewelMedia) || /width\s*:\s*112%/.test(desktopJewelMedia) || /height\s*:\s*112%/.test(desktopJewelMedia) || /transform\s*:\s*[^;]*scale/i.test(desktopJewelMedia)) {
   fail("desktop terminal media must not keep the inherited overscan pad");
+}
+if (
+  !desktopWorkLinks ||
+  !/display\s*:\s*flex/.test(desktopWorkLinks) ||
+  !/flex-direction\s*:\s*column/.test(desktopWorkLinks) ||
+  !/align-items\s*:\s*center/.test(desktopWorkLinks)
+) {
+  fail("desktop terminal action floor must be one centered vertical hierarchy");
+}
+if (/grid-template-columns/.test(desktopWorkLinks) || /display\s*:\s*grid/.test(desktopWorkLinks)) {
+  fail("desktop terminal action floor must not restore a two-column split");
 }
 if (!desktopJewel || !/object-fit\s*:\s*cover/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must remain a sharp cover inside the authored upper frame");
 }
 if (/object-fit\s*:\s*contain/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must not collapse into a contained portrait island");
+}
+const WIDE_STILL = "assets/ring-pink-star-wide-composite-preview-v4.png";
+const WIDE_SHA = "6822A694F20AB5C2319E90BCFBE5CFDF52B40B516BD6CF79904D088ABD5BFD88";
+const workStackMarkup = (index.match(/id="workStack0"[\s\S]*?<\/picture>/) || [""])[0];
+if (!/<picture class="layer-media" id="workStack0">/.test(index)) {
+  fail("desktop terminal stack must be a picture so the wide master can be viewport-selected");
+}
+if (
+  !/media="\(min-width:\s*701px\)"/.test(workStackMarkup) ||
+  !workStackMarkup.includes('srcset="' + WIDE_STILL + '"')
+) {
+  fail("desktop terminal picture must select the supplied wide master from 701px");
+}
+if (!/<img src="assets\/ring-pink-star\.webp"/.test(workStackMarkup)) {
+  fail("mobile terminal img src must remain the authentic square pink-star still");
+}
+if (indexMobile.includes(WIDE_STILL) || stylesMobile.includes(WIDE_STILL)) {
+  fail("mobile styles/markup must not retarget the terminal crop to the wide master");
+}
+const widePath = path.join(root, WIDE_STILL);
+if (!fs.existsSync(widePath)) {
+  fail("supplied wide terminal master is missing from assets/");
+}
+const wideSha = crypto.createHash("sha256").update(fs.readFileSync(widePath)).digest("hex").toUpperCase();
+if (wideSha !== WIDE_SHA) {
+  fail("wide terminal master must remain the supplied source bytes");
 }
 if (/mask-image\s*:\s*[^;]*radial-gradient/i.test(desktopJewel) || /filter\s*:\s*[^;]*blur/i.test(desktopJewel)) {
   fail("desktop #workStack0 > img must not use a radial mask or blur/echo filler");
@@ -521,5 +570,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop terminal uses the authored upper image/lower solid-black copy split without overscan; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop terminal uses full-bleed wide media over one centered black action floor; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );
