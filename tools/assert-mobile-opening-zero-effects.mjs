@@ -562,20 +562,25 @@ for (const token of forbiddenMaskTokens) {
   }
 }
 
-// --- Desktop cinema: full-width 2:1 plate; assets unchanged ---
+// --- Desktop cinema: full-width plate with reserved black holds; assets unchanged ---
 const desktopMediaStack = extractBlock(index, ".media-stack", 0);
 if (!desktopMediaStack) fail("missing desktop base .media-stack block in index.html");
 const baseMediaStackIdx = index.indexOf(".media-stack");
 if (baseMediaStackIdx < 0 || baseMediaStackIdx > indexMobileIdx) {
   fail("desktop .media-stack must be defined before the mobile query");
 }
-if (!/\bwidth:\s*100%\s*;/.test(desktopMediaStack) || !/\bheight:\s*50vw\s*;/.test(desktopMediaStack)) {
-  fail("desktop .media-stack must be a full-width 2:1 plate (width 100%, height 50vw)");
+if (
+  !/\bwidth:\s*100%\s*;/.test(desktopMediaStack) ||
+  !/\bheight:\s*min\(\s*50vw,\s*56svh\)\s*;/.test(desktopMediaStack)
+) {
+  fail(
+    "desktop .media-stack must be a full-width plate capped at 2:1 with reserved black holds"
+  );
 }
 if (desktopMediaStack.includes("inset: -6%") || desktopMediaStack.includes("width: 112%")) {
   fail("desktop .media-stack must not keep cover-crop overscan");
 }
-if (/--cinema-hold|inset:\s*var\(--cinema-hold\)/.test(desktopMediaStack)) {
+if (/inset:\s*var\(--cinema-hold\)/.test(desktopMediaStack)) {
   fail("desktop .media-stack must not shrink into a contained cinema hold");
 }
 const desktopStackMedia =
@@ -649,5 +654,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop full-width 2:1 cinema + same assets)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop full-width cinema holds + same assets)"
 );

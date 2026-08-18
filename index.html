@@ -103,8 +103,10 @@
       left: 0;
       right: 0;
       width: 100%;
-      height: 50vw;
-      top: max(0px, calc((100% - 50vw) / 2));
+      /* Full-width plate. Cap at 2:1, and at 56svh so 22svh black holds
+         keep the mark, nav, and line off gold engraving frames. */
+      height: min(50vw, 56svh);
+      top: max(0px, calc((100% - min(50vw, 56svh)) / 2));
       transform-origin: center center;
       will-change: transform;
       background: #020005;
@@ -1032,7 +1034,7 @@
           const startW = Math.min(0.34 * vw, 460);
           const endW = Math.min(0.17 * vw, 240);
           widthPx = lerp(startW, endW, t);
-          top = lerp(7, 5.2, t);
+          top = lerp(4.6, 5.2, t);
           const startLeft = (vw - startW) / 2;
           const endLeft = 0.042 * vw;
           const startCenter = startLeft + startW / 2;
