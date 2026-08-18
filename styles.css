@@ -1041,20 +1041,24 @@
     pointer-events: none !important;
   }
 
-  /* Bench media stays full-frame as the sole Hand paint authority. */
+  /* Bench media stays the same full-frame plate as the opening beat. */
+  .hand-bench,
   .hand-bench .layer-media {
+    inset: 0;
+    width: 100%;
+    height: 100%;
     -webkit-mask-image: none;
     mask-image: none;
   }
 }
 
 @media (min-width: 701px) {
-  /* Desktop cinema: full-width plate with reserved black holds. Mobile stays cover. */
+  /* Desktop cinema: source-ratio plate, whole frame, reserved black. Mobile stays cover. */
   .hand-bench .layer-media img,
   .hand-bench .layer-media video,
   .hand-bridge .layer-media img,
   .hand-bridge .layer-media video {
-    object-fit: cover;
+    object-fit: contain;
     object-position: 50% 50%;
   }
 
@@ -1064,14 +1068,22 @@
 
   .hand-bench .layer-media,
   .hand-bridge .layer-media {
+    --cinema-h: min(50vw, 56svh);
+    --cinema-w: min(100%, calc(var(--cinema-h) * 2));
     inset: auto;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: min(50vw, 56svh);
-    top: max(0px, calc((100% - min(50vw, 56svh)) / 2));
+    left: max(0px, calc((100% - var(--cinema-w)) / 2));
+    right: auto;
+    width: var(--cinema-w);
+    height: var(--cinema-h);
+    top: max(0px, calc((100% - var(--cinema-h)) / 2));
     bottom: auto;
+    overflow: hidden;
     background: #020005;
+  }
+
+  .hand-bridge .layer-media {
+    --cinema-h: min(56svh, 100vw);
+    --cinema-w: min(56svh, 100vw);
   }
 }
 

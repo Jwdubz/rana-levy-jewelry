@@ -5,8 +5,8 @@
  * The retired 332x720 portrait was a tight center cut of the 720x720
  * desktop film. The candidate must keep the exact 419-frame order,
  * 13.966667s duration, loop wiring, and desktop bytes, while placing
- * the complete 720x720 source into a 720x1560 canvas with honest
- * black negative space.
+ * the 720x720 source into the same 720x648 beat-1 plate used by the
+ * opening/hand mobile films, letterboxed in a 720x1560 canvas.
  *
  * Usage: node tools/assert-mobile-ring-wide-frame-media.mjs
  *
@@ -37,7 +37,9 @@ const OUT_W = 720;
 const OUT_H = 1560;
 const SOURCE_W = 720;
 const SOURCE_H = 720;
-const BAND_Y = 420;
+const BAND_H = 648;
+const BAND_Y = 456;
+const DESK_CROP_Y = 36;
 const OLD_CROP_W = 332;
 const MATCH = 80;
 
@@ -286,9 +288,9 @@ try {
     const nativeRaw = path.join(tmp, `native_${n}.raw`);
     extractRgb(path.join(root, MOBILE_VIDEO), n, nativeRaw, 4, OUT_H);
     const band = detectContentBand(fs.readFileSync(nativeRaw), 4, OUT_H);
-    if (Math.abs(band.h - SOURCE_H) > 8) {
+    if (Math.abs(band.h - BAND_H) > 8) {
       fail(
-        `${MOBILE_VIDEO} frame ${n} content band ${band.h}px is not the complete ${SOURCE_H}px square (y0=${band.y0})`
+        `${MOBILE_VIDEO} frame ${n} content band ${band.h}px is not the beat-1 ${BAND_H}px plate (y0=${band.y0})`
       );
     }
     if (Math.abs(band.y0 - BAND_Y) > 8) {
@@ -304,17 +306,24 @@ try {
       mobileRaw,
       MATCH,
       MATCH,
-      `crop=${OUT_W}:${SOURCE_H}:0:${BAND_Y}`
+      `crop=${OUT_W}:${BAND_H}:0:${BAND_Y}`
     );
-    extractRgb(path.join(root, DESKTOP_VIDEO), n, deskRaw, MATCH, MATCH);
+    extractRgb(
+      path.join(root, DESKTOP_VIDEO),
+      n,
+      deskRaw,
+      MATCH,
+      MATCH,
+      `crop=${SOURCE_W}:${BAND_H}:0:${DESK_CROP_Y}`
+    );
     const mad = meanAbsDiffBuf(fs.readFileSync(mobileRaw), fs.readFileSync(deskRaw));
     if (mad > 10) {
       fail(
-        `${MOBILE_VIDEO} frame ${n} does not match the complete ${SOURCE_W}x${SOURCE_H} desktop frame (mad ${mad.toFixed(3)} > 10)`
+        `${MOBILE_VIDEO} frame ${n} does not match the beat-1 crop of the ${SOURCE_W}x${SOURCE_H} desktop frame (mad ${mad.toFixed(3)} > 10)`
       );
     }
     console.log(
-      `  frame ${n}: mad=${mad.toFixed(3)} band=${band.h}px y0=${band.y0} (full ${SOURCE_W}x${SOURCE_H})`
+      `  frame ${n}: mad=${mad.toFixed(3)} band=${band.h}px y0=${band.y0} (beat-1 ${OUT_W}x${BAND_H})`
     );
   }
 
@@ -336,5 +345,5 @@ try {
 }
 
 console.log(
-  "PASS: mobile ring wide-frame media (419-frame 720x1560 letterbox of the complete 720x720 desktop film; poster matches frame 0; desktop bytes exact; wiring/loop intact; source proof only — not visual consumer verification)"
+  "PASS: mobile ring wide-frame media (419-frame 720x1560 letterbox on the beat-1 720x648 plate; poster matches frame 0; desktop bytes exact; wiring/loop intact; source proof only — not visual consumer verification)"
 );

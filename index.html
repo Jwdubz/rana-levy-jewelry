@@ -99,17 +99,25 @@
     }
 
     .media-stack {
+      /* Desktop cinema: plate matches the source, so the whole frame stays
+         sharp inside the reserved black. 2:1 opening / 1:1 ring. */
+      --cinema-h: min(50vw, 56svh);
+      --cinema-w: min(100%, calc(var(--cinema-h) * 2));
       position: absolute;
-      left: 0;
-      right: 0;
-      width: 100%;
-      /* Full-width plate. Cap at 2:1, and at 56svh so 22svh black holds
-         keep the mark, nav, and line off gold engraving frames. */
-      height: min(50vw, 56svh);
-      top: max(0px, calc((100% - min(50vw, 56svh)) / 2));
+      left: max(0px, calc((100% - var(--cinema-w)) / 2));
+      right: auto;
+      width: var(--cinema-w);
+      height: var(--cinema-h);
+      top: max(0px, calc((100% - var(--cinema-h)) / 2));
       transform-origin: center center;
       will-change: transform;
+      overflow: hidden;
       background: #020005;
+    }
+
+    .world-ring .media-stack {
+      --cinema-h: min(56svh, 100vw);
+      --cinema-w: min(56svh, 100vw);
     }
 
     .media-stack img,
@@ -118,7 +126,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: 50% 50%;
       display: block;
       pointer-events: none;
@@ -367,18 +375,17 @@
         right: 0;
         bottom: 0;
         z-index: 7;
-        height: calc(var(--opening-copy-dock-t, 0) * var(--opening-copy-dock-h));
+        height: 0;
         background: #020005;
         pointer-events: none;
       }
 
+      /* Beat-1 plate stays the carrier through ring. Type sits in the
+         derivative's black; the dock must not resize the video. */
       .world-studio,
       .world-ring {
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: calc(var(--opening-copy-dock-t, 0) * var(--opening-copy-dock-h));
-        height: auto;
+        inset: 0;
+        height: 100%;
       }
 
       .headline {
@@ -504,6 +511,8 @@
             >
             <video
               id="studioVideo"
+              width="2160"
+              height="1080"
               data-src="assets/studio-opening-cluster-bench-engraving.mp4"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"
               data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"
@@ -533,6 +542,8 @@
             >
             <video
               id="ringVideo"
+              width="720"
+              height="720"
               data-src="assets/ring-alexandrite.mp4"
               data-desktop-src="assets/ring-alexandrite.mp4"
               data-mobile-src="assets/ring-alexandrite-portrait.mp4"
@@ -582,6 +593,8 @@
             >
             <video
               id="handVideo"
+              width="2160"
+              height="1080"
               data-src="assets/studio-hand-work-cycle.mp4"
               data-desktop-src="assets/studio-hand-work-cycle.mp4"
               data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"
@@ -611,6 +624,8 @@
             >
             <video
               id="handBridgeVideo"
+              width="720"
+              height="720"
               data-src="assets/ring-alexandrite.mp4"
               data-desktop-src="assets/ring-alexandrite.mp4"
               data-mobile-src="assets/ring-alexandrite-portrait.mp4"
@@ -1034,7 +1049,7 @@
           const startW = Math.min(0.34 * vw, 460);
           const endW = Math.min(0.17 * vw, 240);
           widthPx = lerp(startW, endW, t);
-          top = lerp(4.6, 5.2, t);
+          top = lerp(7, 5.2, t);
           const startLeft = (vw - startW) / 2;
           const endLeft = 0.042 * vw;
           const startCenter = startLeft + startW / 2;
@@ -1098,9 +1113,8 @@
         heads.style.backgroundPosition = prismX + "% 50%";
 
         if (sceneEl) {
-          const dockT = mobile ? headOpacity : 0;
-          sceneEl.style.setProperty("--opening-copy-dock-t", String(dockT));
-          sceneEl.classList.toggle("is-copy-dock", mobile && dockT > 0.5);
+          sceneEl.style.setProperty("--opening-copy-dock-t", "0");
+          sceneEl.classList.remove("is-copy-dock");
         }
         if (openingCopyDock) {
           openingCopyDock.setAttribute("aria-hidden", "true");
