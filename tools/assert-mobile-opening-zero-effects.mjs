@@ -567,7 +567,7 @@ for (const token of forbiddenMaskTokens) {
   }
 }
 
-// --- Desktop cinema: source-ratio plate, whole frame, reserved black; assets unchanged ---
+// --- Desktop: full-scene cover, edge-to-edge like mobile; assets unchanged ---
 const desktopMediaStack = extractBlock(index, ".media-stack", 0);
 if (!desktopMediaStack) fail("missing desktop base .media-stack block in index.html");
 const baseMediaStackIdx = index.indexOf(".media-stack");
@@ -575,34 +575,26 @@ if (baseMediaStackIdx < 0 || baseMediaStackIdx > indexMobileIdx) {
   fail("desktop .media-stack must be defined before the mobile query");
 }
 if (
-  !/--cinema-h:\s*min\(\s*50vw,\s*56svh\)/.test(desktopMediaStack) ||
-  !/--cinema-w:\s*min\(\s*100%/.test(desktopMediaStack) ||
-  !/\bwidth:\s*var\(--cinema-w\)\s*;/.test(desktopMediaStack)
+  !/\binset:\s*0\s*;/.test(desktopMediaStack) ||
+  !/\bwidth:\s*100%\s*;/.test(desktopMediaStack) ||
+  !/\bheight:\s*100%\s*;/.test(desktopMediaStack)
 ) {
-  fail("desktop .media-stack must be a source-ratio cinema plate with reserved black holds");
+  fail("desktop .media-stack must fill the scene edge-to-edge");
 }
 if (desktopMediaStack.includes("inset: -6%") || desktopMediaStack.includes("width: 112%")) {
   fail("desktop .media-stack must not keep cover-crop overscan");
 }
-if (/inset:\s*var\(--cinema-hold\)/.test(desktopMediaStack)) {
-  fail("desktop .media-stack must not shrink into a contained cinema hold");
-}
-const desktopRingStack = extractBlock(index, ".world-ring .media-stack", 0);
-if (
-  !desktopRingStack ||
-  desktopRingStack.includes("inset: 0") ||
-  !/--cinema-w:\s*min\(\s*56svh/.test(desktopRingStack)
-) {
-  fail("desktop ring plate must be a 1:1 cinema hold, not a full-bleed cover crop");
+if (/--cinema-h:|--cinema-w:|inset:\s*var\(--cinema-hold\)/.test(desktopMediaStack)) {
+  fail("desktop .media-stack must not use a composed cinema hold");
 }
 const desktopStackMedia =
   extractBlock(index, ".media-stack img,\n    .media-stack video", 0) ||
   extractBlock(index, ".media-stack img, .media-stack video", 0);
-if (!desktopStackMedia || !/\bobject-fit:\s*contain\s*;/.test(desktopStackMedia)) {
-  fail("desktop .media-stack children must show the whole source in the cinema plate");
+if (!desktopStackMedia || !/\bobject-fit:\s*cover\s*;/.test(desktopStackMedia)) {
+  fail("desktop .media-stack children must cover the scene edge-to-edge");
 }
-if (/\bobject-fit:\s*cover\s*;/.test(desktopStackMedia)) {
-  fail("desktop .media-stack children must not cover-crop the source");
+if (/\bobject-fit:\s*contain\s*;/.test(desktopStackMedia)) {
+  fail("desktop .media-stack children must not contain/letterbox");
 }
 
 // Desktop still points at owner-approved landscape/square opening assets by default.
@@ -669,5 +661,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop full-width cinema holds + same assets)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
 );

@@ -1053,37 +1053,26 @@
 }
 
 @media (min-width: 701px) {
-  /* Desktop cinema: source-ratio plate, whole frame, reserved black. Mobile stays cover. */
+  /* Desktop: same full-scene cover as mobile. Every film is edge-to-edge. */
+  .hand-bench .layer-media,
+  .hand-bridge .layer-media {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #020005;
+  }
+
   .hand-bench .layer-media img,
   .hand-bench .layer-media video,
   .hand-bridge .layer-media img,
   .hand-bridge .layer-media video {
-    object-fit: contain;
+    object-fit: cover;
     object-position: 50% 50%;
   }
 
   .hand-bridge {
     background: #020005;
-  }
-
-  .hand-bench .layer-media,
-  .hand-bridge .layer-media {
-    --cinema-h: min(50vw, 56svh);
-    --cinema-w: min(100%, calc(var(--cinema-h) * 2));
-    inset: auto;
-    left: max(0px, calc((100% - var(--cinema-w)) / 2));
-    right: auto;
-    width: var(--cinema-w);
-    height: var(--cinema-h);
-    top: max(0px, calc((100% - var(--cinema-h)) / 2));
-    bottom: auto;
-    overflow: hidden;
-    background: #020005;
-  }
-
-  .hand-bridge .layer-media {
-    --cinema-h: min(56svh, 100vw);
-    --cinema-w: min(56svh, 100vw);
   }
 }
 
