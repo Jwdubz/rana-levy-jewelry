@@ -1563,6 +1563,7 @@ html.is-quiet::view-transition-new(root) {
   .tray-field label {
     font-size: 0.78rem;
     letter-spacing: 0.04em;
+    text-transform: capitalize;
   }
 
   .tray-field input,
@@ -1572,6 +1573,14 @@ html.is-quiet::view-transition-new(root) {
     max-width: 100%;
     font-size: 0.95rem;
     min-height: 44px;
+  }
+
+  .tray-field select {
+    text-transform: capitalize;
+  }
+
+  .tray-field select option {
+    text-transform: capitalize;
   }
 
   /*

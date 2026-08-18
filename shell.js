@@ -1108,17 +1108,23 @@
     return li;
   }
 
+  function titleCaseFilterLabel(value) {
+    return String(value || "").replace(/[A-Za-z][^\s-]*/g, function (word) {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+  }
+
   function fillSelect(select, values, allLabel) {
     if (!select) return;
     select.innerHTML = "";
     var all = document.createElement("option");
     all.value = "";
-    all.textContent = allLabel || "All";
+    all.textContent = titleCaseFilterLabel(allLabel || "All");
     select.appendChild(all);
     for (var i = 0; i < values.length; i += 1) {
       var opt = document.createElement("option");
       opt.value = values[i];
-      opt.textContent = values[i];
+      opt.textContent = titleCaseFilterLabel(values[i]);
       select.appendChild(opt);
     }
   }
@@ -1223,8 +1229,8 @@
     }
 
     var facets = deriveFacets(source);
-    fillSelect(kindEl, facets.kinds, "All kinds");
-    fillSelect(stoneEl, facets.stones, "All stones");
+    fillSelect(kindEl, facets.kinds, "All Kinds");
+    fillSelect(stoneEl, facets.stones, "All Stones");
 
     function onStateChange() {
       state.query = searchEl ? searchEl.value : "";

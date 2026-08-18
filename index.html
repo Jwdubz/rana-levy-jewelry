@@ -70,13 +70,18 @@
       will-change: transform;
     }
 
+    .world-studio,
+    .world-ring {
+      background: #020005;
+    }
+
     .world-studio {
       z-index: 1;
     }
 
     .world-ring {
       z-index: 2;
-      /* Full-bleed underneath; revealed by diagonal feathered mask only. */
+      /* Cinema plate underneath; revealed by diagonal feathered mask only. */
       will-change: transform, mask-image, -webkit-mask-image;
     }
 
@@ -94,12 +99,14 @@
     }
 
     .media-stack {
+      --cinema-hold: calc(7svh + (min(34vw, 460px) * 0.34) + 1rem);
       position: absolute;
-      inset: -6%;
-      width: 112%;
-      height: 112%;
+      inset: var(--cinema-hold) 0;
+      width: auto;
+      height: auto;
       transform-origin: center center;
       will-change: transform;
+      background: #020005;
     }
 
     .media-stack img,
@@ -108,7 +115,8 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+      object-position: 50% 50%;
       display: block;
       pointer-events: none;
       user-select: none;
@@ -116,13 +124,10 @@
     }
 
     .world-studio .media-stack img,
-    .world-studio .media-stack video {
-      object-position: 50% 52%;
-    }
-
+    .world-studio .media-stack video,
     .world-ring .media-stack img,
     .world-ring .media-stack video {
-      object-position: 50% 48%;
+      object-position: 50% 50%;
     }
 
     .media-stack video {
@@ -987,10 +992,11 @@
           ringX = 50;
           ringY = 50;
         } else {
-          studioX = lerp(50, 52, progress);
-          studioY = lerp(52, 49, progress);
+          // Desktop cinema: whole source, no cover-crop drift.
+          studioX = 50;
+          studioY = 50;
           ringX = 50;
-          ringY = 48;
+          ringY = 50;
         }
 
         // Pointer crop drift is additive via transform; object-position holds art direction.
@@ -1158,30 +1164,16 @@
           studioScale = 1;
           ringScale = 1;
         } else {
-          // Studio: 1.08 at 0 → 1.015 at 0.62
-          const studioScaleT = windowProgress(progress, 0, 0.62);
-          studioScale = lerp(MOTION.mediaScaleStart, 1.015, studioScaleT);
-
-          // Ring: 1.045 at 0.31 → 1.015 at 0.86
-          const ringScaleT = windowProgress(
-            progress,
-            MOTION.handoffStart,
-            MOTION.finalTextEnd
-          );
-          ringScale = lerp(1.045, 1.015, ringScaleT);
+          // Desktop cinema: whole source at scale 1 so the plate stays sharp.
+          studioScale = 1;
+          ringScale = 1;
         }
 
-        const allowPointer =
-          !quietModeActive() && state.finePointer && state.pointerActive;
-        const nx = allowPointer ? px : 0;
-        const ny = allowPointer ? py : 0;
-
-        // Cap media crop travel at 1.8vw via ring mapping amplitude.
-        // Mobile keeps translate at 0 so scale-1 frames stay whole.
-        const studioTx = mobile ? 0 : nx * -0.9;
-        const studioTy = mobile ? 0 : ny * -0.6;
-        const ringTx = mobile ? 0 : nx * -1.8;
-        const ringTy = mobile ? 0 : ny * -1.2;
+        // Cinema plates stay whole — no pointer crop travel on either viewport.
+        const studioTx = 0;
+        const studioTy = 0;
+        const ringTx = 0;
+        const ringTy = 0;
 
         const studioTf =
           "translate3d(" +

@@ -274,6 +274,18 @@ const searchMobile = extractBlock(shellCss, ".tray-field--search", shellMobileId
 if (!searchMobile || !/grid-column\s*:\s*1\s*\/\s*-1/.test(searchMobile)) {
   fail("mobile search field must span full instrument row");
 }
+const labelMobile = extractBlock(shellCss, ".tray-field label", shellMobileIdx);
+const selectCaps = extractBlock(shellCss, ".tray-field select", shellMobileIdx);
+const optionCaps = extractBlock(shellCss, ".tray-field select option", shellMobileIdx);
+if (!labelMobile || !/text-transform\s*:\s*capitalize/.test(labelMobile)) {
+  fail("mobile filter labels must use text-transform: capitalize");
+}
+if (!selectCaps || !/text-transform\s*:\s*capitalize/.test(selectCaps)) {
+  fail("mobile filter selects must use text-transform: capitalize");
+}
+if (!optionCaps || !/text-transform\s*:\s*capitalize/.test(optionCaps)) {
+  fail("mobile filter options must use text-transform: capitalize");
+}
 
 // --- Catalog native select: dark option panel (Windows/Chromium) ---
 // Cream option text over a white OS popup is nearly invisible.

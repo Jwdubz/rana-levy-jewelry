@@ -562,27 +562,30 @@ for (const token of forbiddenMaskTokens) {
   }
 }
 
-// --- Desktop overscan contracts unchanged ---
+// --- Desktop cinema: whole source in a black hold; assets unchanged ---
 const desktopMediaStack = extractBlock(index, ".media-stack", 0);
 if (!desktopMediaStack) fail("missing desktop base .media-stack block in index.html");
 const baseMediaStackIdx = index.indexOf(".media-stack");
 if (baseMediaStackIdx < 0 || baseMediaStackIdx > indexMobileIdx) {
   fail("desktop .media-stack must be defined before the mobile query");
 }
-if (!desktopMediaStack.includes("inset: -6%")) {
-  fail("desktop .media-stack lost inset: -6% overscan");
+if (!/--cinema-hold/.test(desktopMediaStack) && !/var\(--cinema-hold\)/.test(desktopMediaStack)) {
+  fail("desktop .media-stack must sit in the cinema hold");
 }
-if (
-  !desktopMediaStack.includes("width: 112%") ||
-  !desktopMediaStack.includes("height: 112%")
-) {
-  fail("desktop .media-stack lost 112% overscan geometry");
+if (!/inset:\s*var\(--cinema-hold\)\s+0/.test(desktopMediaStack)) {
+  fail("desktop .media-stack must use inset: var(--cinema-hold) 0");
+}
+if (desktopMediaStack.includes("inset: -6%") || desktopMediaStack.includes("width: 112%")) {
+  fail("desktop .media-stack must not keep cover-crop overscan");
 }
 const desktopStackMedia =
   extractBlock(index, ".media-stack img,\n    .media-stack video", 0) ||
   extractBlock(index, ".media-stack img, .media-stack video", 0);
-if (!desktopStackMedia || !/\bobject-fit:\s*cover\s*;/.test(desktopStackMedia)) {
-  fail("desktop .media-stack children must keep object-fit: cover");
+if (!desktopStackMedia || !/\bobject-fit:\s*contain\s*;/.test(desktopStackMedia)) {
+  fail("desktop .media-stack children must use object-fit: contain");
+}
+if (/\bobject-fit:\s*cover\s*;/.test(desktopStackMedia)) {
+  fail("desktop .media-stack children must not use object-fit: cover");
 }
 
 // Desktop still points at owner-approved landscape/square opening assets by default.
@@ -649,5 +652,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop overscan/assets unchanged)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop cinema contain + same assets)"
 );
