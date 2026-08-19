@@ -411,7 +411,7 @@ if (!/\.hand-bench\s+\.layer-media\s*\{[^}]*inset:\s*0/i.test(styles)) {
   fail("hand-bench layer-media must remain full-viewport inset:0");
 }
 if (!/#workStack0\s*>\s*(img|video)[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobile)) {
-  fail("mobile first Work carrier must remain object-fit:cover full-viewport authority");
+  fail("mobile first Work carrier must remain object-fit:cover");
 }
 if (new RegExp("id=\"" + "ve" + "gasVideo\"").test(index) || new RegExp("setVideoActive\\s*\\(\\s*" + "ve" + "gasVideo").test(siteJs)) {
   fail("retired night montage must not remain a work video authority");

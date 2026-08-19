@@ -547,7 +547,10 @@ if (!/work-world-0::before[\s\S]{0,180}(content\s*:\s*none|display\s*:\s*none)/i
   fail("mobile work-world echo underlays must be disabled");
 }
 if (!/#workStack0\s*>\s*img[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobile)) {
-  fail("mobile work jewelry carriers must use object-fit: cover full-viewport");
+  fail("mobile work jewelry carriers must use object-fit: cover");
+}
+if (!/#workStack0\s*>\s*img[\s\S]{0,500}100dvh\s*\*\s*456\s*\/\s*1560/.test(stylesMobile)) {
+  fail("mobile work jewelry must sit below the beat-1 header hold");
 }
 if (/#workStack0\s*>\s*img[\s\S]{0,500}mask-image\s*:\s*radial-gradient/i.test(stylesMobile)) {
   fail("mobile work jewelry must not use radial-gradient media masks");

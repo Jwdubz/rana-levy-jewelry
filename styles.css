@@ -897,10 +897,12 @@
 
   #workStack0 > img {
     position: absolute;
-    inset: 0;
+    /* Same top hold as the 720x1560 beat-1 plate (content band starts at y=456). */
+    inset: auto 0 0 0;
+    top: calc(100dvh * 456 / 1560);
     margin: 0;
     width: 100%;
-    height: 100%;
+    height: calc(100% - (100dvh * 456 / 1560));
     max-width: none;
     max-height: none;
     object-fit: cover;
@@ -967,6 +969,7 @@
   }
 
   .work-design-paths {
+    order: 2;
     flex-direction: column;
     align-items: center;
     gap: 0.3rem;
@@ -974,6 +977,7 @@
   }
 
   .work-ready-path {
+    order: 1;
     align-items: center;
     gap: 0.35rem;
   }

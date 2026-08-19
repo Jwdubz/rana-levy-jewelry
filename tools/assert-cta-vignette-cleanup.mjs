@@ -382,7 +382,18 @@ if (
   fail("mobile .work-world-0 .layer-media must remain a full media well above the copy dock");
 }
 if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
-  fail("mobile #workStack0 > img must remain a cover full-viewport carrier");
+  fail("mobile #workStack0 > img must remain a cover carrier");
+}
+if (!/top\s*:\s*calc\(\s*100dvh\s*\*\s*456\s*\/\s*1560\s*\)/.test(mobileJewel || "")) {
+  fail("mobile #workStack0 > img must sit on the beat-1 plate so the header holds in black");
+}
+const mobileReadyPath = extractBlock(stylesMobile, ".work-ready-path");
+const mobileDesignPaths = extractBlock(stylesMobile, ".work-design-paths");
+if (!mobileReadyPath || !/\border\s*:\s*1\s*;/.test(mobileReadyPath)) {
+  fail("mobile ready path must stack above Made To Order");
+}
+if (!mobileDesignPaths || !/\border\s*:\s*2\s*;/.test(mobileDesignPaths)) {
+  fail("mobile Made To Order path must sit below See What's Ready Now");
 }
 if (/object-fit\s*:\s*contain/i.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must not inherit the desktop contain exception");
