@@ -857,6 +857,25 @@
     line-height: 1.1;
   }
 
+  .hand-thought-a {
+    left: 0;
+    right: 0;
+    width: 100%;
+    bottom: 11svh;
+    max-width: none;
+    padding: 0 4.5vw;
+    box-sizing: border-box;
+    text-align: center;
+    white-space: nowrap;
+    font-size: clamp(1.18rem, 5.7vw, 1.62rem);
+    line-height: 1.05;
+    letter-spacing: -0.012em;
+  }
+
+  .hand-thought-a .line {
+    display: inline;
+  }
+
   .thought-md {
     font-size: clamp(1.28rem, 5.8vw, 1.7rem);
     line-height: 1.2;
