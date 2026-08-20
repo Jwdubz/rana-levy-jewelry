@@ -895,7 +895,7 @@
     object-position: 50% 50%;
   }
 
-  /* Terminal still: complete square plate under a reserved black header. */
+  /* Terminal still: edge-to-edge cover under a reserved black header. */
   .work-world-0 {
     --work-subject-shift-y: 0svh;
     background: #020005;
@@ -913,10 +913,10 @@
     top: var(--work-header-h);
     left: 0;
     right: 0;
-    bottom: auto;
-    width: var(--work-still-s);
-    height: var(--work-still-s);
-    margin: 0 auto;
+    bottom: 0;
+    width: 100%;
+    height: auto;
+    margin: 0;
     translate: none;
     overflow: hidden;
     border-radius: 0;
@@ -947,15 +947,7 @@
       env(safe-area-inset-top, 0px) + 1.6svh + (min(46vw, 11rem) * 0.34) + 0.45rem +
         44px + 0.4rem
     );
-    --work-min-dock: max(11.25rem, 23dvh);
-    --work-still-s: min(
-      100vw,
-      calc(100dvh - var(--work-header-h) - var(--work-min-dock))
-    );
-    --work-copy-dock-h: max(
-      var(--work-min-dock),
-      calc(100dvh - var(--work-header-h) - var(--work-still-s))
-    );
+    --work-copy-dock-h: max(11.25rem, 23dvh);
   }
 
   .movement-work .work-world {
@@ -1022,6 +1014,14 @@
     justify-content: center;
     gap: 0 1.35rem;
     padding-top: 0;
+  }
+
+  .work-design-paths a[href="consultation.html"] {
+    order: 1;
+  }
+
+  .work-design-paths a[href="made.html"] {
+    order: 2;
   }
 
   .work-ready-path {

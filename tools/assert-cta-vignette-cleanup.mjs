@@ -376,10 +376,11 @@ if (/radial-gradient|filter\s*:\s*[^;]*blur|mask-image\s*:\s*[^;]*(?!none)/i.tes
 if (
   !mobileJewelMedia ||
   !/top\s*:\s*var\(\s*--work-header-h\s*\)/.test(mobileJewelMedia) ||
-  !/width\s*:\s*var\(\s*--work-still-s\s*\)/.test(mobileJewelMedia) ||
-  !/height\s*:\s*var\(\s*--work-still-s\s*\)/.test(mobileJewelMedia)
+  !/width\s*:\s*100%/.test(mobileJewelMedia) ||
+  !/left\s*:\s*0/.test(mobileJewelMedia) ||
+  !/right\s*:\s*0/.test(mobileJewelMedia)
 ) {
-  fail("mobile .work-world-0 .layer-media must be the shrunk square plate under the header band");
+  fail("mobile .work-world-0 .layer-media must run edge to edge under the header band");
 }
 if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
   fail("mobile #workStack0 > img must remain a cover carrier");
@@ -390,8 +391,8 @@ if (!/inset\s*:\s*0/.test(mobileJewel || "") || !/height\s*:\s*100%/.test(mobile
 if (/#workWorld0::after/.test(stylesMobile)) {
   fail("mobile terminal must not paint a black header hold over the ring");
 }
-if (!/--work-header-h:/.test(stylesMobile) || !/--work-still-s:/.test(stylesMobile)) {
-  fail("mobile terminal must reserve a black header band and shrink the still into the remaining square");
+if (!/--work-header-h:/.test(stylesMobile) || /--work-still-s:/.test(stylesMobile)) {
+  fail("mobile terminal must reserve a black header band and keep the still edge to edge");
 }
 const mobileWorkDock = extractBlock(stylesMobile, ".work-copy-dock");
 if (!mobileWorkDock || !/background\s*:\s*#020005/.test(mobileWorkDock)) {
@@ -405,8 +406,13 @@ if (!/display\s*:\s*flex/.test(mobileDesignPaths || "") || /display\s*:\s*conten
 if (!/flex-direction\s*:\s*column/.test(mobileReadyPath || "") || /display\s*:\s*contents/.test(mobileReadyPath || "")) {
   fail("mobile ready path must keep the second headline stacked over See What's Ready Now");
 }
-if (/a\[href="consultation\.html"\][\s\S]{0,80}order\s*:/.test(stylesMobile) || /a\[href="made\.html"\][\s\S]{0,80}order\s*:/.test(stylesMobile)) {
-  fail("mobile terminal must keep desktop grouping instead of reordering dock links");
+const consultOrder = extractBlock(stylesMobile, '.work-design-paths a[href="consultation.html"]');
+const madeOrder = extractBlock(stylesMobile, '.work-design-paths a[href="made.html"]');
+if (!consultOrder || !/\border\s*:\s*1\s*;/.test(consultOrder)) {
+  fail("mobile Custom Consultation must sit before Made To Order");
+}
+if (!madeOrder || !/\border\s*:\s*2\s*;/.test(madeOrder)) {
+  fail("mobile Made To Order must sit after Custom Consultation");
 }
 if (/object-fit\s*:\s*contain/i.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must not inherit the desktop contain exception");

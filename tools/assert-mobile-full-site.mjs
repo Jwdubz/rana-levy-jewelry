@@ -552,8 +552,8 @@ if (!/#workStack0\s*>\s*img[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobi
 if (/#workWorld0::after/.test(stylesMobile)) {
   fail("mobile work must not paint a black header hold over the ring");
 }
-if (!/--work-header-h:/.test(stylesMobile) || !/--work-still-s:/.test(stylesMobile)) {
-  fail("mobile work must reserve a black header band and shrink the still");
+if (!/--work-header-h:/.test(stylesMobile) || /--work-still-s:/.test(stylesMobile)) {
+  fail("mobile work must reserve a black header band and keep the still edge to edge");
 }
 if (!/#workStack0\s*>\s*img[\s\S]{0,400}inset\s*:\s*0/.test(stylesMobile)) {
   fail("mobile work jewelry must fill its square plate");
