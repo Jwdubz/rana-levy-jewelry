@@ -860,16 +860,24 @@
   .hand-thought-a {
     left: 0;
     right: 0;
+    top: auto;
+    bottom: 0;
     width: 100%;
-    bottom: 11svh;
+    height: 18dvh;
     max-width: none;
-    padding: 0 4.5vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: none;
+    translate: 0 -8.25dvh;
+    padding: 0 0.85rem;
     box-sizing: border-box;
     text-align: center;
     white-space: nowrap;
-    font-size: clamp(1.18rem, 5.7vw, 1.62rem);
+    font-size: clamp(1.45rem, 7.4vw, 2.25rem);
     line-height: 1.05;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.01em;
+    text-shadow: none;
   }
 
   .hand-thought-a .line {

@@ -1176,8 +1176,12 @@
 
     if (handThought0) {
       handThought0.style.opacity = String(o0);
-      handThought0.style.transform =
-        "translate3d(0," + lerp(4, 0, windowProgress(p, t0In0, t0In1)) + "svh,0)";
+      if (mobile) {
+        handThought0.style.transform = "none";
+      } else {
+        handThought0.style.transform =
+          "translate3d(0," + lerp(4, 0, windowProgress(p, t0In0, t0In1)) + "svh,0)";
+      }
     }
 
     // Mobile object positions already in CSS; slight progress drift on desktop bench.
