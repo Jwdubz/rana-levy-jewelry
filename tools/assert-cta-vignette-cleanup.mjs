@@ -191,8 +191,8 @@ if (/background-clip\s*:\s*text/i.test(desktopHeadline)) {
 }
 const mobileHeadlineRule = extractBlock(stylesMobile, ".work-terminal-headline");
 if (!mobileHeadlineRule) fail("mobile .work-terminal-headline rule missing");
-if (!/clamp\(\s*1\.48rem\s*,\s*6\.1vw\s*,\s*1\.88rem\s*\)/.test(mobileHeadlineRule)) {
-  fail("mobile terminal headlines must use display clamp 1.48rem / 6.1vw / 1.88rem");
+if (!/clamp\(\s*1\.12rem\s*,\s*4\.35vw\s*,\s*1\.28rem\s*\)/.test(mobileHeadlineRule)) {
+  fail("mobile terminal headlines must use the compact display clamp 1.12rem / 4.35vw / 1.28rem");
 }
 if (!/font-weight\s*:\s*400/.test(desktopHeadline + mobileHeadlineRule)) {
   fail("terminal headlines must stay 400 weight on every viewport");
@@ -392,8 +392,8 @@ if (!/height\s*:\s*calc\(\s*100dvh\s*\*\s*456\s*\/\s*1560\s*\)/.test(mobileHeade
   fail("mobile terminal must keep the beat-1 header hold in black");
 }
 const mobileWorkDock = extractBlock(stylesMobile, ".work-copy-dock");
-if (!mobileWorkDock || !/background\s*:\s*transparent/.test(mobileWorkDock)) {
-  fail("mobile terminal copy must sit on the picture, not a second black field");
+if (!mobileWorkDock || !/background\s*:\s*#020005/.test(mobileWorkDock)) {
+  fail("mobile terminal copy must sit on a solid black field under the picture");
 }
 const mobileDesignPaths = extractBlock(stylesMobile, ".work-design-paths");
 const mobileReadyPath = extractBlock(stylesMobile, ".work-ready-path");

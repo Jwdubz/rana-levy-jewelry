@@ -518,11 +518,11 @@ if (/id="workLinks"[\s\S]*href="ready\.html">Ready Now</.test(workSectionMarkup)
 if (/\.work-thought-/.test(stylesMobile) && new RegExp("work-thought-" + "ve" + "gas").test(stylesMobile)) {
   fail("retired night-studio thought styles must be absent");
 }
-if (!/\.work-thought-rest[\s\S]{0,280}font-size:\s*clamp\(\s*1\.48rem\s*,\s*6\.1vw\s*,\s*1\.88rem\s*\)/.test(stylesMobile)) {
-  fail("mobile terminal headlines must use display clamp 1.48rem / 6.1vw / 1.88rem");
+if (!/\.work-thought-rest[\s\S]{0,280}font-size:\s*clamp\(\s*1\.12rem\s*,\s*4\.35vw\s*,\s*1\.28rem\s*\)/.test(stylesMobile)) {
+  fail("mobile terminal headlines must use compact display clamp 1.12rem / 4.35vw / 1.28rem");
 }
-if (!/\.work-terminal-headline[\s\S]{0,280}font-size:\s*clamp\(\s*1\.48rem\s*,\s*6\.1vw\s*,\s*1\.88rem\s*\)/.test(stylesMobile)) {
-  fail("mobile .work-terminal-headline must use the same display clamp");
+if (!/\.work-terminal-headline[\s\S]{0,280}font-size:\s*clamp\(\s*1\.12rem\s*,\s*4\.35vw\s*,\s*1\.28rem\s*\)/.test(stylesMobile)) {
+  fail("mobile .work-terminal-headline must use the same compact display clamp");
 }
 if (/ring-heirloom/.test(index)) {
   fail("rejected heirloom ring beat must be absent from homepage markup");

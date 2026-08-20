@@ -926,11 +926,14 @@
   }
 
   .movement-work {
-    --work-copy-dock-h: max(21.25rem, 43dvh);
+    --work-copy-dock-h: max(13.5rem, 28dvh);
   }
 
   .movement-work .work-world {
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--work-copy-dock-t, 0) * var(--work-copy-dock-h));
     height: auto;
   }
 
@@ -953,13 +956,13 @@
     height: calc(var(--work-copy-dock-t, 0) * var(--work-copy-dock-h));
     min-height: 0;
     max-width: none;
-    background: transparent;
+    background: #020005;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
-    padding: 0.7rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+    gap: 0.18rem;
+    padding: 0.7rem 1.15rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     pointer-events: none;
     overflow: hidden;
@@ -979,8 +982,8 @@
     grid-template-columns: none;
     flex-direction: column;
     align-items: center;
-    gap: 0.85rem;
-    filter: drop-shadow(0 1px 10px rgba(2, 0, 5, 0.55));
+    gap: 0.12rem;
+    filter: none;
   }
 
   .work-design-paths {
@@ -997,6 +1000,7 @@
 
   .work-links #workThoughtReady {
     order: 2;
+    margin-top: 0.7rem;
   }
 
   .work-links a[href="ready.html"] {
@@ -1011,30 +1015,24 @@
     position: static;
     left: auto;
     bottom: auto;
-    max-width: min(22rem, 94vw);
+    max-width: min(18.5rem, 86vw);
     text-align: center;
-    font-size: clamp(1.48rem, 6.1vw, 1.88rem);
-    line-height: 1.02;
-    letter-spacing: -0.012em;
-    text-shadow:
-      0 1px 2px rgba(2, 0, 5, 0.7),
-      0 2px 28px rgba(2, 0, 5, 0.7),
-      0 0 40px rgba(2, 0, 5, 0.45);
+    font-size: clamp(1.12rem, 4.35vw, 1.28rem);
+    line-height: 1.08;
+    letter-spacing: -0.014em;
+    text-shadow: none;
   }
 
   .work-thought-rest {
     position: static;
     left: auto;
     bottom: auto;
-    max-width: min(22rem, 94vw);
+    max-width: min(18.5rem, 86vw);
     text-align: center;
-    font-size: clamp(1.48rem, 6.1vw, 1.88rem);
-    line-height: 1.02;
-    letter-spacing: -0.012em;
-    text-shadow:
-      0 1px 2px rgba(2, 0, 5, 0.7),
-      0 2px 28px rgba(2, 0, 5, 0.7),
-      0 0 40px rgba(2, 0, 5, 0.45);
+    font-size: clamp(1.12rem, 4.35vw, 1.28rem);
+    line-height: 1.08;
+    letter-spacing: -0.014em;
+    text-shadow: none;
   }
 
   .choice-link {
@@ -1043,8 +1041,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: max(1rem, 1.05rem);
-    padding: 0.35rem 0.4rem;
+    font-size: 0.98rem;
+    letter-spacing: 0.018em;
+    padding: 0.2rem 0.15rem;
   }
 
   /* No radial resting wash on mobile — readability via localized text shadow. */
