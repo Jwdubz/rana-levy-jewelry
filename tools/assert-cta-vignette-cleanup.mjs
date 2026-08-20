@@ -387,13 +387,28 @@ if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
 if (!/top\s*:\s*calc\(\s*100dvh\s*\*\s*456\s*\/\s*1560\s*\)/.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must sit on the beat-1 plate so the header holds in black");
 }
-const mobileReadyPath = extractBlock(stylesMobile, ".work-ready-path");
-const mobileDesignPaths = extractBlock(stylesMobile, ".work-design-paths");
-if (!mobileReadyPath || !/\border\s*:\s*1\s*;/.test(mobileReadyPath)) {
-  fail("mobile ready path must stack above Made To Order");
+if (!/height\s*:\s*auto/.test(mobileJewel || "")) {
+  fail("mobile #workStack0 > img must keep the ring picture at full size");
 }
-if (!mobileDesignPaths || !/\border\s*:\s*2\s*;/.test(mobileDesignPaths)) {
-  fail("mobile Made To Order path must sit below See What's Ready Now");
+const mobileDesignPaths = extractBlock(stylesMobile, ".work-design-paths");
+const mobileReadyPath = extractBlock(stylesMobile, ".work-ready-path");
+if (
+  !/display\s*:\s*contents/.test(mobileDesignPaths || "") ||
+  !/display\s*:\s*contents/.test(mobileReadyPath || "")
+) {
+  fail("mobile design/ready wrappers must yield to per-link order");
+}
+const consultOrder = extractBlock(stylesMobile, '.work-links a[href="consultation.html"]');
+const readyOrder = extractBlock(stylesMobile, '.work-links a[href="ready.html"]');
+const madeOrder = extractBlock(stylesMobile, '.work-links a[href="made.html"]');
+if (!consultOrder || !/\border\s*:\s*1\s*;/.test(consultOrder)) {
+  fail("mobile Custom Consultation must sit under Bring Your Vision To Life");
+}
+if (!readyOrder || !/\border\s*:\s*3\s*;/.test(readyOrder)) {
+  fail("mobile See What's Ready Now must stay above Made To Order");
+}
+if (!madeOrder || !/\border\s*:\s*4\s*;/.test(madeOrder)) {
+  fail("mobile Made To Order must sit below See What's Ready Now");
 }
 if (/object-fit\s*:\s*contain/i.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must not inherit the desktop contain exception");

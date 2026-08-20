@@ -897,12 +897,12 @@
 
   #workStack0 > img {
     position: absolute;
-    /* Same top hold as the 720x1560 beat-1 plate (content band starts at y=456). */
+    /* Header hold only — same 720x1560 beat-1 plate. Picture stays full size. */
     inset: auto 0 0 0;
     top: calc(100dvh * 456 / 1560);
     margin: 0;
     width: 100%;
-    height: calc(100% - (100dvh * 456 / 1560));
+    height: auto;
     max-width: none;
     max-height: none;
     object-fit: cover;
@@ -918,7 +918,11 @@
     --work-copy-dock-h: max(21.25rem, 43dvh);
   }
 
-  .movement-work .work-world,
+  .movement-work .work-world {
+    inset: 0;
+    height: auto;
+  }
+
   .movement-work .movement-veil,
   .movement-work .junction-light,
   .movement-work .movement-grain {
@@ -969,17 +973,27 @@
   }
 
   .work-design-paths {
-    order: 2;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
-    padding-top: 0;
+    display: contents;
   }
 
   .work-ready-path {
+    display: contents;
+  }
+
+  .work-links a[href="consultation.html"] {
     order: 1;
-    align-items: center;
-    gap: 0.35rem;
+  }
+
+  .work-links #workThoughtReady {
+    order: 2;
+  }
+
+  .work-links a[href="ready.html"] {
+    order: 3;
+  }
+
+  .work-links a[href="made.html"] {
+    order: 4;
   }
 
   .work-terminal-headline {
