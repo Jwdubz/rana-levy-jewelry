@@ -897,12 +897,10 @@
 
   #workStack0 > img {
     position: absolute;
-    /* Header hold only — same 720x1560 beat-1 plate. Picture stays full size. */
-    inset: auto 0 0 0;
-    top: calc(100dvh * 456 / 1560);
+    inset: 0;
     margin: 0;
     width: 100%;
-    height: auto;
+    height: 100%;
     max-width: none;
     max-height: none;
     object-fit: cover;
@@ -912,6 +910,19 @@
     mask-image: none;
     filter: none;
     border-radius: 0;
+  }
+
+  /* Same header hold as the 720x1560 beat-1 plate. The still stays full-bleed. */
+  #workWorld0::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(100dvh * 456 / 1560);
+    background: #020005;
+    z-index: 2;
+    pointer-events: none;
   }
 
   .movement-work {
@@ -942,7 +953,7 @@
     height: calc(var(--work-copy-dock-t, 0) * var(--work-copy-dock-h));
     min-height: 0;
     max-width: none;
-    background: #020005;
+    background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -969,7 +980,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.85rem;
-    filter: none;
+    filter: drop-shadow(0 1px 10px rgba(2, 0, 5, 0.55));
   }
 
   .work-design-paths {
@@ -1005,7 +1016,10 @@
     font-size: clamp(1.48rem, 6.1vw, 1.88rem);
     line-height: 1.02;
     letter-spacing: -0.012em;
-    text-shadow: none;
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.7),
+      0 2px 28px rgba(2, 0, 5, 0.7),
+      0 0 40px rgba(2, 0, 5, 0.45);
   }
 
   .work-thought-rest {
@@ -1017,7 +1031,10 @@
     font-size: clamp(1.48rem, 6.1vw, 1.88rem);
     line-height: 1.02;
     letter-spacing: -0.012em;
-    text-shadow: none;
+    text-shadow:
+      0 1px 2px rgba(2, 0, 5, 0.7),
+      0 2px 28px rgba(2, 0, 5, 0.7),
+      0 0 40px rgba(2, 0, 5, 0.45);
   }
 
   .choice-link {

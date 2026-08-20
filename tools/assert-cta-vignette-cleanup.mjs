@@ -384,11 +384,16 @@ if (
 if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
   fail("mobile #workStack0 > img must remain a cover carrier");
 }
-if (!/top\s*:\s*calc\(\s*100dvh\s*\*\s*456\s*\/\s*1560\s*\)/.test(mobileJewel || "")) {
-  fail("mobile #workStack0 > img must sit on the beat-1 plate so the header holds in black");
+if (!/inset\s*:\s*0/.test(mobileJewel || "") || !/height\s*:\s*100%/.test(mobileJewel || "")) {
+  fail("mobile #workStack0 > img must stay a full-bleed cover");
 }
-if (!/height\s*:\s*auto/.test(mobileJewel || "")) {
-  fail("mobile #workStack0 > img must keep the ring picture at full size");
+const mobileHeaderHold = extractBlock(stylesMobile, "#workWorld0::after");
+if (!/height\s*:\s*calc\(\s*100dvh\s*\*\s*456\s*\/\s*1560\s*\)/.test(mobileHeaderHold || "")) {
+  fail("mobile terminal must keep the beat-1 header hold in black");
+}
+const mobileWorkDock = extractBlock(stylesMobile, ".work-copy-dock");
+if (!mobileWorkDock || !/background\s*:\s*transparent/.test(mobileWorkDock)) {
+  fail("mobile terminal copy must sit on the picture, not a second black field");
 }
 const mobileDesignPaths = extractBlock(stylesMobile, ".work-design-paths");
 const mobileReadyPath = extractBlock(stylesMobile, ".work-ready-path");
