@@ -912,21 +912,8 @@
     border-radius: 0;
   }
 
-  /* Same header hold as the 720x1560 beat-1 plate. The still stays full-bleed. */
-  #workWorld0::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(100dvh * 456 / 1560);
-    background: #020005;
-    z-index: 2;
-    pointer-events: none;
-  }
-
   .movement-work {
-    --work-copy-dock-h: max(13.5rem, 28dvh);
+    --work-copy-dock-h: max(11.25rem, 23dvh);
   }
 
   .movement-work .work-world {
@@ -961,8 +948,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.18rem;
-    padding: 0.7rem 1.15rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
+    gap: 0.08rem;
+    padding: 0.42rem 1.15rem calc(0.48rem + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     pointer-events: none;
     overflow: hidden;
@@ -982,33 +969,24 @@
     grid-template-columns: none;
     flex-direction: column;
     align-items: center;
-    gap: 0.12rem;
+    gap: 0.72rem;
     filter: none;
   }
 
   .work-design-paths {
-    display: contents;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0 1.35rem;
+    padding-top: 0;
   }
 
   .work-ready-path {
-    display: contents;
-  }
-
-  .work-links a[href="consultation.html"] {
-    order: 1;
-  }
-
-  .work-links #workThoughtReady {
-    order: 2;
-    margin-top: 0.7rem;
-  }
-
-  .work-links a[href="ready.html"] {
-    order: 3;
-  }
-
-  .work-links a[href="made.html"] {
-    order: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.06rem;
   }
 
   .work-terminal-headline {
@@ -1018,7 +996,7 @@
     max-width: min(18.5rem, 86vw);
     text-align: center;
     font-size: clamp(1.12rem, 4.35vw, 1.28rem);
-    line-height: 1.08;
+    line-height: 1.02;
     letter-spacing: -0.014em;
     text-shadow: none;
   }
@@ -1030,20 +1008,21 @@
     max-width: min(18.5rem, 86vw);
     text-align: center;
     font-size: clamp(1.12rem, 4.35vw, 1.28rem);
-    line-height: 1.08;
+    line-height: 1.02;
     letter-spacing: -0.014em;
     text-shadow: none;
   }
 
   .choice-link {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 0;
+    min-width: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 0.98rem;
     letter-spacing: 0.018em;
-    padding: 0.2rem 0.15rem;
+    line-height: 1.2;
+    padding: 0.08rem 0.1rem;
   }
 
   /* No radial resting wash on mobile — readability via localized text shadow. */

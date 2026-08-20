@@ -549,8 +549,8 @@ if (!/work-world-0::before[\s\S]{0,180}(content\s*:\s*none|display\s*:\s*none)/i
 if (!/#workStack0\s*>\s*img[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobile)) {
   fail("mobile work jewelry carriers must use object-fit: cover");
 }
-if (!/#workWorld0::after[\s\S]{0,300}100dvh\s*\*\s*456\s*\/\s*1560/.test(stylesMobile)) {
-  fail("mobile work must keep the beat-1 header hold in black");
+if (/#workWorld0::after/.test(stylesMobile)) {
+  fail("mobile work must not paint a black header hold above the ring");
 }
 if (!/#workStack0\s*>\s*img[\s\S]{0,400}inset\s*:\s*0/.test(stylesMobile)) {
   fail("mobile work jewelry must stay full-bleed");

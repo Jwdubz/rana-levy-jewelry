@@ -387,9 +387,8 @@ if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
 if (!/inset\s*:\s*0/.test(mobileJewel || "") || !/height\s*:\s*100%/.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must stay a full-bleed cover");
 }
-const mobileHeaderHold = extractBlock(stylesMobile, "#workWorld0::after");
-if (!/height\s*:\s*calc\(\s*100dvh\s*\*\s*456\s*\/\s*1560\s*\)/.test(mobileHeaderHold || "")) {
-  fail("mobile terminal must keep the beat-1 header hold in black");
+if (/#workWorld0::after/.test(stylesMobile)) {
+  fail("mobile terminal must not paint a black header hold above the ring");
 }
 const mobileWorkDock = extractBlock(stylesMobile, ".work-copy-dock");
 if (!mobileWorkDock || !/background\s*:\s*#020005/.test(mobileWorkDock)) {
@@ -397,23 +396,14 @@ if (!mobileWorkDock || !/background\s*:\s*#020005/.test(mobileWorkDock)) {
 }
 const mobileDesignPaths = extractBlock(stylesMobile, ".work-design-paths");
 const mobileReadyPath = extractBlock(stylesMobile, ".work-ready-path");
-if (
-  !/display\s*:\s*contents/.test(mobileDesignPaths || "") ||
-  !/display\s*:\s*contents/.test(mobileReadyPath || "")
-) {
-  fail("mobile design/ready wrappers must yield to per-link order");
+if (!/display\s*:\s*flex/.test(mobileDesignPaths || "") || /display\s*:\s*contents/.test(mobileDesignPaths || "")) {
+  fail("mobile Made To Order and Custom Consultation must stay a paired row under the first headline");
 }
-const consultOrder = extractBlock(stylesMobile, '.work-links a[href="consultation.html"]');
-const readyOrder = extractBlock(stylesMobile, '.work-links a[href="ready.html"]');
-const madeOrder = extractBlock(stylesMobile, '.work-links a[href="made.html"]');
-if (!consultOrder || !/\border\s*:\s*1\s*;/.test(consultOrder)) {
-  fail("mobile Custom Consultation must sit under Bring Your Vision To Life");
+if (!/flex-direction\s*:\s*column/.test(mobileReadyPath || "") || /display\s*:\s*contents/.test(mobileReadyPath || "")) {
+  fail("mobile ready path must keep the second headline stacked over See What's Ready Now");
 }
-if (!readyOrder || !/\border\s*:\s*3\s*;/.test(readyOrder)) {
-  fail("mobile See What's Ready Now must stay above Made To Order");
-}
-if (!madeOrder || !/\border\s*:\s*4\s*;/.test(madeOrder)) {
-  fail("mobile Made To Order must sit below See What's Ready Now");
+if (/a\[href="consultation\.html"\][\s\S]{0,80}order\s*:/.test(stylesMobile) || /a\[href="made\.html"\][\s\S]{0,80}order\s*:/.test(stylesMobile)) {
+  fail("mobile terminal must keep desktop grouping instead of reordering dock links");
 }
 if (/object-fit\s*:\s*contain/i.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must not inherit the desktop contain exception");
