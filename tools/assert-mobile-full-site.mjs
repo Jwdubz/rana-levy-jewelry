@@ -550,10 +550,13 @@ if (!/#workStack0\s*>\s*img[\s\S]{0,400}object-fit\s*:\s*cover/i.test(stylesMobi
   fail("mobile work jewelry carriers must use object-fit: cover");
 }
 if (/#workWorld0::after/.test(stylesMobile)) {
-  fail("mobile work must not paint a black header hold above the ring");
+  fail("mobile work must not paint a black header hold over the ring");
+}
+if (!/--work-header-h:/.test(stylesMobile) || !/--work-still-s:/.test(stylesMobile)) {
+  fail("mobile work must reserve a black header band and shrink the still");
 }
 if (!/#workStack0\s*>\s*img[\s\S]{0,400}inset\s*:\s*0/.test(stylesMobile)) {
-  fail("mobile work jewelry must stay full-bleed");
+  fail("mobile work jewelry must fill its square plate");
 }
 if (/#workStack0\s*>\s*img[\s\S]{0,500}mask-image\s*:\s*radial-gradient/i.test(stylesMobile)) {
   fail("mobile work jewelry must not use radial-gradient media masks");

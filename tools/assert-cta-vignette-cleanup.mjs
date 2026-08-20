@@ -375,11 +375,11 @@ if (/radial-gradient|filter\s*:\s*[^;]*blur|mask-image\s*:\s*[^;]*(?!none)/i.tes
 }
 if (
   !mobileJewelMedia ||
-  !/inset\s*:\s*0/.test(mobileJewelMedia) ||
-  !/width\s*:\s*100%/.test(mobileJewelMedia) ||
-  !/height\s*:\s*100%/.test(mobileJewelMedia)
+  !/top\s*:\s*var\(\s*--work-header-h\s*\)/.test(mobileJewelMedia) ||
+  !/width\s*:\s*var\(\s*--work-still-s\s*\)/.test(mobileJewelMedia) ||
+  !/height\s*:\s*var\(\s*--work-still-s\s*\)/.test(mobileJewelMedia)
 ) {
-  fail("mobile .work-world-0 .layer-media must remain a full media well above the copy dock");
+  fail("mobile .work-world-0 .layer-media must be the shrunk square plate under the header band");
 }
 if (!mobileJewel || !/object-fit\s*:\s*cover/i.test(mobileJewel)) {
   fail("mobile #workStack0 > img must remain a cover carrier");
@@ -388,7 +388,10 @@ if (!/inset\s*:\s*0/.test(mobileJewel || "") || !/height\s*:\s*100%/.test(mobile
   fail("mobile #workStack0 > img must stay a full-bleed cover");
 }
 if (/#workWorld0::after/.test(stylesMobile)) {
-  fail("mobile terminal must not paint a black header hold above the ring");
+  fail("mobile terminal must not paint a black header hold over the ring");
+}
+if (!/--work-header-h:/.test(stylesMobile) || !/--work-still-s:/.test(stylesMobile)) {
+  fail("mobile terminal must reserve a black header band and shrink the still into the remaining square");
 }
 const mobileWorkDock = extractBlock(stylesMobile, ".work-copy-dock");
 if (!mobileWorkDock || !/background\s*:\s*#020005/.test(mobileWorkDock)) {
