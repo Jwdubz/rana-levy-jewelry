@@ -7,14 +7,16 @@
  * - workBridge / studio-poster Work bridge is absent on every viewport
  * - opening video retirement removes is-live and pauses
  * - reverse re-entry restores is-live only after playback resumes
- * - mobile Opening: exactly one of studioVideo|ringVideo unpaused+is-live
- * - mobile arm/init does not immediately play both opening decoders
+ * - Opening: only studioVideo may be unpaused+is-live; live gem is not a decoder
+ * - arm/init pauses studio under the gem cover and plays it at the headline rest
+ * - desktop must not hydrate or play studio under gem cover
+ * - reverse cover authority pauses and resets the studio film to time zero
  * - inactive opening decoder paused + is-live removed; stale play cannot restore it
- * - reverse Studio↔Ring transfer uses the same exclusive authored-timeline authority
+ * - reverse cover↔studio transfer uses the same exclusive authored-timeline authority
  * - Hand retirement pauses handVideo and drops is-live
  * - no representative boundary can arm more than one unpaused is-live path
  * - direct mobile Opening → Hand → first Work order (no bridge / blank / filler)
- * - desktop bridge paths and desktop two-world opening handoff remain present
+ * - desktop bridge paths remain present; opening has one studio film, not a ring decoder
  * - exact Hand montage media/order/duration unchanged
  *
  * Usage: node tools/assert-mobile-media-authority.mjs
@@ -210,101 +212,104 @@ if (
   );
 }
 
-// ——— Mobile exclusive Studio|Ring opening decoder authority ———
-// Prior counterexample: both studioVideo and ringVideo stayed unpaused+is-live for
-// the entire mobile Opening (including the angled internal handoff). These checks
-// bind the exclusive lifecycle path rather than a special-case string.
+// ——— Exclusive gem-cover | studio opening decoder authority ———
+// Prior counterexample: an opening ring decoder shared authority with studio.
+// The live gem is a canvas world. Only studioVideo may be the opening decoder,
+// paused under gem-cover and owned at the headline rest on desktop and mobile.
 const armFn = index.match(/function\s+armVideos\s*\(\s*\)\s*\{[\s\S]*?\n      \}/);
 if (!armFn) fail("index.html must define armVideos");
 const armBody = armFn[0];
 
-// Authored timeline selects exactly one of studio|ring via MOTION.handoffStart.
-if (!/function\s+mobileOpeningDecoderAuthority\s*\(/.test(index)) {
-  fail("mobileOpeningDecoderAuthority must select exclusive studio|ring from authored timeline");
+if (/function\s+mobileOpeningDecoderAuthority\s*\(/.test(index)) {
+  fail("must not retain a mobile-only opening decoder authority after the gemOutEnd boundary is universal");
 }
-const mobileAuthFn = index.match(
-  /function\s+mobileOpeningDecoderAuthority\s*\(\s*\)\s*\{[\s\S]*?\n      \}/
+if (!/function\s+openingDecoderAuthority\s*\(/.test(index)) {
+  fail("openingDecoderAuthority must select exclusive cover|studio from authored timeline");
+}
+const openingAuthFn = index.match(
+  /function\s+openingDecoderAuthority\s*\(\s*\)\s*\{[\s\S]*?\n      \}/
 );
-if (!mobileAuthFn) fail("mobileOpeningDecoderAuthority body must be extractable");
-if (!/openingTimeline\s*\(\s*state\.visualProgress\s*\)/.test(mobileAuthFn[0])) {
-  fail("mobile opening decoder authority must use openingTimeline(state.visualProgress)");
+if (!openingAuthFn) fail("openingDecoderAuthority body must be extractable");
+if (!/openingTimeline\s*\(\s*state\.visualProgress\s*\)/.test(openingAuthFn[0])) {
+  fail("opening decoder authority must use openingTimeline(state.visualProgress)");
 }
-if (!/MOTION\.handoffStart/.test(mobileAuthFn[0])) {
-  fail("mobile opening decoder authority must use MOTION.handoffStart as the transfer cue");
+if (!/MOTION\.gemOutEnd/.test(openingAuthFn[0])) {
+  fail("opening decoder authority must use MOTION.gemOutEnd as the gem-cover vs headline transfer");
+}
+if (/handoffStart|ringVideo|["']ring["']/.test(openingAuthFn[0])) {
+  fail("opening decoder authority must not use the retired studio|ring handoff");
 }
 if (
-  !/timeline\s*>=\s*MOTION\.handoffStart\s*\?\s*["']ring["']\s*:\s*["']studio["']/.test(
-    mobileAuthFn[0]
+  !/timeline\s*>=\s*MOTION\.gemOutEnd\s*\?\s*["']studio["']\s*:\s*["']cover["']/.test(
+    openingAuthFn[0]
   )
 ) {
   fail(
-    "mobileOpeningDecoderAuthority must return exactly one of 'ring'|'studio' at handoffStart"
+    "openingDecoderAuthority must return 'cover' under the gem and 'studio' at the headline rest"
   );
 }
 
-// arm/init must not immediately play both opening decoders on mobile.
-if (!/isMobileOpeningViewport\s*\(\s*\)/.test(armBody)) {
-  fail("armVideos must branch on isMobileOpeningViewport for exclusive mobile arm");
+if (/isMobileOpeningViewport\s*\(\s*\)/.test(armBody)) {
+  fail("armVideos must not keep a desktop-eager / mobile-only decoder split");
 }
-// Mobile exclusive arm: pause inactive, then tryPlay only the authoritative decoder.
-if (
-  !/want\s*===\s*["']ring["'][\s\S]{0,240}pauseOpeningDecoder\s*\(\s*studioVideo\s*\)[\s\S]{0,100}tryPlay\s*\(\s*ringVideo/.test(
-    armBody
-  )
-) {
-  fail("mobile ring-authority arm must pauseOpeningDecoder(studioVideo) then tryPlay(ringVideo)");
+if (/ringVideo/.test(armBody) || /tryPlay\s*\(\s*ringVideo/.test(armBody)) {
+  fail("armVideos must not play or name a retired opening ring decoder");
 }
-if (
-  !/pauseOpeningDecoder\s*\(\s*ringVideo\s*\)[\s\S]{0,100}tryPlay\s*\(\s*studioVideo\s*\)/.test(
-    armBody
-  )
-) {
-  fail("mobile studio-authority arm must pauseOpeningDecoder(ringVideo) then tryPlay(studioVideo)");
+if (!/openingDecoderAuthority\s*\(\s*\)/.test(armBody)) {
+  fail("armVideos must consult openingDecoderAuthority on desktop and mobile");
 }
-// Dual tryPlay is legal only on the desktop both-authority path (not bare mobile init).
-if (
-  !/openingDecoderAuthority\s*=\s*["']both["']\s*;\s*tryPlay\s*\(\s*studioVideo\s*\)\s*;\s*tryPlay\s*\(\s*ringVideo/.test(
-    armBody
-  )
-) {
-  fail(
-    "desktop arm may tryPlay both only under openingDecoderAuthority = 'both' (mobile must not dual-arm)"
-  );
+const armAuthAt = armBody.search(/openingDecoderAuthority\s*\(\s*\)/);
+const armHydrateAt = armBody.search(/ensureVideoSource\s*\(\s*studioVideo/);
+const armPlayAt = armBody.search(/tryPlay\(\s*studioVideo\s*\)/);
+if (armAuthAt < 0 || armHydrateAt < 0 || armHydrateAt < armAuthAt) {
+  fail("desktop must not hydrate studioVideo under gem cover before openingDecoderAuthority");
 }
-// Studio still arms at cluster start (no seek); ring may arm at 0 only when authoritative.
+if (armPlayAt < 0 || armPlayAt < armAuthAt) {
+  fail("desktop must not play studioVideo under gem cover before openingDecoderAuthority");
+}
+if (/openingDecoderAuthority\s*=\s*["']studio["'][\s\S]{0,80}tryPlay\(\s*studioVideo/.test(armBody)) {
+  fail("desktop must not assign studio authority and play without consulting gemOutEnd");
+}
+if (!/pauseOpeningDecoder\s*\(\s*studioVideo\s*\)/.test(armBody)) {
+  fail("gem-cover arm must pauseOpeningDecoder(studioVideo)");
+}
+if (!/resetOpeningDecoderToStart\s*\(\s*studioVideo\s*\)/.test(armBody)) {
+  fail("gem-cover arm must reset studio to the montage beginning");
+}
 if (!/tryPlay\(\s*studioVideo\s*\)/.test(armBody)) {
-  fail("studioVideo must still arm with tryPlay(studioVideo) at the cluster start");
+  fail("studio authority must tryPlay(studioVideo) without a seek");
 }
 if (/tryPlay\(\s*studioVideo\s*,\s*[^)]+\)/.test(armBody)) {
   fail("studioVideo must not receive an initial tryPlay seek");
 }
+if (/openingDecoderAuthority\s*=\s*["']both["']/.test(armBody) || /tryPlay\s*\(\s*ringVideo/.test(armBody)) {
+  fail("armVideos must not keep retired dual studio|ring 'both' authority");
+}
 
-// manageOpening mobile branch: exclusive active/inactive pair from authored want.
-if (!/mobileOpeningDecoderAuthority\s*\(\s*\)/.test(manageBody)) {
-  fail("manageOpeningVideoActivity must consult mobileOpeningDecoderAuthority on mobile");
+if (!/openingDecoderAuthority\s*\(\s*\)/.test(manageBody)) {
+  fail("manageOpeningVideoActivity must consult openingDecoderAuthority on desktop and mobile");
+}
+if (/else\s*\{\s*state\.openingDecoderAuthority\s*=\s*["']studio["']/.test(manageBody)) {
+  fail("desktop manageOpening must not force studio authority under gem cover");
+}
+if (/ringVideo/.test(manageBody)) {
+  fail("manageOpening must not refer to a retired opening ringVideo");
+}
+if (!/pauseOpeningDecoder\s*\(\s*studioVideo\s*\)/.test(manageBody)) {
+  fail("gem-cover must pauseOpeningDecoder(studioVideo)");
 }
 if (
-  !/activeVideo\s*=\s*want\s*===\s*["']ring["']\s*\?\s*ringVideo\s*:\s*studioVideo/.test(
+  !/want\s*!==\s*["']studio["'][\s\S]*pauseOpeningDecoder\s*\(\s*studioVideo\s*\)[\s\S]*resetOpeningDecoderToStart\s*\(\s*studioVideo\s*\)/.test(
     manageBody
   )
 ) {
-  fail("mobile manageOpening must select exactly one activeVideo (ring|studio)");
+  fail("reverse cover authority must pause and reset the studio film to time zero");
 }
-if (
-  !/inactiveVideo\s*=\s*want\s*===\s*["']ring["']\s*\?\s*studioVideo\s*:\s*ringVideo/.test(
-    manageBody
-  )
-) {
-  fail("mobile manageOpening must name the complementary inactiveVideo");
+const manageCoverAt = manageBody.search(/want\s*!==\s*["']studio["']/);
+const manageHydrateAt = manageBody.search(/ensureVideoSource/);
+if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt) {
+  fail("manageOpening must not hydrate studioVideo under gem cover");
 }
-// Inactive paused + is-live removed before (or while) active resumes.
-if (!/pauseOpeningDecoder\s*\(\s*inactiveVideo\s*\)/.test(manageBody)) {
-  fail("mobile manageOpening must pauseOpeningDecoder(inactiveVideo) for exclusive authority");
-}
-if (!/playOpeningDecoder\s*\(\s*activeVideo\s*,\s*openingDecoderToken\s*\)/.test(manageBody)) {
-  fail("mobile manageOpening must playOpeningDecoder(activeVideo, openingDecoderToken)");
-}
-// Token invalidation on authority transfer and on section leave (stale play guard).
 if (!/let\s+openingDecoderToken\s*=\s*0/.test(index)) {
   fail("openingDecoderToken must exist for causal stale-play rejection");
 }
@@ -327,31 +332,31 @@ if (
     "playOpeningDecoder must gate is-live add on token === openingDecoderToken after play resolves"
   );
 }
-// Reverse transfer: authority identity change bumps token and pauses inactive first.
 if (
-  !/openingDecoderAuthority\s*!==\s*want[\s\S]{0,200}openingDecoderToken\s*\+=\s*1[\s\S]{0,120}pauseOpeningDecoder\s*\(\s*inactiveVideo\s*\)/m.test(
+  !/openingDecoderAuthority\s*!==\s*want[\s\S]{0,200}openingDecoderToken\s*\+=\s*1[\s\S]{0,160}pauseOpeningDecoder\s*\(\s*studioVideo\s*\)/m.test(
     manageBody
   )
 ) {
   fail(
-    "mobile reverse/forward transfer must bump token and pause inactive before resuming active"
+    "reverse/forward cover↔studio transfer must bump token and pause studio before the other authority resumes"
   );
 }
 
-// Desktop two-world handoff remains: non-mobile path still plays both opening videos.
-if (!/openingDecoderAuthority\s*=\s*["']both["']/.test(manageBody)) {
-  fail("desktop manageOpening path must retain dual openingDecoderAuthority = 'both'");
+if (/openingDecoderAuthority\s*=\s*["']both["']/.test(manageBody)) {
+  fail("desktop manageOpening must not keep retired dual studio|ring 'both' authority");
 }
-if (!/openingDecoderAuthority\s*=\s*["']both["']/.test(armBody)) {
-  fail("desktop armVideos path must retain openingDecoderAuthority = 'both'");
+if (!/want\s*!==\s*["']studio["']/.test(manageBody)) {
+  fail("manageOpening must own the one studio opening film only under studio authority");
 }
-// Desktop branch still iterates openingVideos for dual play (not mobile-only exclusive).
-if (
-  !/else\s*\{[\s\S]*?openingDecoderAuthority\s*=\s*["']both["'][\s\S]*?openingVideos\.forEach/m.test(
-    manageBody
-  )
-) {
-  fail("desktop manageOpening must still forEach openingVideos for two-world handoff");
+const resetFn = index.match(
+  /function\s+resetOpeningDecoderToStart\s*\(\s*video\s*\)\s*\{[\s\S]*?\n      \}/
+);
+if (!resetFn) fail("resetOpeningDecoderToStart must be defined");
+if (!/readyState\s*>=\s*1/.test(resetFn[0]) || !/currentTime\s*=\s*0/.test(resetFn[0])) {
+  fail("cover reset must seek to time zero only when metadata permits");
+}
+if (!/openingVideos\.forEach/.test(manageBody)) {
+  fail("manageOpening must still iterate the opening studio decoder set");
 }
 
 // Source reuse: ensureVideoSource hydrates; authority changes must not clear src.
@@ -446,5 +451,5 @@ if (!/function\s+retireBridgeLayer\s*\(/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile media authority (exclusive mobile opening decoder; no workBridge; no mobile hand-bridge paint/play; honest is-live retirement; desktop two-world opening handoff retained; Hand montage unchanged)"
+  "PASS: mobile media authority (exclusive cover|studio decoder after gemOutEnd on desktop and mobile; reverse cover resets studio; no opening ring decoder; no workBridge; no mobile hand-bridge paint/play; honest is-live retirement; Hand montage unchanged)"
 );

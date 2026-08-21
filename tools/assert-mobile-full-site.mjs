@@ -897,9 +897,15 @@ assertIncludes(
 );
 // Opening must not retain superseded montage rotations as film authority.
 const openingWorldSlice = index.slice(
-  index.indexOf('id="worldStudio"'),
-  index.indexOf('id="worldRing"')
+  index.indexOf('id="opening"'),
+  index.indexOf('id="hand"')
 );
+if (openingWorldSlice.indexOf('id="worldStudio"') < 0) {
+  fail("could not isolate the opening studio world");
+}
+if (/id="ringVideo"/.test(openingWorldSlice)) {
+  fail("opening must not keep the retired ringVideo decoder");
+}
 if (/studio-banner(?:-portrait)?\.mp4/.test(openingWorldSlice)) {
   fail("opening world must not use pre-rotation studio-banner as film authority");
 }

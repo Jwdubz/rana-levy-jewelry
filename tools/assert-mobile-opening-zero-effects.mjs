@@ -248,7 +248,7 @@ if (
   );
 }
 const studioStackBlock = index.match(
-  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="world world-ring"/
+  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="world world-gem"/
 );
 if (!studioStackBlock) fail("could not extract worldStudio media stack");
 if (
@@ -334,8 +334,11 @@ if (!/\breturn\s*;/.test(quietHead[0])) {
 if (/ensureVideoSource\s*\(/.test(quietHead[0])) {
   fail("quiet-mode armVideos path must not call ensureVideoSource");
 }
-if (!/ensureVideoSource\s*\(\s*studioVideo/.test(armBody) || !/ensureVideoSource\s*\(\s*ringVideo/.test(armBody)) {
-  fail("normal armVideos path must hydrate studioVideo and ringVideo once each");
+if (!/ensureVideoSource\s*\(\s*studioVideo/.test(armBody)) {
+  fail("normal armVideos path must hydrate studioVideo");
+}
+if (/ensureVideoSource\s*\(\s*ringVideo/.test(armBody) || /ringVideo/.test(armBody)) {
+  fail("armVideos must not hydrate a retired opening ring decoder");
 }
 // ensureVideoSource itself only assigns from data-src; quiet path never reaches it for opening.
 if (!/video\.setAttribute\(\s*["']src["']/.test(ensureFn[0])) {
@@ -412,16 +415,22 @@ if (veilMobile && !/display:\s*none/i.test(veilMobile)) {
   fail("mobile .veil must be disabled (display:none) — full-frame wash is a substitute surround");
 }
 
-// --- One live decoder per opening source ---
+// --- One live opening decoder; the gem is a canvas world, not a second film ---
 const openingSection = index.slice(
   index.indexOf('id="opening"'),
   index.indexOf('id="hand"')
 );
 const openingVideos = openingSection.match(/<video\b/g) || [];
-if (openingVideos.length !== 2) {
+if (openingVideos.length !== 1) {
   fail(
-    `opening must keep exactly one live decoder per source (studio+ring); found ${openingVideos.length} <video>`
+    `opening must keep exactly one live decoder (studio first-beat); found ${openingVideos.length} <video>`
   );
+}
+if (!/id="worldGem"/.test(openingSection) || !/id="gemCanvas"/.test(openingSection)) {
+  fail("opening must host the live gem as a canvas world, not a second decoder");
+}
+if (/id="ringVideo"/.test(openingSection)) {
+  fail("opening must not keep the retired ringVideo decoder");
 }
 if ((openingSection.match(/media-atmosphere|atmosphere-layer/g) || []).length) {
   fail("opening must not introduce atmosphere DOM layers");
@@ -505,12 +514,11 @@ if (!mediaTransformsFn) {
   fail("could not locate applyMediaTransforms in index.html");
 }
 const fnBody = mediaTransformsFn[0];
-if (
-  !/if\s*\(\s*mobile\s*\)\s*\{[\s\S]*?studioScale\s*=\s*1\s*;[\s\S]*?ringScale\s*=\s*1\s*;/m.test(
-    fnBody
-  )
-) {
-  fail("mobile applyMediaTransforms must set studioScale and ringScale to exactly 1");
+if (!/studioScale\s*=\s*1/.test(fnBody)) {
+  fail("applyMediaTransforms must set studioScale to exactly 1");
+}
+if (/ringScale/.test(fnBody)) {
+  fail("applyMediaTransforms must not keep retired opening ringScale");
 }
 if (/mobile\s*\?\s*1\.0[3-9]/i.test(fnBody) || /mobile\s*\?\s*1\.[1-9]/i.test(fnBody)) {
   fail("mobile applyMediaTransforms must not keep crop-producing start scales");
@@ -608,8 +616,8 @@ if (!/data-desktop-src="assets\/ring-alexandrite\.mp4"/.test(index)) {
 }
 // Reject superseded opening films as any opening authority surface.
 const openingWorldSliceZero = index.slice(
-  index.indexOf('id="worldStudio"'),
-  index.indexOf('id="worldRing"')
+  index.indexOf('id="opening"'),
+  index.indexOf('id="hand"')
 );
 if (
   /studio-banner(?:-portrait)?\.mp4/.test(openingWorldSliceZero) ||
@@ -661,5 +669,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; live gem canvas world; no opening ringVideo; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
 );

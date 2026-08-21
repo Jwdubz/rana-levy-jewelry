@@ -406,7 +406,7 @@ if (fs.existsSync(path.join(root, REJECTED_VIDEO)) || fs.existsSync(path.join(ro
   );
 }
 
-const openingWorld = index.slice(index.indexOf('id="worldStudio"'), index.indexOf('id="worldRing"'));
+const openingWorld = index.slice(index.indexOf('id="worldStudio"'), index.indexOf('id="worldGem"'));
 if (!openingWorld) fail("could not isolate opening studio world");
 
 const studioVideoBlock = index.match(/id="studioVideo"[\s\S]*?<\/video>/);
@@ -438,7 +438,7 @@ if (!/poster="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(studioM
 }
 
 const studioStackBlock = index.match(
-  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="world world-ring"/
+  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="world world-gem"/
 );
 if (!studioStackBlock) fail("could not extract worldStudio media stack");
 if (!studioStackBlock[0].includes(`data-mobile-src="${NEW_POSTER}"`)) {
@@ -451,12 +451,15 @@ if (!/src="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(studioStac
   fail("studio fallback default src must remain the desktop still");
 }
 
-const ringBlock = index.match(/id="ringVideo"[\s\S]*?<\/video>/);
+const ringBlock = index.match(/id="handBridgeVideo"[\s\S]*?<\/video>/);
 if (!ringBlock || !ringBlock[0].includes(`data-mobile-src="${RING_MOBILE}"`)) {
-  fail("ringVideo must remain the alexandrite portrait on mobile");
+  fail("handBridgeVideo must remain the alexandrite portrait on mobile");
 }
-if (!/data-desktop-src="assets\/ring-alexandrite\.mp4"/.test(index)) {
-  fail("desktop ringVideo source must remain ring-alexandrite.mp4");
+if (!/data-desktop-src="assets\/ring-alexandrite\.mp4"/.test(ringBlock[0])) {
+  fail("desktop handBridgeVideo source must remain ring-alexandrite.mp4");
+}
+if (/id="ringVideo"/.test(openingWorld)) {
+  fail("opening must not keep the retired ringVideo decoder");
 }
 
 const forbiddenOpening = [
@@ -756,15 +759,50 @@ try {
   }
   console.log(`PASS: poster≈film0 mad=${posterMad.toFixed(3)}`);
 
-  // Alternate opening clips must not be the source of sampled product frames.
+  // Alternate clips must not be the source of sampled product frames.
+  // Compare detected content bands, not the shared 720x1560 letterbox plate
+  // (identical black bars pull full-frame MAD under the threshold).
   const altFrame = NEW_PRODUCT1_START;
-  const newAltRaw = path.join(tmp, `detect_${altFrame}.raw`);
+  const productNative = path.join(tmp, `native_${altFrame}.raw`);
+  const productBand = detectContentBand(fs.readFileSync(productNative), 4, outH);
+  const productCropY = productBand.y0 % 2 === 0 ? productBand.y0 : productBand.y0 + 1;
+  const productCropH = even(Math.min(outH - productCropY, productBand.h));
+  const newAltRaw = path.join(tmp, `altcontent_${altFrame}.raw`);
+  extractRgb(
+    path.join(root, NEW_VIDEO),
+    altFrame,
+    newAltRaw,
+    DETECT_W,
+    DETECT_H,
+    `crop=${outW}:${productCropH}:0:${productCropY}`
+  );
   const newAlt = fs.readFileSync(newAltRaw);
   for (const rel of ALT_CLIPS) {
     const altPath = path.join(root, rel);
     if (!fs.existsSync(altPath)) continue;
+    const altProbe = probeJson(altPath);
+    const altStream = (Array.isArray(altProbe.streams) ? altProbe.streams : []).find(
+      (s) => s.codec_type === "video"
+    );
+    const altH = Number(altStream && altStream.height);
+    const altW = Number(altStream && altStream.width);
+    if (!Number.isFinite(altH) || altH < 2 || !Number.isFinite(altW) || altW < 2) {
+      fail(`could not probe alternate clip geometry for ${rel}`);
+    }
+    const altNative = path.join(tmp, `altnative_${path.basename(rel)}.raw`);
+    extractRgb(altPath, 0, altNative, 4, altH);
+    const altBand = detectContentBand(fs.readFileSync(altNative), 4, altH);
+    const altCropY = altBand.y0 % 2 === 0 ? altBand.y0 : altBand.y0 + 1;
+    const altCropH = even(Math.min(altH - altCropY, altBand.h));
     const altRaw = path.join(tmp, `alt_${path.basename(rel)}.raw`);
-    extractRgb(altPath, 0, altRaw, DETECT_W, DETECT_H);
+    extractRgb(
+      altPath,
+      0,
+      altRaw,
+      DETECT_W,
+      DETECT_H,
+      `crop=${altW}:${altCropH}:0:${altCropY}`
+    );
     const mad = meanAbsDiffBuf(newAlt, fs.readFileSync(altRaw));
     if (mad < 18) {
       fail(

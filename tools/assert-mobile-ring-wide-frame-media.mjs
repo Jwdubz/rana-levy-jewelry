@@ -261,25 +261,26 @@ console.log(
 );
 
 const index = read("index.html");
-const ringBlock = index.match(/id="ringVideo"[\s\S]*?<\/video>/);
-if (!ringBlock) fail("ringVideo element must be present");
+const opening = index.slice(index.indexOf('id="opening"'), index.indexOf('id="hand"'));
+if (/id="ringVideo"/.test(opening)) {
+  fail("opening must not keep the retired ringVideo decoder");
+}
+const ringBlock = index.match(/id="handBridgeVideo"[\s\S]*?<\/video>/);
+if (!ringBlock) fail("handBridgeVideo element must be present as the ring-film consumer");
 const markup = ringBlock[0];
 if (!markup.includes(`data-mobile-src="${MOBILE_VIDEO}"`)) {
-  fail(`ringVideo data-mobile-src must remain ${MOBILE_VIDEO}`);
+  fail(`handBridgeVideo data-mobile-src must remain ${MOBILE_VIDEO}`);
 }
 if (!markup.includes(`data-mobile-poster="${MOBILE_POSTER}"`)) {
-  fail(`ringVideo data-mobile-poster must remain ${MOBILE_POSTER}`);
+  fail(`handBridgeVideo data-mobile-poster must remain ${MOBILE_POSTER}`);
 }
 if (!markup.includes(`data-desktop-src="${DESKTOP_VIDEO}"`)) {
-  fail(`ringVideo desktop film must remain ${DESKTOP_VIDEO}`);
+  fail(`handBridgeVideo desktop film must remain ${DESKTOP_VIDEO}`);
 }
 if (!/\bloop\b/.test(markup)) {
-  fail("ringVideo must keep loop behavior");
+  fail("handBridgeVideo must keep loop behavior");
 }
-if (!/id="handBridgeVideo"[\s\S]*?data-mobile-src="assets\/ring-alexandrite-portrait\.mp4"/.test(index)) {
-  fail("handBridgeVideo must keep the mobile portrait ring filename (desktop path retained)");
-}
-console.log("PASS: ring mobile filename/wiring and loop attribute remain intact");
+console.log("PASS: handBridgeVideo ring mobile filename/wiring and loop attribute remain intact");
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rana-ring-wide-"));
 try {
@@ -345,5 +346,5 @@ try {
 }
 
 console.log(
-  "PASS: mobile ring wide-frame media (419-frame 720x1560 letterbox on the beat-1 720x648 plate; poster matches frame 0; desktop bytes exact; wiring/loop intact; source proof only — not visual consumer verification)"
+  "PASS: mobile ring wide-frame media (419-frame 720x1560 letterbox on the beat-1 720x648 plate; poster matches frame 0; desktop bytes exact; handBridgeVideo wiring/loop intact; no opening ringVideo; source proof only — not visual consumer verification)"
 );

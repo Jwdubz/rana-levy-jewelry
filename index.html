@@ -85,10 +85,28 @@
       will-change: transform, mask-image, -webkit-mask-image;
     }
 
+    .world-gem {
+      z-index: 3;
+      background: #000;
+      pointer-events: none;
+    }
+
+    .world-gem canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #gemFallback {
+      visibility: hidden;
+    }
+
     .caustic-light {
       position: absolute;
       inset: 0;
-      z-index: 3;
+      z-index: 4;
       pointer-events: none;
       mix-blend-mode: screen;
       filter: blur(10px);
@@ -377,7 +395,8 @@
       /* Beat-1 plate stays the carrier through ring. Type sits in the
          derivative's black; the dock must not resize the video. */
       .world-studio,
-      .world-ring {
+      .world-ring,
+      .world-gem {
         inset: 0;
         height: 100%;
       }
@@ -523,41 +542,21 @@
           </div>
         </div>
 
-        <div class="world world-ring" id="worldRing">
-          <div class="media-stack" id="ringStack">
-            <img
-              src="assets/ring-poster.jpg"
-              data-desktop-src="assets/ring-poster.jpg"
-              data-mobile-src="assets/ring-poster-portrait.jpg"
-              alt=""
-              width="1000"
-              height="1000"
-              decoding="async"
-            >
-            <video
-              id="ringVideo"
-              width="720"
-              height="720"
-              data-src="assets/ring-alexandrite.mp4"
-              data-desktop-src="assets/ring-alexandrite.mp4"
-              data-mobile-src="assets/ring-alexandrite-portrait.mp4"
-              poster="assets/ring-poster.jpg"
-              data-desktop-poster="assets/ring-poster.jpg"
-              data-mobile-poster="assets/ring-poster-portrait.jpg"
-              muted
-              loop
-              playsinline
-              preload="none"
-              disablepictureinpicture
-              disableremoteplayback
-            ></video>
-          </div>
+        <div class="world world-gem" id="worldGem">
+          <canvas
+            id="gemFallback"
+            aria-hidden="true"
+          ></canvas>
+          <canvas
+            id="gemCanvas"
+            aria-label="A brilliant-cut gemstone turning slowly against black, rendered live, its facets carrying the spectrum."
+          ></canvas>
         </div>
 
         <div class="caustic-light" id="causticLight" aria-hidden="true"></div>
         <div class="veil" aria-hidden="true"></div>
         <div class="light-wash" id="lightWash" aria-hidden="true"></div>
-        <div class="grain" aria-hidden="true"></div>
+        <div class="grain" id="sceneGrain" aria-hidden="true"></div>
 
         <div class="mark" id="mark" aria-hidden="true"></div>
 
@@ -691,14 +690,16 @@
         pointerTravelVw: 1.8,
         markStart: 0.06,
         markEnd: 0.34,
-        setupOutStart: 0.14,
-        setupOutEnd: 0.34,
-        headlineInStart: 0.20,
-        headlineInEnd: 0.46,
+        setupOutStart: 0.10,
+        setupOutEnd: 0.18,
+        headlineInStart: 0.28,
+        headlineInEnd: 0.48,
         headlineOutStart: 0.68,
         headlineOutEnd: 0.84,
         handoffStart: 0.31,
         handoffEnd: 0.62,
+        gemOutStart: 0.18,
+        gemOutEnd: 0.28,
         finalTextStart: 0.68,
         finalTextEnd: 0.86
       };
@@ -867,13 +868,14 @@
       const openingCopyDock = document.getElementById("openingCopyDock");
       const heads = document.getElementById("heads");
       const sceneEl = document.getElementById("scene");
-      const worldRing = document.getElementById("worldRing");
+      const worldStudio = document.getElementById("worldStudio");
+      const worldGem = document.getElementById("worldGem");
+      const gemCanvas = document.getElementById("gemCanvas");
+      const gemFallback = document.getElementById("gemFallback");
       const studioStack = document.getElementById("studioStack");
-      const ringStack = document.getElementById("ringStack");
       const studioVideo = document.getElementById("studioVideo");
-      const ringVideo = document.getElementById("ringVideo");
-      const causticLight = document.getElementById("causticLight");
       const lightWash = document.getElementById("lightWash");
+      const sceneGrain = document.getElementById("sceneGrain");
       const siteHeader = document.getElementById("siteHeader");
       const sitePrimaryNav = document.getElementById("sitePrimaryNav");
       const siteChromeCompact = document.getElementById("siteChromeCompact");
@@ -884,10 +886,9 @@
       const studioMedia = studioStack
         ? studioStack.querySelectorAll("img, video")
         : [];
-      const ringMedia = ringStack ? ringStack.querySelectorAll("img, video") : [];
-      // One live decoder per source.
-      const openingVideos = [studioVideo, ringVideo].filter(Boolean);
-      // Mobile exclusive authority: stale play() resolutions must not resurrect is-live.
+      // One live decoder: the original first-beat studio montage.
+      const openingVideos = [studioVideo].filter(Boolean);
+      // Cover|studio authority: stale play() resolutions must not resurrect is-live.
       let openingDecoderToken = 0;
       const indexPanelLinks = siteIndexPanel
         ? Array.prototype.slice.call(siteIndexPanel.querySelectorAll("a, button"))
@@ -908,7 +909,7 @@
         indexOpen: false,
         indexLastFocus: null,
         headerYield: 0,
-        // Mobile: "studio" | "ring"; desktop dual handoff: "both"; retired: null.
+        // Opening film: "cover" under the live gem; "studio" at the headline rest; retired: null.
         openingDecoderAuthority: null
       };
 
@@ -935,6 +936,470 @@
       // scroll distances; the remaining terminalHoldSvh holds every cue at 1.
       function openingTimeline(physicalProgress) {
         return clamp(physicalProgress / OPENING_SPAN.choreographyEnd, 0, 1);
+      }
+
+      // Turning Colors live gem — ported from the historical #gl / VERT / SCENE /
+      // BLUR / COMP renderer. Halo, compositor darkening, forced spin, and the
+      // locked timed intro are omitted. The loop is driven by the page clock
+      // and stops once this opening rest is no longer covering.
+      const GEM_VERT = `#version 300 es
+in vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+
+      const GEM_SCENE = `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 uRes; uniform float uTime; uniform vec2 uOrbit;
+uniform float uShift, uSpin, uEnc;
+#define PI 3.14159265359
+#define F 16
+float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+vec3 pal(float t){ return .5+.5*cos(6.28318*(t+vec3(0.,0.33,0.67))); }
+void pl(int i, out vec3 n, out float d){
+  if(i==0){ n=vec3(0.,1.,0.); d=0.40; return; }
+  int k=i-1;
+  if(k<F){ float a=(float(k)+.5)/float(F)*2.*PI; n=normalize(vec3(cos(a),0.80,sin(a))); d=0.535; return; }
+  k-=F;
+  if(k<F){ float a=float(k)/float(F)*2.*PI; n=normalize(vec3(cos(a),0.,sin(a))); d=0.50; return; }
+  k-=F; float a=(float(k)+.5)/float(F)*2.*PI; n=normalize(vec3(cos(a),-0.84,sin(a))); d=0.40;
+}
+bool hit(vec3 ro, vec3 rd, out float t1, out float t2, out vec3 nn){
+  t1=-1e9; t2=-1e9; float tf=1e9; nn=vec3(0.);
+  for(int i=0;i<1+F*3;i++){
+    vec3 n; float d; pl(i,n,d);
+    float den=dot(n,rd), dist=d-dot(n,ro);
+    if(abs(den)<1e-7){ if(dist<0.) return false; continue; }
+    float t=dist/den;
+    if(den<0.){ if(t>t1){ t2=t1; t1=t; nn=n; } else if(t>t2) t2=t; }
+    else if(t<tf) tf=t;
+    if(t1>tf) return false;
+  }
+  return tf>0.;
+}
+void main(){
+  float s=min(uRes.x,uRes.y);
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/s;
+  uv.y += 0.02;
+  float az=uTime*uSpin+uOrbit.x, el=0.19+uOrbit.y;
+  vec3 ro=vec3(sin(az)*cos(el),sin(el),cos(az)*cos(el))*5.40; ro.y+=0.10;
+  vec3 ww=normalize(vec3(0.,-0.02,0.)-ro);
+  vec3 uu=normalize(cross(vec3(0.,1.,0.),ww)), vv=cross(ww,uu);
+  vec3 rd=normalize(uv.x*uu+uv.y*vv+2.0*ww);
+  float hue0 = uShift + uTime*0.055;
+  vec3 col=vec3(0.);
+  float t1,t2; vec3 nn;
+  bool H=hit(ro,rd,t1,t2,nn)&&t1>0.;
+  if(H){
+    vec3 pos=ro+rd*t1;
+    float hp = hue0 + dot(nn,vec3(.31,.19,.44))*0.62 + length(pos)*0.42;
+    vec3 T=pal(hp), FL=pal(hp+0.11);
+    float core=pow(1.-clamp(length(pos)/0.62,0.,1.),1.15);
+    col=T*(0.30+2.2*core);
+    float f=sin(dot(pos,vec3(11.,7.,5.))+uTime*.7)*sin(dot(pos,vec3(-6.,13.,9.))-uTime*.5)*sin(dot(pos,vec3(4.,-9.,14.))+uTime*.3);
+    col+=FL*pow(max(1.-abs(f),0.),16.)*(0.5+2.8*core);
+    col+=FL*pow(1.-max(dot(-rd,nn),0.),3.)*1.2;
+    col+=(FL*.6+vec3(1.))*pow(1.-smoothstep(0.,0.016,t1-t2),3.0)*2.6;
+    col+=vec3(1.,.99,.96)*pow(max(dot(reflect(rd,nn),normalize(vec3(.42,.74,-.52))),0.),240.)*24.;
+    col+=FL*pow(max(dot(reflect(rd,nn),normalize(vec3(-.62,.35,.60))),0.),160.)*10.;
+    col+=FL*step(.9962,hash(floor(pos.xy*80.)+vec2(floor(pos.z*80.),floor(uTime*2.))))*5.;
+  }
+  o=vec4(col*uEnc,1.);
+}`;
+
+      const GEM_BLUR = `#version 300 es
+precision highp float;
+out vec4 o;
+uniform sampler2D uT; uniform vec2 uDst,uTexel,uDir; uniform float uDec,uEnc,uBright;
+void main(){
+  vec2 uv=gl_FragCoord.xy/uDst;
+  float w[5]=float[5](.227,.194,.121,.054,.016);
+  vec3 a=vec3(0.);
+  for(int i=-4;i<=4;i++){
+    vec3 s=texture(uT,uv+uDir*uTexel*float(i)*2.).rgb*uDec;
+    if(uBright>.5) s=max(s-vec3(.9),vec3(0.));
+    a+=s*w[i<0?-i:i];
+  }
+  o=vec4(a*uEnc,1.);
+}`;
+
+      const GEM_COMP = `#version 300 es
+precision highp float;
+out vec4 o;
+uniform sampler2D uS,uB; uniform vec2 uRes; uniform float uDec,uExp;
+void main(){
+  vec2 uv=gl_FragCoord.xy/uRes;
+  vec3 c=texture(uS,uv).rgb*uDec + texture(uB,uv).rgb*uDec*1.9;
+  c*=uExp;
+  c=vec3(1.)-exp(-c*1.15);
+  c=pow(max(c,vec3(0.)),vec3(1./2.2));
+  o=vec4(c,1.);
+}`;
+
+      const GEM_STILL_TIME = 2.4;
+      const GEM_SPIN = 0.32;
+      let gemEngine = null;
+
+      function gemPaletteCss(t) {
+        const ch = function (p) {
+          return Math.round((0.5 + 0.5 * Math.cos(6.28318 * (t + p))) * 255);
+        };
+        return "rgb(" + ch(0) + "," + ch(0.33) + "," + ch(0.67) + ")";
+      }
+
+      function paintGemFallback(canvas) {
+        if (!canvas) return false;
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        const rect = canvas.getBoundingClientRect();
+        const w = Math.max(1, Math.round((rect.width || window.innerWidth) * dpr));
+        const h = Math.max(1, Math.round((rect.height || window.innerHeight) * dpr));
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return false;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, w, h);
+        const cx = w * 0.5;
+        const cy = h * 0.5 + Math.min(w, h) * 0.02;
+        const R = Math.min(w, h) * 0.22;
+        const hue0 = GEM_STILL_TIME * 0.055;
+        const F = 16;
+        for (let i = 0; i < F; i++) {
+          const a0 = (i / F) * Math.PI * 2 - Math.PI / 2;
+          const a1 = ((i + 1) / F) * Math.PI * 2 - Math.PI / 2;
+          const aM = ((i + 0.5) / F) * Math.PI * 2 - Math.PI / 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(a0) * R * 0.42, cy + Math.sin(a0) * R * 0.34);
+          ctx.lineTo(cx + Math.cos(aM) * R, cy + Math.sin(aM) * R * 0.86);
+          ctx.lineTo(cx + Math.cos(a1) * R * 0.42, cy + Math.sin(a1) * R * 0.34);
+          ctx.closePath();
+          ctx.fillStyle = gemPaletteCss(hue0 + i * 0.07);
+          ctx.globalAlpha = 0.92;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = "rgba(255,252,245,0.28)";
+          ctx.lineWidth = Math.max(1, dpr * 0.6);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+          const x = cx + Math.cos(a) * R * 0.28;
+          const y = cy + Math.sin(a) * R * 0.22;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = gemPaletteCss(hue0 + 0.11);
+        ctx.globalAlpha = 0.88;
+        ctx.fill();
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgb(255,252,245)";
+        ctx.beginPath();
+        ctx.ellipse(cx - R * 0.18, cy - R * 0.22, R * 0.06, R * 0.035, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        return true;
+      }
+
+      function createTurningColorsGem(liveCanvas, fallbackCanvas, quiet) {
+        const api = {
+          cover: 1,
+          live: false,
+          quiet: !!quiet,
+          resize: function () {},
+          frame: function () {},
+          setCover: function (t) {
+            api.cover = t;
+          },
+          dispose: function () {}
+        };
+
+        function showFallback() {
+          api.live = false;
+          if (liveCanvas) liveCanvas.style.visibility = "hidden";
+          if (fallbackCanvas) {
+            fallbackCanvas.style.visibility = "visible";
+            paintGemFallback(fallbackCanvas);
+          }
+        }
+
+        if (!liveCanvas) {
+          showFallback();
+          api.resize = function () {
+            paintGemFallback(fallbackCanvas);
+          };
+          return api;
+        }
+
+        let gl = null;
+        try {
+          gl = liveCanvas.getContext("webgl2", {
+            antialias: false,
+            alpha: false,
+            premultipliedAlpha: false,
+            powerPreference: "default"
+          });
+        } catch (err) {
+          gl = null;
+        }
+        if (!gl) {
+          showFallback();
+          api.resize = function () {
+            paintGemFallback(fallbackCanvas);
+          };
+          return api;
+        }
+
+        if (fallbackCanvas) fallbackCanvas.style.visibility = "hidden";
+        liveCanvas.style.visibility = "visible";
+
+        const fOK = !!gl.getExtension("EXT_color_buffer_float");
+        const ENC = fOK ? 1 : 0.25;
+        const DEC = fOK ? 1 : 4;
+        const shaders = [];
+        function compile(type, src) {
+          const obj = gl.createShader(type);
+          gl.shaderSource(obj, src);
+          gl.compileShader(obj);
+          if (!gl.getShaderParameter(obj, gl.COMPILE_STATUS)) {
+            throw new Error("gem shader");
+          }
+          shaders.push(obj);
+          return obj;
+        }
+        function program(fs) {
+          const p = gl.createProgram();
+          gl.attachShader(p, compile(gl.VERTEX_SHADER, GEM_VERT));
+          gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+          gl.linkProgram(p);
+          if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+            throw new Error("gem program");
+          }
+          return p;
+        }
+
+        let pS;
+        let pB;
+        let pC;
+        try {
+          pS = program(GEM_SCENE);
+          pB = program(GEM_BLUR);
+          pC = program(GEM_COMP);
+        } catch (err) {
+          showFallback();
+          api.resize = function () {
+            paintGemFallback(fallbackCanvas);
+          };
+          return api;
+        }
+
+        let vb = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        [pS, pB, pC].forEach(function (p) {
+          const loc = gl.getAttribLocation(p, "p");
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        });
+        const U = function (p, n) {
+          return gl.getUniformLocation(p, n);
+        };
+
+        function target(w, h) {
+          const t = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, t);
+          if (fOK) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+          } else {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          }
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          const f = gl.createFramebuffer();
+          gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+          return { t: t, f: f, w: w, h: h };
+        }
+
+        function releaseTarget(tgt) {
+          if (!gl || !tgt) return;
+          if (tgt.f) {
+            gl.deleteFramebuffer(tgt.f);
+            tgt.f = null;
+          }
+          if (tgt.t) {
+            gl.deleteTexture(tgt.t);
+            tgt.t = null;
+          }
+        }
+
+        let W = 0;
+        let H = 0;
+        let scn = null;
+        let bA = null;
+        let bB = null;
+        let lost = false;
+        const t0 = performance.now();
+        let stillDrawn = false;
+
+        function resize() {
+          if (lost || !gl) return;
+          const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+          const r = liveCanvas.getBoundingClientRect();
+          const nw = Math.max(1, Math.round((r.width || window.innerWidth) * dpr));
+          const nh = Math.max(1, Math.round((r.height || window.innerHeight) * dpr));
+          if (nw === W && nh === H) return;
+          releaseTarget(scn);
+          releaseTarget(bA);
+          releaseTarget(bB);
+          scn = null;
+          bA = null;
+          bB = null;
+          W = liveCanvas.width = nw;
+          H = liveCanvas.height = nh;
+          scn = target(nw, nh);
+          bA = target(Math.max(1, nw >> 1), Math.max(1, nh >> 1));
+          bB = target(Math.max(1, nw >> 1), Math.max(1, nh >> 1));
+          stillDrawn = false;
+        }
+
+        function draw(t) {
+          if (lost || !gl || !scn) return;
+          const spin = api.quiet ? 0 : GEM_SPIN;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, scn.f);
+          gl.viewport(0, 0, scn.w, scn.h);
+          gl.useProgram(pS);
+          gl.uniform2f(U(pS, "uRes"), scn.w, scn.h);
+          gl.uniform1f(U(pS, "uTime"), t);
+          gl.uniform2f(U(pS, "uOrbit"), 0, 0);
+          gl.uniform1f(U(pS, "uShift"), 0);
+          gl.uniform1f(U(pS, "uSpin"), spin);
+          gl.uniform1f(U(pS, "uEnc"), ENC);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, bA.f);
+          gl.viewport(0, 0, bA.w, bA.h);
+          gl.useProgram(pB);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, scn.t);
+          gl.uniform1i(U(pB, "uT"), 0);
+          gl.uniform2f(U(pB, "uDst"), bA.w, bA.h);
+          gl.uniform2f(U(pB, "uTexel"), 1 / scn.w, 1 / scn.h);
+          gl.uniform2f(U(pB, "uDir"), 1, 0);
+          gl.uniform1f(U(pB, "uDec"), DEC);
+          gl.uniform1f(U(pB, "uEnc"), ENC);
+          gl.uniform1f(U(pB, "uBright"), 1);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, bB.f);
+          gl.viewport(0, 0, bB.w, bB.h);
+          gl.bindTexture(gl.TEXTURE_2D, bA.t);
+          gl.uniform2f(U(pB, "uDst"), bB.w, bB.h);
+          gl.uniform2f(U(pB, "uTexel"), 1 / bA.w, 1 / bA.h);
+          gl.uniform2f(U(pB, "uDir"), 0, 1);
+          gl.uniform1f(U(pB, "uBright"), 0);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.viewport(0, 0, W, H);
+          gl.useProgram(pC);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, scn.t);
+          gl.uniform1i(U(pC, "uS"), 0);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, bB.t);
+          gl.uniform1i(U(pC, "uB"), 1);
+          gl.uniform2f(U(pC, "uRes"), W, H);
+          gl.uniform1f(U(pC, "uDec"), DEC);
+          gl.uniform1f(U(pC, "uExp"), 1);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          api.live = true;
+        }
+
+        liveCanvas.addEventListener(
+          "webglcontextlost",
+          function (event) {
+            event.preventDefault();
+            lost = true;
+            api.live = false;
+            showFallback();
+          },
+          false
+        );
+        liveCanvas.addEventListener(
+          "webglcontextrestored",
+          function () {
+            // Resources from the lost context are invalid. This instance does
+            // not recreate programs/buffers, so the fallback stays for its life.
+            lost = true;
+            api.live = false;
+            showFallback();
+          },
+          false
+        );
+
+        api.resize = function () {
+          if (lost) {
+            paintGemFallback(fallbackCanvas);
+            return;
+          }
+          resize();
+          if (api.quiet) {
+            draw(GEM_STILL_TIME);
+            stillDrawn = true;
+          }
+        };
+        api.frame = function (now) {
+          if (api.cover < 0.02 || document.hidden) return;
+          if (lost) return;
+          resize();
+          if (api.quiet) {
+            if (!stillDrawn) {
+              draw(GEM_STILL_TIME);
+              stillDrawn = true;
+            }
+            return;
+          }
+          draw((now - t0) / 1000);
+        };
+        api.dispose = function () {
+          lost = true;
+          api.live = false;
+          if (!gl) return;
+          releaseTarget(scn);
+          releaseTarget(bA);
+          releaseTarget(bB);
+          scn = null;
+          bA = null;
+          bB = null;
+          if (pS) gl.deleteProgram(pS);
+          if (pB) gl.deleteProgram(pB);
+          if (pC) gl.deleteProgram(pC);
+          pS = null;
+          pB = null;
+          pC = null;
+          for (let i = 0; i < shaders.length; i++) {
+            if (shaders[i]) gl.deleteShader(shaders[i]);
+          }
+          shaders.length = 0;
+          if (vb) {
+            gl.deleteBuffer(vb);
+            vb = null;
+          }
+          W = 0;
+          H = 0;
+        };
+
+        try {
+          resize();
+          draw(api.quiet ? GEM_STILL_TIME : 0);
+          stillDrawn = api.quiet;
+        } catch (err) {
+          showFallback();
+        }
+        return api;
       }
 
       function measureScrollProgress() {
@@ -993,31 +1458,21 @@
         const mobile = state.isMobile;
         let studioX;
         let studioY;
-        let ringX;
-        let ringY;
 
         if (mobile) {
           // Exact-ratio parents + scale 1 show the whole frame; center art.
           studioX = 50;
           studioY = 50;
-          ringX = 50;
-          ringY = 50;
         } else {
           // Desktop: centered cover. No contain letterbox.
           studioX = 50;
           studioY = 50;
-          ringX = 50;
-          ringY = 50;
         }
 
         // Pointer crop drift is additive via transform; object-position holds art direction.
         const studioPos = studioX.toFixed(2) + "% " + studioY.toFixed(2) + "%";
-        const ringPos = ringX.toFixed(2) + "% " + ringY.toFixed(2) + "%";
         for (let i = 0; i < studioMedia.length; i++) {
           studioMedia[i].style.objectPosition = studioPos;
-        }
-        for (let i = 0; i < ringMedia.length; i++) {
-          ringMedia[i].style.objectPosition = ringPos;
         }
       }
 
@@ -1060,10 +1515,10 @@
 
       function applyCopy(progress) {
         const mobile = state.isMobile;
-        // Mobile authoring: sequential beats with no perceptible coexistence.
-        const setupOutStart = mobile ? 0.12 : MOTION.setupOutStart;
-        const setupOutEnd = mobile ? 0.26 : MOTION.setupOutEnd;
-        const headInStart = mobile ? 0.28 : MOTION.headlineInStart;
+        // Sequential worlds: setup-out completes, then gem yields, then headline enters.
+        const setupOutStart = MOTION.setupOutStart;
+        const setupOutEnd = MOTION.setupOutEnd;
+        const headInStart = MOTION.headlineInStart;
         const headInEnd = mobile ? 0.48 : MOTION.headlineInEnd;
         const headOutStart = mobile ? 0.62 : MOTION.headlineOutStart;
         const headOutEnd = mobile ? 0.74 : MOTION.headlineOutEnd;
@@ -1114,76 +1569,43 @@
         }
       }
 
-      function applyHandoff(progress) {
-        const t = windowProgress(progress, MOTION.handoffStart, MOTION.handoffEnd);
-        const mobile = state.isMobile;
-        const angle = mobile ? 28 : 62;
-        const edgeStart = mobile ? -22 : -18;
-        const edgeEnd = mobile ? 112 : 108;
-        const edge = lerp(edgeStart, edgeEnd, t);
-
-        // At completion the ring world is unconditionally full-bleed.
-        if (t >= 1) {
-          worldRing.style.maskImage = "none";
-          worldRing.style.webkitMaskImage = "none";
-          worldRing.style.maskSize = "";
-          worldRing.style.webkitMaskSize = "";
-          worldRing.style.maskRepeat = "";
-          worldRing.style.webkitMaskRepeat = "";
-        } else {
-          const mask =
-            "linear-gradient(" +
-            angle +
-            "deg, #000 0%, #000 " +
-            (edge - 10) +
-            "%, rgba(0,0,0,.82) " +
-            (edge - 4) +
-            "%, rgba(0,0,0,.28) " +
-            (edge + 4) +
-            "%, transparent " +
-            (edge + 10) +
-            "%)";
-          worldRing.style.maskImage = mask;
-          worldRing.style.webkitMaskImage = mask;
-          worldRing.style.maskSize = "100% 100%";
-          worldRing.style.webkitMaskSize = "100% 100%";
-          worldRing.style.maskRepeat = "no-repeat";
-          worldRing.style.webkitMaskRepeat = "no-repeat";
+      function applyGem(progress) {
+        const gemOutStart = MOTION.gemOutStart;
+        const gemOutEnd = MOTION.gemOutEnd;
+        const gemT = 1 - windowProgress(progress, gemOutStart, gemOutEnd);
+        // Studio is the under-layer: gem cover yields it forward and restores it reverse.
+        if (worldStudio) {
+          worldStudio.style.opacity = "1";
+          worldStudio.style.visibility = "visible";
         }
-
-        // Passing refraction: same angle, sin(πt) envelope, opacity zero outside handoff.
-        const bgPos = lerp(112, -12, t);
-        const lightOpacity = Math.sin(Math.PI * t) * 0.72;
-        causticLight.style.backgroundImage =
-          "linear-gradient(" +
-          angle +
-          "deg, transparent 42%, rgba(255,244,232,.06) 46%, rgba(215,185,255,.34) 49%, rgba(255,156,201,.22) 51.5%, rgba(244,221,176,.13) 54%, transparent 59%)";
-        causticLight.style.backgroundSize = "260% 100%";
-        causticLight.style.backgroundPosition = bgPos + "% 50%";
-        causticLight.style.opacity = String(lightOpacity);
+        if (worldGem) {
+          worldGem.style.opacity = String(gemT);
+          worldGem.style.visibility = gemT < 0.02 ? "hidden" : "visible";
+        }
+        if (sceneGrain) {
+          sceneGrain.style.opacity = String(0.045 * (1 - gemT));
+        }
+        if (gemEngine) {
+          gemEngine.setCover(gemT);
+        }
       }
 
       function applyMediaTransforms(progress, px, py) {
         const mobile = state.isMobile;
         let studioScale;
-        let ringScale;
 
         if (mobile) {
           // Full-viewport portrait media must stay scale 1 — no crop-producing
           // overscan/zoom. Motion lives in the source video and passage timing.
           studioScale = 1;
-          ringScale = 1;
         } else {
           // Desktop: full-scene cover at scale 1.
           studioScale = 1;
-          ringScale = 1;
         }
 
-        // Cinema plates stay whole — no pointer crop travel on either viewport.
+        // Cinema plate stays whole — no pointer crop travel on either viewport.
         const studioTx = 0;
         const studioTy = 0;
-        const ringTx = 0;
-        const ringTy = 0;
 
         const studioTf =
           "translate3d(" +
@@ -1193,21 +1615,12 @@
           "vw, 0) scale(" +
           studioScale +
           ")";
-        const ringTf =
-          "translate3d(" +
-          ringTx +
-          "vw, " +
-          ringTy +
-          "vw, 0) scale(" +
-          ringScale +
-          ")";
 
         if (studioStack) studioStack.style.transform = studioTf;
-        if (ringStack) ringStack.style.transform = ringTf;
       }
 
       function applyPointerWash(px, py) {
-        if (quietModeActive() || !state.finePointer) {
+        if (quietModeActive() || !state.finePointer || (gemEngine && gemEngine.cover > 0.2)) {
           lightWash.classList.remove("is-active");
           return;
         }
@@ -1310,7 +1723,7 @@
       function render(progress, px, py) {
         applyMark(progress);
         applyCopy(progress);
-        applyHandoff(progress);
+        applyGem(progress);
         applyObjectPositions(progress);
         applyMediaTransforms(progress, px, py);
         applyPointerWash(px, py);
@@ -1340,9 +1753,7 @@
         // Re-resolve asset paths only while opening videos remain unhydrated.
         const studioHydrated =
           studioVideo && (studioVideo.getAttribute("src") || studioVideo.currentSrc);
-        const ringHydrated =
-          ringVideo && (ringVideo.getAttribute("src") || ringVideo.currentSrc);
-        if (!studioHydrated && !ringHydrated) {
+        if (!studioHydrated) {
           selectResponsiveMedia();
         }
         state.targetProgress = measureScrollProgress();
@@ -1351,6 +1762,7 @@
         }
         // Physical progress is measured/smoothed; render consumes remapped timeline.
         render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
+        if (gemEngine) gemEngine.resize();
       }
 
       function tick(now) {
@@ -1384,6 +1796,7 @@
 
         // All MOTION cues run on the remapped choreography timeline.
         render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
+        if (gemEngine) gemEngine.frame(now);
 
         // Whole-site single-clock hook (M2–M5). No second rAF loop.
         if (typeof window.__ranaSiteTick === "function") {
@@ -1405,6 +1818,15 @@
           } catch (e) {}
         }
         video.classList.remove("is-live");
+      }
+
+      function resetOpeningDecoderToStart(video) {
+        if (!video) return;
+        try {
+          if (video.readyState >= 1 && isFinite(video.duration) && video.currentTime > 0.05) {
+            video.currentTime = 0;
+          }
+        } catch (e) {}
       }
 
       // Causal play gate: only the token that still owns authority may mark is-live.
@@ -1459,12 +1881,6 @@
         }
       }
 
-      // Authored Studio→Ring handoff onset (same cue the mask/render uses).
-      function mobileOpeningDecoderAuthority() {
-        const timeline = openingTimeline(state.visualProgress);
-        return timeline >= MOTION.handoffStart ? "ring" : "studio";
-      }
-
       function armVideos() {
         // Explicit quiet mode: never assign media sources; posters remain composed.
         if (mediaQuietActive()) {
@@ -1496,17 +1912,6 @@
               video.classList.remove("is-live");
               return;
             }
-            // Mobile exclusive: never mark live if this decoder lost authority mid-arm.
-            if (isMobileOpeningViewport()) {
-              const want = mobileOpeningDecoderAuthority();
-              const isActive =
-                (want === "ring" && video === ringVideo) ||
-                (want === "studio" && video === studioVideo);
-              if (!isActive) {
-                pauseOpeningDecoder(video);
-                return;
-              }
-            }
             playOpeningDecoder(video, token, startAt);
           };
 
@@ -1532,16 +1937,6 @@
                 video.classList.remove("is-live");
                 return;
               }
-              if (isMobileOpeningViewport()) {
-                const want = mobileOpeningDecoderAuthority();
-                const isActive =
-                  (want === "ring" && video === ringVideo) ||
-                  (want === "studio" && video === studioVideo);
-                if (!isActive) {
-                  pauseOpeningDecoder(video);
-                  return;
-                }
-              }
               video.classList.add("is-live");
             },
             { once: true }
@@ -1549,35 +1944,32 @@
         }
 
         // Opening scene media only — later duplicates hydrate from site.js.
-        // Atmosphere uses lightweight poster stills; one live decoder per source.
-        // Sources hydrate once; mobile authority changes only play/pause, never unload.
-        ensureVideoSource(studioVideo, "auto");
-        ensureVideoSource(ringVideo, "auto");
+        // The original first-beat montage is the only opening film.
         // Studio film is already ordered cluster-first (product run, then bench +
         // engraving reveal); do not seek (loop must return to the cluster start).
-        if (isMobileOpeningViewport()) {
-          // Mobile: exactly one opening decoder may start unpaused/is-live.
-          const want = mobileOpeningDecoderAuthority();
-          state.openingDecoderAuthority = want;
-          if (want === "ring") {
-            pauseOpeningDecoder(studioVideo);
-            tryPlay(ringVideo, 0);
-          } else {
-            pauseOpeningDecoder(ringVideo);
-            tryPlay(studioVideo);
-          }
-        } else {
-          // Desktop: two-world angled moving handoff keeps both decoders live.
-          state.openingDecoderAuthority = "both";
-          tryPlay(studioVideo);
-          tryPlay(ringVideo, 0);
+        // Cover has no studio authority: do not hydrate or play under the live gem.
+        const want = openingDecoderAuthority();
+        state.openingDecoderAuthority = want;
+        if (want !== "studio") {
+          pauseOpeningDecoder(studioVideo);
+          resetOpeningDecoderToStart(studioVideo);
+          return;
         }
+        ensureVideoSource(studioVideo, "auto");
+        tryPlay(studioVideo);
+      }
+
+      // Exclusive cover|studio authority from the authored timeline.
+      // Pause the studio film under the live gem; own it only after gem-out
+      // completes (headline rest). Desktop and mobile share this cue.
+      function openingDecoderAuthority() {
+        const timeline = openingTimeline(state.visualProgress);
+        return timeline >= MOTION.gemOutEnd ? "studio" : "cover";
       }
 
       // Opening decoder life-cycle follows section authority, not a broad near range.
       // When Opening ceases to own the viewport: pause and remove is-live.
       // Reverse re-entry restores play and adds is-live only after playback resumes.
-      // Mobile: exclusive Studio|Ring authority from MOTION.handoffStart timeline cue.
       function manageOpeningVideoActivity() {
         if (mediaQuietActive() || !passage) return;
         const rect = passage.getBoundingClientRect();
@@ -1586,15 +1978,13 @@
         const retired = passage.classList.contains("is-retired");
 
         // Authority: Opening owns while not retired and its sticky still covers
-        // the viewport. The prior broad near band left studio+ring live under Hand.
+        // the viewport.
         let owns;
         if (retired) {
           owns = false;
         } else if (mobile) {
           owns = rect.bottom > vh * 0.55 && rect.top < vh * 0.45;
         } else {
-          // Desktop may keep a slightly wider band for the angled bridge Turn,
-          // but still retires once the sticky no longer covers the viewport.
           owns = rect.bottom > vh * 0.2 && rect.top < vh * 0.8;
         }
 
@@ -1613,8 +2003,23 @@
             video.classList.remove("is-live");
           });
           if (studioStack) studioStack.style.willChange = "auto";
-          if (ringStack) ringStack.style.willChange = "auto";
           return;
+        }
+
+        const want = openingDecoderAuthority();
+        const previous = state.openingDecoderAuthority;
+        if (state.openingDecoderAuthority !== want) {
+          openingDecoderToken += 1;
+          state.openingDecoderAuthority = want;
+        }
+        if (want !== "studio") {
+          pauseOpeningDecoder(studioVideo);
+          resetOpeningDecoderToStart(studioVideo);
+          if (studioStack) studioStack.style.willChange = "auto";
+          return;
+        }
+        if (previous === "cover") {
+          resetOpeningDecoderToStart(studioVideo);
         }
 
         // Hydrate once if needed; never unload/refetch on small scroll movement.
@@ -1625,67 +2030,45 @@
           }
         });
 
-        if (mobile) {
-          // Authored handoff onset: timeline >= MOTION.handoffStart → ring authority.
-          const want = mobileOpeningDecoderAuthority();
-          const activeVideo = want === "ring" ? ringVideo : studioVideo;
-          const inactiveVideo = want === "ring" ? studioVideo : ringVideo;
-
-          if (state.openingDecoderAuthority !== want) {
-            // Transfer once: invalidate stale promises, pause inactive first, then resume active.
-            openingDecoderToken += 1;
-            state.openingDecoderAuthority = want;
-            pauseOpeningDecoder(inactiveVideo);
-          } else {
-            // Maintain exclusivity if anything re-started the inactive decoder.
-            pauseOpeningDecoder(inactiveVideo);
-          }
-
-          // is-live only after playback actually resumes under the current token.
-          playOpeningDecoder(activeVideo, openingDecoderToken);
-        } else {
-          // Desktop two-world angled handoff: both opening decoders may advance.
-          state.openingDecoderAuthority = "both";
-          const token = openingDecoderToken;
-          openingVideos.forEach(function (video) {
-            if (!video) return;
-            if (video.paused) {
-              const playPromise = video.play();
-              if (playPromise && typeof playPromise.then === "function") {
-                playPromise
-                  .then(function () {
-                    if (token !== openingDecoderToken || mediaQuietActive() || video.paused) {
-                      try {
-                        video.pause();
-                      } catch (e) {}
-                      video.classList.remove("is-live");
-                      return;
-                    }
-                    // is-live only after actual playback resumes.
-                    video.classList.add("is-live");
-                  })
-                  .catch(function () {
-                    if (token === openingDecoderToken) {
-                      video.classList.remove("is-live");
-                    }
-                  });
-              } else if (!video.paused && token === openingDecoderToken) {
-                video.classList.add("is-live");
-              }
-            } else if (!video.classList.contains("is-live") && token === openingDecoderToken) {
+        const token = openingDecoderToken;
+        openingVideos.forEach(function (video) {
+          if (!video) return;
+          if (video.paused) {
+            const playPromise = video.play();
+            if (playPromise && typeof playPromise.then === "function") {
+              playPromise
+                .then(function () {
+                  if (token !== openingDecoderToken || mediaQuietActive() || video.paused) {
+                    try {
+                      video.pause();
+                    } catch (e) {}
+                    video.classList.remove("is-live");
+                    return;
+                  }
+                  video.classList.add("is-live");
+                })
+                .catch(function () {
+                  if (token === openingDecoderToken) {
+                    video.classList.remove("is-live");
+                  }
+                });
+            } else if (!video.paused && token === openingDecoderToken) {
               video.classList.add("is-live");
             }
-          });
-        }
+          } else if (!video.classList.contains("is-live") && token === openingDecoderToken) {
+            video.classList.add("is-live");
+          }
+        });
 
         if (studioStack) studioStack.style.willChange = "transform";
-        if (ringStack) ringStack.style.willChange = "transform";
       }
 
       // Initial zero-delta frame before first rAF.
       state.targetProgress = measureScrollProgress();
       state.visualProgress = state.targetProgress;
+      gemEngine = createTurningColorsGem(gemCanvas, gemFallback, quietModeActive());
       render(openingTimeline(state.visualProgress), 0, 0);
+      if (gemEngine) gemEngine.frame(performance.now());
 
       loadMark();
       armVideos();
