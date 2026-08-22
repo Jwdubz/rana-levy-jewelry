@@ -360,6 +360,12 @@
       display: none;
     }
 
+    /* Desktop keeps the host clip wipe. Phones ignore clip/mask/scissor on
+       a live WebGL canvas, so mobile uses this opaque cover instead. */
+    #gemReveal {
+      display: none;
+    }
+
     @media (max-width: 700px) {
       /*
         Live sticky tracks collapsing browser chrome (100dvh). Authored travel
@@ -478,6 +484,38 @@
         height: 150vmin;
       }
 
+      .world-gem {
+        overflow: hidden;
+      }
+
+      #gemReveal {
+        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 100%;
+        z-index: 2;
+        background: #000;
+        pointer-events: none;
+      }
+
+      /* Keep the painted stone present; the sheet is the wipe.
+         Visibility-hiding the host is what popped the finished frame. */
+      html:not(.is-opening-intro-done) #gemHost {
+        opacity: 1 !important;
+        visibility: visible !important;
+        clip-path: none;
+        -webkit-clip-path: none;
+        -webkit-mask-image: none;
+        mask-image: none;
+      }
+
+      html:not(.is-opening-intro-done) #gemCanvas {
+        clip-path: none;
+        -webkit-clip-path: none;
+      }
+
       .headline {
         left: 0;
         right: 0;
@@ -518,6 +556,36 @@
     @media (pointer: coarse) {
       .light-wash {
         display: none;
+      }
+
+      .world-gem {
+        overflow: hidden;
+      }
+
+      #gemReveal {
+        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 100%;
+        z-index: 2;
+        background: #000;
+        pointer-events: none;
+      }
+
+      html:not(.is-opening-intro-done) #gemHost {
+        opacity: 1 !important;
+        visibility: visible !important;
+        clip-path: none;
+        -webkit-clip-path: none;
+        -webkit-mask-image: none;
+        mask-image: none;
+      }
+
+      html:not(.is-opening-intro-done) #gemCanvas {
+        clip-path: none;
+        -webkit-clip-path: none;
       }
     }
 
@@ -641,6 +709,7 @@
               aria-label="A brilliant-cut gemstone turning slowly against black, rendered live, its facets carrying the spectrum."
             ></canvas>
           </div>
+          <div class="gem-reveal" id="gemReveal" aria-hidden="true"></div>
         </div>
 
         <div class="caustic-light" id="causticLight" aria-hidden="true"></div>
@@ -972,6 +1041,7 @@
       const worldStudio = document.getElementById("worldStudio");
       const worldGem = document.getElementById("worldGem");
       const gemHost = document.getElementById("gemHost");
+      const gemReveal = document.getElementById("gemReveal");
       const gemCanvas = document.getElementById("gemCanvas");
       const gemFallback = document.getElementById("gemFallback");
       const studioStack = document.getElementById("studioStack");
@@ -1020,8 +1090,11 @@
         origin: 0,
         passed: false,
         done: false,
+        gemArmed: false,
+        gemOrigin: 0,
         line: 0,
         gem: 0,
+        wipe: 0,
         header: 0
       };
 
@@ -1599,18 +1672,27 @@ void main(){
         return shaped((elapsed - start) / duration);
       }
 
+      function gemCanWipe() {
+        if (gemFallback && gemFallback.classList.contains("is-ready")) return true;
+        if (gemEngine && gemEngine.live) return true;
+        return false;
+      }
+
       function syncOpeningIntro(now, progress, armClock) {
         if (progress > INTRO.leaveProgress || openingIntro.passed) {
           openingIntro.passed = true;
           openingIntro.done = true;
+          openingIntro.gemArmed = true;
           openingIntro.line = 1;
           openingIntro.gem = 1;
+          openingIntro.wipe = 1;
           openingIntro.header = 1;
           return;
         }
         if (openingIntro.done) {
           openingIntro.line = 1;
           openingIntro.gem = 1;
+          openingIntro.wipe = 1;
           openingIntro.header = 1;
           return;
         }
@@ -1618,6 +1700,7 @@ void main(){
           if (armClock === false) {
             openingIntro.line = 0;
             openingIntro.gem = 0;
+            openingIntro.wipe = 0;
             openingIntro.header = 0;
             return;
           }
@@ -1627,10 +1710,33 @@ void main(){
         const elapsed = Math.max(0, (now - openingIntro.origin) / 1000);
         const lineStart = INTRO.blackHold;
         const gemStart = INTRO.blackHold + INTRO.lineFade + INTRO.lineHold;
-        const headerStart = gemStart + INTRO.gemFade + INTRO.headerDelay;
         openingIntro.line = introWindow(elapsed, lineStart, INTRO.lineFade);
-        openingIntro.gem = introWindow(elapsed, gemStart, INTRO.gemFade, easeOutCubic);
-        openingIntro.header = introWindow(elapsed, headerStart, INTRO.headerFade, easeOutCubic);
+        const useSheet = state.isMobile || !state.finePointer;
+        if (elapsed < gemStart) {
+          openingIntro.gem = 0;
+          openingIntro.wipe = 0;
+          openingIntro.header = 0;
+          return;
+        }
+        if (!openingIntro.gemArmed) {
+          if (useSheet && !gemCanWipe()) {
+            openingIntro.gem = 0;
+            openingIntro.wipe = 0;
+            openingIntro.header = 0;
+            return;
+          }
+          openingIntro.gemArmed = true;
+          openingIntro.gemOrigin = now;
+        }
+        const gemElapsed = Math.max(0, (now - openingIntro.gemOrigin) / 1000);
+        openingIntro.gem = introWindow(gemElapsed, 0, INTRO.gemFade, easeOutCubic);
+        openingIntro.wipe = introWindow(gemElapsed, 0, INTRO.gemFade, smoothstep);
+        openingIntro.header = introWindow(
+          gemElapsed,
+          INTRO.gemFade + INTRO.headerDelay,
+          INTRO.headerFade,
+          easeOutCubic
+        );
         if (openingIntro.header >= 1) {
           openingIntro.done = true;
         }
@@ -1667,6 +1773,10 @@ void main(){
             gemFallback.style.removeProperty("opacity");
             gemFallback.style.removeProperty("visibility");
           }
+          if (gemReveal) {
+            gemReveal.style.height = "0";
+            gemReveal.style.visibility = "hidden";
+          }
           if (siteHeader) {
             siteHeader.style.removeProperty("opacity");
             siteHeader.style.removeProperty("visibility");
@@ -1684,30 +1794,57 @@ void main(){
           setupLine.style.visibility = setupOpacity < 0.02 ? "hidden" : "visible";
         }
 
+        const useSheet = state.isMobile || !state.finePointer;
+        const wipeT = useSheet ? openingIntro.wipe : gem;
+        if (gemReveal) {
+          if (useSheet) {
+            gemReveal.style.visibility = "visible";
+            gemReveal.style.height = 100 * (1 - wipeT) + "%";
+          } else {
+            gemReveal.style.height = "0";
+            gemReveal.style.visibility = "hidden";
+          }
+        }
+
         if (gemHost) {
-          const wipeTop = (1 - gem) * 100;
-          const wipe = "inset(" + wipeTop + "% 0 0 0)";
-          const mask =
-            "linear-gradient(to top, #000 0%, #000 " +
-            gem * 100 +
-            "%, transparent " +
-            gem * 100 +
-            "%)";
-          gemHost.style.setProperty("opacity", String(gem), "important");
-          gemHost.style.setProperty("clip-path", wipe, "important");
-          gemHost.style.setProperty("-webkit-clip-path", wipe, "important");
-          gemHost.style.setProperty("-webkit-mask-image", mask, "important");
-          gemHost.style.setProperty("mask-image", mask, "important");
-          gemHost.style.setProperty(
-            "visibility",
-            gem < 0.02 ? "hidden" : "visible",
-            "important"
-          );
-          if (gemCanvas) {
-            gemCanvas.style.setProperty("clip-path", wipe, "important");
-            gemCanvas.style.setProperty("-webkit-clip-path", wipe, "important");
-            gemCanvas.style.setProperty("-webkit-mask-image", mask, "important");
-            gemCanvas.style.setProperty("mask-image", mask, "important");
+          if (useSheet) {
+            gemHost.style.removeProperty("opacity");
+            gemHost.style.setProperty("visibility", "visible", "important");
+            gemHost.style.removeProperty("clip-path");
+            gemHost.style.removeProperty("-webkit-clip-path");
+            gemHost.style.removeProperty("-webkit-mask-image");
+            gemHost.style.removeProperty("mask-image");
+            if (gemCanvas) {
+              gemCanvas.style.removeProperty("clip-path");
+              gemCanvas.style.removeProperty("-webkit-clip-path");
+              gemCanvas.style.removeProperty("-webkit-mask-image");
+              gemCanvas.style.removeProperty("mask-image");
+            }
+          } else {
+            const wipeTop = (1 - gem) * 100;
+            const wipe = "inset(" + wipeTop + "% 0 0 0)";
+            const mask =
+              "linear-gradient(to top, #000 0%, #000 " +
+              gem * 100 +
+              "%, transparent " +
+              gem * 100 +
+              "%)";
+            gemHost.style.setProperty("opacity", String(gem), "important");
+            gemHost.style.setProperty("clip-path", wipe, "important");
+            gemHost.style.setProperty("-webkit-clip-path", wipe, "important");
+            gemHost.style.setProperty("-webkit-mask-image", mask, "important");
+            gemHost.style.setProperty("mask-image", mask, "important");
+            gemHost.style.setProperty(
+              "visibility",
+              gem < 0.02 ? "hidden" : "visible",
+              "important"
+            );
+            if (gemCanvas) {
+              gemCanvas.style.setProperty("clip-path", wipe, "important");
+              gemCanvas.style.setProperty("-webkit-clip-path", wipe, "important");
+              gemCanvas.style.setProperty("-webkit-mask-image", mask, "important");
+              gemCanvas.style.setProperty("mask-image", mask, "important");
+            }
           }
         }
 

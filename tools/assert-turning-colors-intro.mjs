@@ -70,12 +70,19 @@ if (!/id="worldGem"/.test(opening) || !/id="gemCanvas"/.test(opening)) {
 if (!/id="gemHost"/.test(opening)) {
   fail("opening must host a gemHost that paints canvas and fallback together");
 }
+if (!/id="gemReveal"/.test(opening)) {
+  fail("opening must host a black #gemReveal sheet so mobile can wipe without clipping WebGL");
+}
 {
   const hostAt = opening.indexOf('id="gemHost"');
   const fallbackAt = opening.indexOf('id="gemFallback"');
   const canvasAt = opening.indexOf('id="gemCanvas"');
+  const revealAt = opening.indexOf('id="gemReveal"');
   if (!(hostAt > 0 && fallbackAt > hostAt && canvasAt > fallbackAt)) {
     fail("gemHost must wrap #gemFallback and #gemCanvas together");
+  }
+  if (!(revealAt > canvasAt)) {
+    fail("gemReveal must sit after the gem host so the black sheet covers the stone");
   }
 }
 if (!/id="gemFallback"/.test(opening)) {
@@ -369,6 +376,12 @@ if (!/#gemFallback[\s\S]{0,220}min\(100vmin,\s*50vw\)/.test(index)) {
 if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*150vmin[\s\S]{0,40}height:\s*150vmin/.test(index)) {
   fail("mobile fallback square must be 150vmin wide and 150vmin tall");
 }
+if (!/@media \(max-width: 700px\)[\s\S]*#gemReveal[\s\S]{0,280}background:\s*#000/.test(index)) {
+  fail("mobile #gemReveal must be an opaque black cover, not a clip of the WebGL canvas");
+}
+if (!/@media \(max-width: 700px\)[\s\S]*html:not\(\.is-opening-intro-done\)\s+#gemHost[\s\S]{0,200}visibility:\s*visible/.test(index)) {
+  fail("mobile first-paint must keep the gem host visible under the reveal sheet");
+}
 {
   const canvasCss = (index.match(/\.world-gem canvas\s*\{[^}]+\}/) || [])[0] || "";
   if (!canvasCss) fail("live gem canvas CSS must remain extractable");
@@ -543,11 +556,24 @@ if (!/smoothstep/.test(introWin)) {
 if (!/introWindow\(\s*elapsed,\s*lineStart,\s*INTRO\.lineFade\s*\)/.test(syncIntro)) {
   fail("line fade must keep the existing introWindow / smoothstep curve");
 }
-if (!/introWindow\(\s*elapsed,\s*gemStart,\s*INTRO\.gemFade,\s*easeOutCubic\s*\)/.test(syncIntro)) {
+if (!/introWindow\(\s*gemElapsed,\s*0,\s*INTRO\.gemFade,\s*easeOutCubic\s*\)/.test(syncIntro)) {
   fail("gem fade must use cubic ease-out");
 }
-if (!/introWindow\(\s*elapsed,\s*headerStart,\s*INTRO\.headerFade,\s*easeOutCubic\s*\)/.test(syncIntro)) {
+if (!/openingIntro\.wipe\s*=\s*introWindow\(\s*gemElapsed,\s*0,\s*INTRO\.gemFade,\s*smoothstep\s*\)/.test(syncIntro)) {
+  fail("mobile cover-sheet wipe must use smoothstep so a 150% stone does not jump halfway open");
+}
+if (
+  !/introWindow\(\s*gemElapsed,\s*INTRO\.gemFade\s*\+\s*INTRO\.headerDelay,\s*INTRO\.headerFade,\s*easeOutCubic\s*\)/.test(
+    syncIntro
+  )
+) {
   fail("header fade must use cubic ease-out");
+}
+if (!/gemCanWipe\s*\(/.test(syncIntro) || !/is-ready/.test(index.slice(index.indexOf("function gemCanWipe")))) {
+  fail("mobile wipe must wait until the live canvas or fallback image is presentable");
+}
+if (!/gemArmed/.test(syncIntro) || !/useSheet && !gemCanWipe/.test(syncIntro)) {
+  fail("cover-sheet wipe must not start until a stone can be shown under it");
 }
 if (!/setupLine[\s\S]*openingIntro\.line|const line = openingIntro\.line[\s\S]*setupLine/.test(applyIntro)) {
   fail("applyOpeningIntro must fade #setupLine on the line phase");
@@ -566,6 +592,15 @@ if (/gemFallback\.style\.setProperty\(\s*["']opacity["']/.test(applyIntro)) {
 }
 if (!/gemHost\.style\.setProperty\(\s*["']opacity["']\s*,\s*String\(\s*gem\s*\)/.test(applyIntro)) {
   fail("gem host opacity must interpolate openingIntro.gem across the fade window");
+}
+if (!/gemReveal\.style\.height\s*=\s*100\s*\*\s*\(1\s*-\s*wipeT\)\s*\+\s*["']%["']/.test(applyIntro)) {
+  fail("mobile wipe must shorten #gemReveal height from the top so the stone is uncovered upward");
+}
+if (!/state\.isMobile/.test(applyIntro) || !/openingIntro\.wipe/.test(applyIntro)) {
+  fail("mobile reveal sheet must use openingIntro.wipe, not the desktop clip-path");
+}
+if (/state\.isMobile[\s\S]{0,240}gemHost\.style\.setProperty\(\s*["']visibility["']\s*,\s*gem < 0\.02/.test(applyIntro)) {
+  fail("mobile must not visibility-toggle the gem host; that pops the painted stone");
 }
 if (!/\(1\s*-\s*gem\)\s*\*\s*100/.test(applyIntro)) {
   fail("gem host wipe must share the gem fade clock: (1-gem)*100");
@@ -741,5 +776,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); mobile painted-canvas wipe (canvas clip-path + mask-image + bottom-left scissor on openingIntro.gem; host overflow contains 150vmin fallback; quiet still redraws while wipe moves); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
+  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); mobile cover-sheet wipe (#gemReveal black height 100%→0 from the top on smoothstep openingIntro.wipe; waits until live canvas or fallback is presentable; host stays visible; no mobile visibility pop); mobile painted-canvas wipe (canvas clip-path + mask-image + bottom-left scissor on openingIntro.gem; host overflow contains 150vmin fallback; quiet still redraws while wipe moves); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
 );
