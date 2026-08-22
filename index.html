@@ -391,9 +391,14 @@
       opacity: 0;
     }
 
-    html:not(.is-opening-intro-done) #scrollCue {
+    html:not(.is-opening-intro-done) #scrollCue,
+    html:not(.is-opening-intro-done) .scroll-cue--scene {
       opacity: 0;
       visibility: hidden;
+    }
+
+    .scroll-cue--scene {
+      display: none;
     }
 
     /* Desktop keeps the host clip wipe. Phones ignore clip/mask/scissor on
@@ -593,6 +598,18 @@
         font-size: clamp(0.68rem, 3.1vw, 0.8rem);
         letter-spacing: 0.26em;
       }
+
+      /* iOS clips a document-fixed cue once body overflow-y is locked.
+         Each sticky scene owns its own SCROLL instead. */
+      #scrollCue {
+        display: none !important;
+      }
+
+      .scroll-cue--scene {
+        display: block;
+        position: absolute;
+        z-index: 40;
+      }
     }
 
     @media (pointer: coarse) {
@@ -764,6 +781,7 @@
         <div class="mark" id="mark" aria-hidden="true"></div>
 
         <p class="type setup" id="setupLine">Some stones turn colors.</p>
+        <p class="scroll-cue scroll-cue--scene" id="scrollCueOpening" aria-hidden="true">SCROLL</p>
 
         <div class="copy-dock-opening" id="openingCopyDock" aria-hidden="true"></div>
 
@@ -845,6 +863,7 @@
         <p class="thought thought-lg hand-thought-a" id="handThought0">
           <span class="line">Cut by hand, one at a time.</span>
         </p>
+        <p class="scroll-cue scroll-cue--scene" id="scrollCueHand" aria-hidden="true">SCROLL</p>
       </div>
     </section>
 
@@ -1079,6 +1098,8 @@
       const markEl = document.getElementById("mark");
       const setupLine = document.getElementById("setupLine");
       const scrollCue = document.getElementById("scrollCue");
+      const scrollCueOpening = document.getElementById("scrollCueOpening");
+      const scrollCueHand = document.getElementById("scrollCueHand");
       const headline = document.getElementById("headline");
       const openingCopyDock = document.getElementById("openingCopyDock");
       const heads = document.getElementById("heads");
@@ -1797,8 +1818,13 @@ void main(){
         return y >= last.start - 12;
       }
 
+      function paintOneScrollCue(node, opacity) {
+        if (!node) return;
+        node.style.opacity = String(opacity);
+        node.style.visibility = opacity < 0.02 ? "hidden" : "visible";
+      }
+
       function paintScrollCue() {
-        if (!scrollCue) return;
         let opacity;
         if (!openingIntro.done) {
           opacity = openingIntro.header;
@@ -1807,8 +1833,15 @@ void main(){
         } else {
           opacity = 1;
         }
-        scrollCue.style.opacity = String(opacity);
-        scrollCue.style.visibility = opacity < 0.02 ? "hidden" : "visible";
+        if (state.isMobile) {
+          paintOneScrollCue(scrollCue, 0);
+          paintOneScrollCue(scrollCueOpening, opacity);
+          paintOneScrollCue(scrollCueHand, openingIntro.done ? opacity : 0);
+        } else {
+          paintOneScrollCue(scrollCue, opacity);
+          paintOneScrollCue(scrollCueOpening, 0);
+          paintOneScrollCue(scrollCueHand, 0);
+        }
       }
 
       function applyOpeningIntro() {

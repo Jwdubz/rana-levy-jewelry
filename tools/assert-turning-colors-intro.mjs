@@ -62,7 +62,16 @@ if (!/id="setupLine">Some stones turn colors\.<\/p>/.test(index)) {
   fail('cold-load setup line must remain exactly "Some stones turn colors."');
 }
 if (!/id="scrollCue"[^>]*>SCROLL<\/p>/.test(index)) {
-  fail('opening must host a #scrollCue that reads exactly "SCROLL"');
+  fail('desktop must host a #scrollCue that reads exactly "SCROLL"');
+}
+if (!/id="scrollCueOpening"[^>]*>SCROLL<\/p>/.test(index)) {
+  fail('opening sticky must host its own SCROLL so the phone can show it');
+}
+if (!/id="scrollCueHand"[^>]*>SCROLL<\/p>/.test(index)) {
+  fail('hand sticky must host its own SCROLL so the phone can show it');
+}
+if (/id="workScene"[\s\S]{0,400}scrollCue/.test(index) || /id="work"[\s\S]{0,800}scroll-cue--scene/.test(index)) {
+  fail("SCROLL must not appear on the last / terminal beat");
 }
 if (!/\.scroll-cue[\s\S]{0,900}#d7b9ff[\s\S]{0,80}#a98cff[\s\S]{0,80}#ff9cc9[\s\S]{0,80}#f4ddb0/.test(index)) {
   fail("SCROLL must use the Heads spectral gradient on desktop and mobile");
@@ -71,13 +80,13 @@ if (!/\.scroll-cue[\s\S]{0,900}-webkit-background-clip:\s*text[\s\S]{0,80}backgr
   fail("SCROLL color must clip the gradient to the word");
 }
 if (!/\.scroll-cue[\s\S]{0,80}position:\s*fixed/.test(index)) {
-  fail("SCROLL must be viewport-fixed so every scrollable beat can show it");
+  fail("desktop SCROLL must stay viewport-fixed");
 }
-if (/@media \(max-width: 700px\)[\s\S]*#scrollCue[\s\S]{0,80}display:\s*none/.test(index)) {
-  fail("SCROLL must remain visible on mobile");
+if (!/@media \(max-width: 700px\)[\s\S]*#scrollCue[\s\S]{0,80}display:\s*none/.test(index)) {
+  fail("mobile must drop the document-fixed cue; iOS clips it under body overflow lock");
 }
-if (/id="scene"[\s\S]*id="scrollCue"[\s\S]*id="hand"/.test(index)) {
-  fail("SCROLL must sit outside the opening scene so later sticky beats cannot cover it");
+if (!/\.scroll-cue--scene[\s\S]{0,80}position:\s*absolute/.test(index)) {
+  fail("mobile SCROLL must live inside each sticky scene");
 }
 if (!/id="headline"[\s\S]*Custom Gems Turn[\s\S]*Heads/.test(index)) {
   fail("opening-headline must remain Custom Gems Turn Heads");
@@ -603,6 +612,12 @@ if (!/openingIntro\.header/.test(paintScroll)) {
 }
 if (!/pastLastScrollableBeat/.test(paintScroll)) {
   fail("SCROLL must stay through every rest except the last authored beat");
+}
+if (!/scrollCueOpening/.test(paintScroll) || !/scrollCueHand/.test(paintScroll)) {
+  fail("mobile must paint SCROLL on the opening and hand stickies");
+}
+if (!/state\.isMobile/.test(paintScroll)) {
+  fail("paintScrollCue must send the scene cues to the phone and the fixed cue to desktop");
 }
 const pastLast = extractFn(index, "pastLastScrollableBeat");
 if (!pastLast || !/collectRests/.test(pastLast) || !/last\.start/.test(pastLast)) {
