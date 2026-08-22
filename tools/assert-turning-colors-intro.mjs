@@ -67,6 +67,17 @@ if (!/id="headline"[\s\S]*Custom Gems Turn[\s\S]*Heads/.test(index)) {
 if (!/id="worldGem"/.test(opening) || !/id="gemCanvas"/.test(opening)) {
   fail("opening must host the live-gem world and canvas");
 }
+if (!/id="gemHost"/.test(opening)) {
+  fail("opening must host a gemHost that paints canvas and fallback together");
+}
+{
+  const hostAt = opening.indexOf('id="gemHost"');
+  const fallbackAt = opening.indexOf('id="gemFallback"');
+  const canvasAt = opening.indexOf('id="gemCanvas"');
+  if (!(hostAt > 0 && fallbackAt > hostAt && canvasAt > fallbackAt)) {
+    fail("gemHost must wrap #gemFallback and #gemCanvas together");
+  }
+}
 if (!/id="gemFallback"/.test(opening)) {
   fail("opening must host a genuine-gem fallback image");
 }
@@ -133,12 +144,14 @@ if (!/html:not\(\.is-opening-intro-done\)\s+\.setup[\s\S]{0,80}opacity:\s*0/.tes
 if (!/html:not\(\.is-opening-intro-done\)\s+\.mark[\s\S]{0,80}opacity:\s*0/.test(index)) {
   fail("cold-load CSS must keep the official mark off the first black frame");
 }
-if (
-  !/html:not\(\.is-opening-intro-done\)\s+\.world-gem canvas[\s\S]{0,160}#gemFallback[\s\S]{0,120}opacity:\s*0/.test(
-    index
-  )
-) {
-  fail("cold-load CSS must hide the live canvas and fallback image, not the black gem world");
+if (!/html:not\(\.is-opening-intro-done\)\s+#gemHost[\s\S]{0,160}opacity:\s*0/.test(index)) {
+  fail("cold-load CSS must hide #gemHost, not the black gem world");
+}
+if (!/html:not\(\.is-opening-intro-done\)\s+#gemHost[\s\S]{0,280}clip-path:\s*inset\(100%\s*0\s*0\s*0\)/.test(index)) {
+  fail("cold-load CSS must clip #gemHost hidden-below so the wipe starts covered");
+}
+if (/html:not\(\.is-opening-intro-done\)\s+\.world-gem canvas[\s\S]{0,80}visibility:\s*hidden/.test(index)) {
+  fail("cold-load CSS must not visibility-hide the live canvas; the host wipe owns first paint");
 }
 if (/html:not\(\.is-opening-intro-done\)[\s\S]{0,220}#worldGem/.test(index)) {
   fail("cold-load CSS must not hide #worldGem; black cover has to stay up so studio cannot flash");
@@ -521,8 +534,35 @@ if (!/introWindow\(\s*elapsed,\s*headerStart,\s*INTRO\.headerFade,\s*easeOutCubi
 if (!/setupLine[\s\S]*openingIntro\.line|const line = openingIntro\.line[\s\S]*setupLine/.test(applyIntro)) {
   fail("applyOpeningIntro must fade #setupLine on the line phase");
 }
+if (!/gemHost/.test(applyIntro)) {
+  fail("applyOpeningIntro must reveal the gem host on the gem phase, not the black world");
+}
 if (!/gemCanvas/.test(applyIntro) || !/gemFallback/.test(applyIntro)) {
-  fail("applyOpeningIntro must reveal canvas and fallback on the gem phase, not the black world");
+  fail("applyOpeningIntro must still own canvas and fallback visibility after the intro");
+}
+if (/gemCanvas\.style\.setProperty\(\s*["']opacity["']/.test(applyIntro)) {
+  fail("must not fade #gemCanvas opacity; the WebGL stone is already fully painted");
+}
+if (/gemFallback\.style\.setProperty\(\s*["']opacity["']/.test(applyIntro)) {
+  fail("must not fade #gemFallback opacity; fade the shared host");
+}
+if (!/gemHost\.style\.setProperty\(\s*["']opacity["']\s*,\s*String\(\s*gem\s*\)/.test(applyIntro)) {
+  fail("gem host opacity must interpolate openingIntro.gem across the fade window");
+}
+if (!/\(1\s*-\s*gem\)\s*\*\s*100/.test(applyIntro)) {
+  fail("gem host wipe must share the gem fade clock: (1-gem)*100");
+}
+if (!/clip-path/.test(applyIntro) || !/inset\(/.test(applyIntro)) {
+  fail("gem host must wipe-up with clip-path inset during the gem phase");
+}
+if (!/% 0 0 0/.test(applyIntro)) {
+  fail("wipe must travel bottom → top (inset top only; right/bottom/left stay 0)");
+}
+if (/gemHost[\s\S]{0,240}display\s*=/.test(applyIntro)) {
+  fail("gem reveal must not toggle display (no display:none→block pop)");
+}
+if (/gemHost\.style\.setProperty\(\s*["']opacity["']\s*,\s*["'](?:0|1)["']/.test(applyIntro)) {
+  fail("gem host opacity must not snap 0→1 as a literal single frame");
 }
 if (/worldGem/.test(applyIntro) || /worldStudio/.test(applyIntro)) {
   fail("applyOpeningIntro must not hide the black gem cover or reveal studio during the intro");
@@ -677,5 +717,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
+  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
 );

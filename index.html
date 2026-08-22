@@ -99,6 +99,15 @@
       display: block;
     }
 
+    /* Shared paint host: canvas + fallback wipe/fade together. Not the black world. */
+    .gem-host {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
     /* Cold-load opening: black → line → gem → header. Lifted by .is-opening-intro-done. */
     html:not(.is-opening-intro-done) #siteHeader {
       opacity: 0;
@@ -113,11 +122,11 @@
       opacity: 0 !important;
     }
 
-    html:not(.is-opening-intro-done) .world-gem canvas,
-    html:not(.is-opening-intro-done) #gemFallback,
-    html:not(.is-opening-intro-done) #gemFallback.is-ready {
+    html:not(.is-opening-intro-done) #gemHost {
       opacity: 0 !important;
       visibility: hidden !important;
+      clip-path: inset(100% 0 0 0);
+      -webkit-clip-path: inset(100% 0 0 0);
     }
 
     #gemFallback {
@@ -606,19 +615,21 @@
         </div>
 
         <div class="world world-gem" id="worldGem">
-          <img
-            id="gemFallback"
-            data-src="assets/turning-colors-gem-fallback.png"
-            alt=""
-            width="1254"
-            height="1254"
-            decoding="async"
-            aria-hidden="true"
-          >
-          <canvas
-            id="gemCanvas"
-            aria-label="A brilliant-cut gemstone turning slowly against black, rendered live, its facets carrying the spectrum."
-          ></canvas>
+          <div class="gem-host" id="gemHost">
+            <img
+              id="gemFallback"
+              data-src="assets/turning-colors-gem-fallback.png"
+              alt=""
+              width="1254"
+              height="1254"
+              decoding="async"
+              aria-hidden="true"
+            >
+            <canvas
+              id="gemCanvas"
+              aria-label="A brilliant-cut gemstone turning slowly against black, rendered live, its facets carrying the spectrum."
+            ></canvas>
+          </div>
         </div>
 
         <div class="caustic-light" id="causticLight" aria-hidden="true"></div>
@@ -949,6 +960,7 @@
       const sceneEl = document.getElementById("scene");
       const worldStudio = document.getElementById("worldStudio");
       const worldGem = document.getElementById("worldGem");
+      const gemHost = document.getElementById("gemHost");
       const gemCanvas = document.getElementById("gemCanvas");
       const gemFallback = document.getElementById("gemFallback");
       const studioStack = document.getElementById("studioStack");
@@ -1600,6 +1612,12 @@ void main(){
 
         if (openingIntro.done) {
           document.documentElement.classList.add("is-opening-intro-done");
+          if (gemHost) {
+            gemHost.style.removeProperty("opacity");
+            gemHost.style.removeProperty("visibility");
+            gemHost.style.removeProperty("clip-path");
+            gemHost.style.removeProperty("-webkit-clip-path");
+          }
           if (gemCanvas) {
             gemCanvas.style.removeProperty("opacity");
             if (gemEngine && gemEngine.live) {
@@ -1629,23 +1647,15 @@ void main(){
           setupLine.style.visibility = setupOpacity < 0.02 ? "hidden" : "visible";
         }
 
-        if (gemCanvas) {
-          gemCanvas.style.setProperty("opacity", String(gem), "important");
-          if (gem < 0.02) {
-            gemCanvas.style.setProperty("visibility", "hidden", "important");
-          } else if (gemEngine && gemEngine.live) {
-            gemCanvas.style.setProperty("visibility", "visible", "important");
-          } else {
-            gemCanvas.style.setProperty("visibility", "hidden", "important");
-          }
-        }
-        if (gemFallback) {
-          const ready = gemFallback.classList.contains("is-ready");
-          const show = ready && gem >= 0.02;
-          gemFallback.style.setProperty("opacity", String(ready ? gem : 0), "important");
-          gemFallback.style.setProperty(
+        if (gemHost) {
+          const wipeTop = (1 - gem) * 100;
+          const wipe = "inset(" + wipeTop + "% 0 0 0)";
+          gemHost.style.setProperty("opacity", String(gem), "important");
+          gemHost.style.setProperty("clip-path", wipe, "important");
+          gemHost.style.setProperty("-webkit-clip-path", wipe, "important");
+          gemHost.style.setProperty(
             "visibility",
-            show ? "visible" : "hidden",
+            gem < 0.02 ? "hidden" : "visible",
             "important"
           );
         }
