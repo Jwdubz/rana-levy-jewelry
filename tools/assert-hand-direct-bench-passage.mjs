@@ -153,6 +153,13 @@ const handThoughtBlock = handMarkup.match(/id="handThought0"[\s\S]*?<\/p>/);
 if (!handThoughtBlock || !/Cut by hand,/.test(handThoughtBlock[0]) || !/one at a time\./.test(handThoughtBlock[0])) {
   fail('Hand thought #handThought0 must carry "Cut by hand, / one at a time."');
 }
+{
+  const styles = read("styles.css");
+  const desktop = styles.slice(0, styles.indexOf("@media (max-width: 700px)"));
+  if (!/\.hand-thought-a\s*\{[^}]*white-space:\s*nowrap/.test(desktop)) {
+    fail("desktop Cut by hand, one at a time. must stay one line");
+  }
+}
 if (/id="handThought1"/.test(index)) {
   fail("retired #handThought1 stack must be absent");
 }
@@ -180,5 +187,5 @@ for (let i = 0; i < samples.length; i++) {
 }
 
 console.log(
-  "PASS: hand direct bench passage (no portrait world; no workBridge poster; scale 1; Cut by hand on workbench; rejected facet/six-year copy absent)"
+  "PASS: hand direct bench passage (no portrait world; no workBridge poster; scale 1; Cut by hand on workbench as one desktop line; rejected facet/six-year copy absent)"
 );

@@ -414,6 +414,14 @@ if (!consultOrder || !/\border\s*:\s*1\s*;/.test(consultOrder)) {
 if (!madeOrder || !/\border\s*:\s*2\s*;/.test(madeOrder)) {
   fail("mobile Made To Order must sit after Custom Consultation");
 }
+const desktopConsultOrder = extractBlock(stylesDesktop, '.work-design-paths a[href="consultation.html"]');
+const desktopMadeOrder = extractBlock(stylesDesktop, '.work-design-paths a[href="made.html"]');
+if (!desktopConsultOrder || !/\border\s*:\s*1\s*;/.test(desktopConsultOrder)) {
+  fail("desktop Custom Consultation must sit before Made To Order");
+}
+if (!desktopMadeOrder || !/\border\s*:\s*2\s*;/.test(desktopMadeOrder)) {
+  fail("desktop Made To Order must sit after Custom Consultation");
+}
 if (/object-fit\s*:\s*contain/i.test(mobileJewel || "")) {
   fail("mobile #workStack0 > img must not inherit the desktop contain exception");
 }
@@ -600,5 +608,5 @@ if (/\.page-ready\s+\.shell-ground\s*\{/.test(shellCss) || /\.page-made\s+\.shel
 }
 
 console.log(
-  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; desktop terminal uses full-bleed wide media over one centered black action floor; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
+  "PASS: CTA hierarchy and vignette cleanup (Bring Your Vision To Life + matching gradient CTA links; Custom Consultation before Made To Order on desktop and mobile; desktop terminal uses full-bleed wide media over one centered black action floor; terminal work stack stays exact scale 1; mobile terminal cover/crop preserved; superseded single-line invitation/old Ready absent from dock; homepage veil/echo/mask/wash disabled on desktop and mobile; non-inventory grounds have no radial/blur/mask filler; services/gallery/gallery-Held are sharp rectangles; ready/made piece-mask and Held vignette remain)"
 );

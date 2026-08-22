@@ -382,6 +382,16 @@
   bottom: 12svh;
 }
 
+.hand-thought-a {
+  max-width: none;
+  white-space: nowrap;
+}
+
+.hand-thought-a .line {
+  display: inline;
+  white-space: nowrap;
+}
+
 .hand-thought-rest {
   left: 6vw;
   bottom: 11svh;
@@ -554,6 +564,14 @@
   justify-content: center;
   gap: 0.75rem 1.7rem;
   padding-top: 0.1rem;
+}
+
+.work-design-paths a[href="consultation.html"] {
+  order: 1;
+}
+
+.work-design-paths a[href="made.html"] {
+  order: 2;
 }
 
 .work-ready-path {
