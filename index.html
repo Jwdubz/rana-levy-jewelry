@@ -100,7 +100,38 @@
     }
 
     #gemFallback {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 2vmin);
+      width: min(100vmin, 50vw);
+      height: min(100vmin, 50vw);
+      transform: translate3d(-50%, -50%, 0);
+      display: block;
       visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      border: 0;
+      outline: none;
+      background: transparent;
+      object-fit: contain;
+    }
+
+    #gemFallback.is-ready {
+      visibility: visible;
+      opacity: 1;
+      animation: gem-fallback-spectral 18s ease-in-out infinite;
+    }
+
+    @keyframes gem-fallback-spectral {
+      0%,
+      100% {
+        filter: hue-rotate(-8deg) saturate(1.05) brightness(1.01);
+      }
+      50% {
+        filter: hue-rotate(10deg) saturate(1.12) brightness(1.03);
+      }
     }
 
     .caustic-light {
@@ -401,6 +432,11 @@
         height: 100%;
       }
 
+      #gemFallback {
+        width: 100vmin;
+        height: 100vmin;
+      }
+
       .headline {
         left: 0;
         right: 0;
@@ -450,6 +486,12 @@
 
     .is-quiet .media-stack video {
       opacity: 0 !important;
+    }
+
+    .is-quiet #gemFallback,
+    .is-quiet #gemFallback.is-ready {
+      animation: none;
+      filter: none;
     }
   </style>
   <link rel="stylesheet" href="styles.css">
@@ -543,10 +585,15 @@
         </div>
 
         <div class="world world-gem" id="worldGem">
-          <canvas
+          <img
             id="gemFallback"
+            data-src="assets/turning-colors-gem-fallback.png"
+            alt=""
+            width="1254"
+            height="1254"
+            decoding="async"
             aria-hidden="true"
-          ></canvas>
+          >
           <canvas
             id="gemCanvas"
             aria-label="A brilliant-cut gemstone turning slowly against black, rendered live, its facets carrying the spectrum."
@@ -1038,70 +1085,7 @@ void main(){
       const GEM_SPIN = 0.32;
       let gemEngine = null;
 
-      function gemPaletteCss(t) {
-        const ch = function (p) {
-          return Math.round((0.5 + 0.5 * Math.cos(6.28318 * (t + p))) * 255);
-        };
-        return "rgb(" + ch(0) + "," + ch(0.33) + "," + ch(0.67) + ")";
-      }
-
-      function paintGemFallback(canvas) {
-        if (!canvas) return false;
-        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-        const rect = canvas.getBoundingClientRect();
-        const w = Math.max(1, Math.round((rect.width || window.innerWidth) * dpr));
-        const h = Math.max(1, Math.round((rect.height || window.innerHeight) * dpr));
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return false;
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, w, h);
-        const cx = w * 0.5;
-        const cy = h * 0.5 + Math.min(w, h) * 0.02;
-        const R = Math.min(w, h) * 0.22;
-        const hue0 = GEM_STILL_TIME * 0.055;
-        const F = 16;
-        for (let i = 0; i < F; i++) {
-          const a0 = (i / F) * Math.PI * 2 - Math.PI / 2;
-          const a1 = ((i + 1) / F) * Math.PI * 2 - Math.PI / 2;
-          const aM = ((i + 0.5) / F) * Math.PI * 2 - Math.PI / 2;
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(cx + Math.cos(a0) * R * 0.42, cy + Math.sin(a0) * R * 0.34);
-          ctx.lineTo(cx + Math.cos(aM) * R, cy + Math.sin(aM) * R * 0.86);
-          ctx.lineTo(cx + Math.cos(a1) * R * 0.42, cy + Math.sin(a1) * R * 0.34);
-          ctx.closePath();
-          ctx.fillStyle = gemPaletteCss(hue0 + i * 0.07);
-          ctx.globalAlpha = 0.92;
-          ctx.fill();
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = "rgba(255,252,245,0.28)";
-          ctx.lineWidth = Math.max(1, dpr * 0.6);
-          ctx.stroke();
-        }
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-          const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
-          const x = cx + Math.cos(a) * R * 0.28;
-          const y = cy + Math.sin(a) * R * 0.22;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fillStyle = gemPaletteCss(hue0 + 0.11);
-        ctx.globalAlpha = 0.88;
-        ctx.fill();
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = "rgb(255,252,245)";
-        ctx.beginPath();
-        ctx.ellipse(cx - R * 0.18, cy - R * 0.22, R * 0.06, R * 0.035, -0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        return true;
-      }
-
-      function createTurningColorsGem(liveCanvas, fallbackCanvas, quiet) {
+      function createTurningColorsGem(liveCanvas, fallbackImage, quiet) {
         const api = {
           cover: 1,
           live: false,
@@ -1113,21 +1097,31 @@ void main(){
           },
           dispose: function () {}
         };
+        const t0 = performance.now();
+        const forceFallback = params.get("gem") === "fallback";
+        let usingFallback = false;
 
         function showFallback() {
+          usingFallback = true;
           api.live = false;
           if (liveCanvas) liveCanvas.style.visibility = "hidden";
-          if (fallbackCanvas) {
-            fallbackCanvas.style.visibility = "visible";
-            paintGemFallback(fallbackCanvas);
+          if (!fallbackImage) return;
+          const url = fallbackImage.getAttribute("data-src");
+          if (!url) return;
+          function revealFallbackImage() {
+            fallbackImage.classList.add("is-ready");
+          }
+          if (!fallbackImage.getAttribute("src")) {
+            fallbackImage.addEventListener("load", revealFallbackImage, { once: true });
+            fallbackImage.src = url;
+          }
+          if (fallbackImage.complete && fallbackImage.naturalWidth) {
+            revealFallbackImage();
           }
         }
 
-        if (!liveCanvas) {
+        if (!liveCanvas || forceFallback) {
           showFallback();
-          api.resize = function () {
-            paintGemFallback(fallbackCanvas);
-          };
           return api;
         }
 
@@ -1144,13 +1138,9 @@ void main(){
         }
         if (!gl) {
           showFallback();
-          api.resize = function () {
-            paintGemFallback(fallbackCanvas);
-          };
           return api;
         }
 
-        if (fallbackCanvas) fallbackCanvas.style.visibility = "hidden";
         liveCanvas.style.visibility = "visible";
 
         const fOK = !!gl.getExtension("EXT_color_buffer_float");
@@ -1187,9 +1177,6 @@ void main(){
           pC = program(GEM_COMP);
         } catch (err) {
           showFallback();
-          api.resize = function () {
-            paintGemFallback(fallbackCanvas);
-          };
           return api;
         }
 
@@ -1241,7 +1228,6 @@ void main(){
         let bA = null;
         let bB = null;
         let lost = false;
-        const t0 = performance.now();
         let stillDrawn = false;
 
         function resize() {
@@ -1341,8 +1327,7 @@ void main(){
         );
 
         api.resize = function () {
-          if (lost) {
-            paintGemFallback(fallbackCanvas);
+          if (lost || usingFallback) {
             return;
           }
           resize();
@@ -1352,8 +1337,10 @@ void main(){
           }
         };
         api.frame = function (now) {
+          if (lost || usingFallback) {
+            return;
+          }
           if (api.cover < 0.02 || document.hidden) return;
-          if (lost) return;
           resize();
           if (api.quiet) {
             if (!stillDrawn) {

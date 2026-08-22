@@ -67,7 +67,27 @@ if (!/id="worldGem"/.test(opening) || !/id="gemCanvas"/.test(opening)) {
   fail("opening must host the live-gem world and canvas");
 }
 if (!/id="gemFallback"/.test(opening)) {
-  fail("opening must host a deterministic gem fallback canvas");
+  fail("opening must host a genuine-gem fallback image");
+}
+if (/<canvas\b[^>]*id="gemFallback"/.test(opening) || /<canvas[\s\S]{0,80}id="gemFallback"/.test(opening)) {
+  fail("fallback must not remain a canvas");
+}
+const worldGemMarkup = opening.slice(opening.indexOf('id="worldGem"'), opening.indexOf('id="gemCanvas"'));
+const fallbackImg = worldGemMarkup.match(/<img\b[\s\S]*?>/);
+if (!fallbackImg || !/id="gemFallback"/.test(fallbackImg[0])) {
+  fail("opening must host one semantic-hidden img#gemFallback");
+}
+if (!/data-src="assets\/turning-colors-gem-fallback\.png"/.test(fallbackImg[0])) {
+  fail('fallback markup must keep data-src="assets/turning-colors-gem-fallback.png"');
+}
+if (!/aria-hidden="true"/.test(fallbackImg[0])) {
+  fail("fallback image must stay semantically hidden");
+}
+{
+  const withoutDataSrc = fallbackImg[0].replace(/data-src="[^"]*"/g, "");
+  if (/\ssrc=/.test(withoutDataSrc) || /(?:^|[\s"'/])src=/.test(withoutDataSrc)) {
+    fail("fallback must not assign a network src in markup; hydrate only after showFallback");
+  }
 }
 if (!/id="worldStudio"/.test(opening) || !/id="studioStack"/.test(opening) || !/id="studioVideo"/.test(opening)) {
   fail("opening must keep the original worldStudio / studioStack / studioVideo first-beat carrier");
@@ -146,8 +166,11 @@ if (!createGem) fail("createTurningColorsGem must exist");
 if (!/webgl2/.test(createGem)) {
   fail("live path must request a WebGL2 context");
 }
-if (!/paintGemFallback/.test(createGem) || !/webglcontextlost/.test(createGem)) {
-  fail("WebGL failure and context loss must fall back to the same-renderer still");
+if (/paintGemFallback/.test(createGem) || /paintGemFallback/.test(index)) {
+  fail("paintGemFallback Canvas2D schematic must be absent");
+}
+if (!/showFallback/.test(createGem) || !/webglcontextlost/.test(createGem)) {
+  fail("WebGL failure and context loss must select the genuine-gem image fallback");
 }
 if (!/webglcontextrestored/.test(createGem)) {
   fail("context restore must be handled so a restore event cannot hide the fallback");
@@ -194,6 +217,93 @@ if (/prefers-reduced-motion/.test(createGem)) {
 }
 if (!/api\.cover < 0\.02/.test(createGem) && !/cover < 0\.02/.test(createGem)) {
   fail("renderer must skip the raytrace once the prologue no longer covers");
+}
+
+if (/function\s+paintGemFallback|function\s+convexGemSilhouette|function\s+gemRing|function\s+gemHueRgb|function\s+gemRgbCss|function\s+mixRgb/.test(index)) {
+  fail("interim Canvas2D gem geometry and palette helpers must be absent");
+}
+if (/\ba0\b/.test(createGem) || /\ba1\b/.test(createGem) || /\baM\b/.test(createGem)) {
+  fail("old radial a0/a1/aM star-wedge painter must be absent");
+}
+if (/moveTo\s*\(\s*cx\s*,\s*cy\s*\)/.test(index)) {
+  fail("fallback must not paint radial wedges from a canvas center");
+}
+if (/getContext\s*\(\s*["']2d["']/.test(createGem)) {
+  fail("gem engine must not open a Canvas2D fallback context");
+}
+
+const showFallback = extractFn(createGem, "showFallback");
+if (!showFallback) fail("showFallback must exist");
+if (!/getAttribute\s*\(\s*["']data-src["']\s*\)/.test(showFallback) || !/\.src\s*=/.test(showFallback)) {
+  fail("showFallback must hydrate the fallback image from data-src onto src");
+}
+if (!/is-ready/.test(showFallback)) {
+  fail("fallback image must reveal only after load");
+}
+
+if (!/get\(["']gem["']\)\s*===\s*["']fallback["']/.test(createGem)) {
+  fail("createTurningColorsGem must honor the ?gem=fallback diagnostic");
+}
+{
+  const forceAt = createGem.search(/get\(["']gem["']\)\s*===\s*["']fallback["']/);
+  const glAt = createGem.search(/getContext\s*\(\s*["']webgl2["']/);
+  if (forceAt < 0 || glAt < 0 || forceAt > glAt) {
+    fail("?gem=fallback must skip WebGL context creation");
+  }
+  const between = createGem.slice(forceAt, glAt);
+  if (!/forceFallback/.test(between) || !/return api/.test(between)) {
+    fail("forced fallback must return the image path before getContext");
+  }
+  if (!/showFallback\s*\(/.test(between)) {
+    fail("?gem=fallback must hydrate and reveal the genuine-gem image");
+  }
+  if (/getContext\s*\(\s*["']webgl2["']/.test(between)) {
+    fail('forced fallback must never call getContext("webgl2")');
+  }
+}
+
+if (!/api\.quiet\s*\?\s*GEM_STILL_TIME/.test(createGem)) {
+  fail("quiet live path must draw a fixed renderer pose");
+}
+if (/runFallbackFrame|GEM_FALLBACK_FRAME_MS|1000\s*\/\s*18/.test(createGem)) {
+  fail("fallback must not keep a Canvas2D repaint loop");
+}
+if (/requestAnimationFrame/.test(createGem)) {
+  fail("gem engine must not add a second animation loop");
+}
+if (!/worldGem\.style\.visibility\s*=\s*gemT < 0\.02 \? ["']hidden["']/.test(applyGem)) {
+  fail("when the gem world leaves, existing cover visibility must stop presenting the fallback");
+}
+
+const fallbackCss = [
+  ...(index.match(/#gemFallback\s*\{[^}]+\}/g) || []),
+  ...(index.match(/#gemFallback\.is-ready\s*\{[^}]+\}/g) || []),
+  ...(index.match(/\.is-quiet\s+#gemFallback[\s\S]{0,80}\{[^}]+\}/g) || []),
+  ...(index.match(/@keyframes\s+gem-fallback-spectral\s*\{[\s\S]*?\n    \}/) || [])
+].join("\n");
+if (!/@keyframes\s+gem-fallback-spectral/.test(index) || !/hue-rotate/.test(fallbackCss)) {
+  fail("normal fallback must use one CSS spectral animation with hue-rotate");
+}
+if (!/#gemFallback\.is-ready[\s\S]{0,160}animation:/.test(index)) {
+  fail("fallback animation must attach only after the image is ready");
+}
+if (!/brightness|saturate/.test(fallbackCss)) {
+  fail("fallback motion must keep brightness/saturation inside a narrow spectral range");
+}
+if (/(?<![a-z-])rotate(?:Z)?\s*\(/.test(fallbackCss)) {
+  fail("fallback animation must not rotate the image in its own 2D plane");
+}
+if (!/\.is-quiet\s+#gemFallback[\s\S]{0,80}animation:\s*none/.test(index)) {
+  fail("quiet mode and ?motion=quiet must disable fallback animation");
+}
+if (!/#gemFallback[\s\S]{0,220}min\(100vmin,\s*50vw\)/.test(index)) {
+  fail("desktop fallback square must size to min(100vmin, 50vw)");
+}
+if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*100vmin/.test(index)) {
+  fail("mobile fallback square must be one viewport-minimum axis wide");
+}
+if (/#gemFallback[\s\S]{0,280}(box-shadow|radial-gradient|vignette|mask-image|border-radius)/.test(index)) {
+  fail("fallback image must not introduce a visible square, frame, mask, or vignette");
 }
 
 const collect = helper.slice(helper.indexOf("function collectRests"));
@@ -384,5 +494,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero)"
+  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback)"
 );
