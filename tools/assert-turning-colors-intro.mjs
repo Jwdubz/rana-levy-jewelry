@@ -176,8 +176,8 @@ if (!createGem) fail("createTurningColorsGem must exist");
 if (!/webgl2/.test(createGem)) {
   fail("live path must request a WebGL2 context");
 }
-if (!/uniform1f\(\s*U\(\s*pS,\s*["']uZoom["']\s*\)\s*,\s*state\.isMobile\s*\?\s*3\s*:\s*1\s*\)/.test(createGem)) {
-  fail("live WebGL uZoom must be 3 on mobile (state.isMobile) and 1 on desktop");
+if (!/uniform1f\(\s*U\(\s*pS,\s*["']uZoom["']\s*\)\s*,\s*state\.isMobile\s*\?\s*2\.5\s*:\s*1\s*\)/.test(createGem)) {
+  fail("live WebGL uZoom must be 2.5 on mobile (state.isMobile) and 1 on desktop");
 }
 if (/style\.(transform|zoom)|canvas\.style\.transform/.test(createGem)) {
   fail("must not CSS-transform or raster-scale the live gem canvas");
@@ -315,8 +315,8 @@ if (!/\.is-quiet\s+#gemFallback[\s\S]{0,80}animation:\s*none/.test(index)) {
 if (!/#gemFallback[\s\S]{0,220}min\(100vmin,\s*50vw\)/.test(index)) {
   fail("desktop fallback square must size to min(100vmin, 50vw)");
 }
-if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*300vmin/.test(index)) {
-  fail("mobile fallback square must be 3 viewport-minimum axes wide");
+if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*250vmin[\s\S]{0,40}height:\s*250vmin/.test(index)) {
+  fail("mobile fallback square must be 250vmin wide and 250vmin tall");
 }
 {
   const canvasCss = (index.match(/\.world-gem canvas\s*\{[^}]+\}/) || [])[0] || "";
@@ -517,5 +517,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; live uZoom 3 on mobile and 1 on desktop; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback)"
+  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; live uZoom 2.5 on mobile and 1 on desktop; mobile fallback 250vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback)"
 );
