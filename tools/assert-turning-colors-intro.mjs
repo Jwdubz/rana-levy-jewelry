@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Source assertion: Turning Colors gemstone prologue on opening-start,
- * then the site's original first-beat studio montage on opening-headline.
+ * Source assertion: Turning Colors four-phase cold-load intro on
+ * opening-start (black → setup line → gem → header), then the site's
+ * original first-beat studio montage on opening-headline.
  *
  * The retired ring-only opening world is not a second rest. The prior
  * two-video (studio + ring) expectation encoded that obsolete carrier
@@ -19,7 +20,7 @@
  * Future consumer: any operator editing the homepage opening prologue
  * Activation: execute — node tools/assert-turning-colors-intro.mjs
  * Behavioral check: PASS when stdout includes "PASS:" and exit 0
- * Retirement: when the live-gem prologue or its rest-map contract is retired
+ * Retirement: when the four-phase cold-load intro or its rest-map contract is retired
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -122,6 +123,25 @@ if (!/id="siteHeader"/.test(index) || !/id="sitePrimaryNav"/.test(index)) {
 }
 if (/#siteHeader[\s\S]{0,200}display:\s*none/.test(index)) {
   fail("must not hide #siteHeader as an intro shortcut");
+}
+if (!/html:not\(\.is-opening-intro-done\)\s+#siteHeader[\s\S]{0,120}opacity:\s*0[\s\S]{0,80}visibility:\s*hidden/.test(index)) {
+  fail("cold-load CSS must hide #siteHeader with opacity/visibility until the intro completes");
+}
+if (!/html:not\(\.is-opening-intro-done\)\s+\.setup[\s\S]{0,80}opacity:\s*0/.test(index)) {
+  fail("cold-load CSS must keep the setup line off the first black frame");
+}
+if (!/html:not\(\.is-opening-intro-done\)\s+\.mark[\s\S]{0,80}opacity:\s*0/.test(index)) {
+  fail("cold-load CSS must keep the official mark off the first black frame");
+}
+if (
+  !/html:not\(\.is-opening-intro-done\)\s+\.world-gem canvas[\s\S]{0,160}#gemFallback[\s\S]{0,120}opacity:\s*0/.test(
+    index
+  )
+) {
+  fail("cold-load CSS must hide the live canvas and fallback image, not the black gem world");
+}
+if (/html:not\(\.is-opening-intro-done\)[\s\S]{0,220}#worldGem/.test(index)) {
+  fail("cold-load CSS must not hide #worldGem; black cover has to stay up so studio cannot flash");
 }
 
 if (!/const GEM_VERT/.test(index) || !/const GEM_SCENE/.test(index)) {
@@ -400,6 +420,124 @@ if (/headInStart\s*=\s*mobile\s*\?\s*0\.28/.test(applyCopy) && /gemOutStart\s*=\
 if (/setTimeout\s*\(|setInterval\s*\(/.test(applyCopy) || /setTimeout\s*\(|setInterval\s*\(/.test(applyGem)) {
   fail("copy and gem handoff must stay scroll-owned; no timer destination");
 }
+
+const introBlock = index.match(/const INTRO = \{[\s\S]*?\n      \};/);
+if (!introBlock) fail("INTRO block must remain extractable");
+function introCue(name) {
+  const m = introBlock[0].match(new RegExp(name + ":\\s*(\\d+(?:\\.\\d+)?)"));
+  return m ? Number(m[1]) : NaN;
+}
+const blackHold = introCue("blackHold");
+const lineFade = introCue("lineFade");
+const lineHold = introCue("lineHold");
+const gemFade = introCue("gemFade");
+const headerDelay = introCue("headerDelay");
+const headerFade = introCue("headerFade");
+const leaveProgress = introCue("leaveProgress");
+if (
+  ![blackHold, lineFade, lineHold, gemFade, headerDelay, headerFade, leaveProgress].every(function (n) {
+    return Number.isFinite(n);
+  })
+) {
+  fail("INTRO must author blackHold, lineFade, lineHold, gemFade, headerDelay, headerFade, leaveProgress");
+}
+if (!(blackHold >= 0.35 && blackHold <= 0.5)) {
+  fail("black hold must stay in the authored 0.35–0.5s window (got " + blackHold + ")");
+}
+if (!(lineFade >= 0.8 && lineFade <= 1.1)) {
+  fail("line fade must stay in the authored 0.8–1.1s window (got " + lineFade + ")");
+}
+if (!(lineHold >= 0.25 && lineHold <= 0.4)) {
+  fail("gem must wait 0.25–0.4s after the line is in (got lineHold=" + lineHold + ")");
+}
+if (!(headerDelay >= 0.4 && headerDelay <= 0.7)) {
+  fail("header must wait 0.4–0.7s after the gem is visible (got headerDelay=" + headerDelay + ")");
+}
+if (!(gemFade > 0 && gemFade <= 0.8)) {
+  fail("gem fade must stay a short authored reveal (got " + gemFade + ")");
+}
+if (!(headerFade > 0 && headerFade <= 0.7)) {
+  fail("header fade must stay a short authored reveal (got " + headerFade + ")");
+}
+const lineEnd = blackHold + lineFade;
+const gemStart = lineEnd + lineHold;
+const gemEnd = gemStart + gemFade;
+const headerStart = gemEnd + headerDelay;
+const headerEnd = headerStart + headerFade;
+if (!(blackHold < lineEnd && lineEnd < gemStart && gemEnd < headerStart)) {
+  fail("intro phases must stay black → line → gem → header");
+}
+if (!(headerEnd <= 3.6)) {
+  fail("intro must stay one opening, not a title-card show (headerEnd=" + headerEnd + ")");
+}
+if (!(leaveProgress > 0 && leaveProgress <= 0.02)) {
+  fail("leaving opening-start must complete the intro before later cues (got " + leaveProgress + ")");
+}
+
+const syncIntro = extractFn(index, "syncOpeningIntro");
+const applyIntro = extractFn(index, "applyOpeningIntro");
+if (!syncIntro) fail("syncOpeningIntro must own the one-shot wall-time intro clock");
+if (!applyIntro) fail("applyOpeningIntro must paint the four-phase intro");
+if (/setTimeout\s*\(|setInterval\s*\(/.test(syncIntro) || /setTimeout\s*\(|setInterval\s*\(/.test(applyIntro)) {
+  fail("intro must ride the existing page clock; no setTimeout destination");
+}
+if (/quietModeActive/.test(syncIntro) || /quietModeActive/.test(applyIntro)) {
+  fail("quiet / reduced-motion / ?motion=quiet must still run black → line → diamond → header");
+}
+if (!/openingIntro\.passed/.test(syncIntro) || !/openingIntro\.done/.test(syncIntro)) {
+  fail("intro must be one-shot and snap to the composed end-state on reverse");
+}
+if (!/armClock\s*===\s*false/.test(syncIntro)) {
+  fail("first paint must hold black without starting the wall-time clock");
+}
+if (!/INTRO\.blackHold/.test(syncIntro) || !/INTRO\.lineFade/.test(syncIntro) || !/INTRO\.gemFade/.test(syncIntro)) {
+  fail("syncOpeningIntro must author line then gem from INTRO");
+}
+if (!/INTRO\.headerDelay/.test(syncIntro) || !/INTRO\.headerFade/.test(syncIntro)) {
+  fail("syncOpeningIntro must author header after the gem from INTRO");
+}
+if (!/setupLine[\s\S]*openingIntro\.line|const line = openingIntro\.line[\s\S]*setupLine/.test(applyIntro)) {
+  fail("applyOpeningIntro must fade #setupLine on the line phase");
+}
+if (!/gemCanvas/.test(applyIntro) || !/gemFallback/.test(applyIntro)) {
+  fail("applyOpeningIntro must reveal canvas and fallback on the gem phase, not the black world");
+}
+if (/worldGem/.test(applyIntro) || /worldStudio/.test(applyIntro)) {
+  fail("applyOpeningIntro must not hide the black gem cover or reveal studio during the intro");
+}
+if (!/siteHeader/.test(applyIntro) || !/markEl/.test(applyIntro)) {
+  fail("applyOpeningIntro must reveal the header host and official mark on the header phase");
+}
+if (!/pointerEvents\s*=\s*header < 0\.98 \? ["']none["']/.test(applyIntro)) {
+  fail("header must stay inert until it appears, then become interactive");
+}
+if (!/sitePrimaryNav[\s\S]*pointerEvents\s*=\s*["']none["']/.test(applyIntro)) {
+  fail("primary nav must not accept pointer events before the header phase");
+}
+if (!/is-opening-intro-done/.test(applyIntro)) {
+  fail("completed intro must lift the first-paint hide class so reverse cannot restick the header");
+}
+if (/display\s*=\s*["']none["']/.test(applyIntro)) {
+  fail("must not hide header with display:none");
+}
+
+const tickFn = extractFn(index, "tick");
+if (!tickFn) fail("tick must exist");
+if (!/syncOpeningIntro\s*\(\s*now/.test(tickFn) || !/applyOpeningIntro\s*\(\s*\)/.test(tickFn)) {
+  fail("page tick must drive syncOpeningIntro then applyOpeningIntro");
+}
+{
+  const syncAt = tickFn.search(/syncOpeningIntro\s*\(\s*now/);
+  const renderAt = tickFn.search(/render\s*\(\s*openingTimeline/);
+  const siteAt = tickFn.search(/__ranaSiteTick/);
+  const applyAt = tickFn.search(/applyOpeningIntro\s*\(\s*\)/);
+  if (syncAt < 0 || renderAt < 0 || siteAt < 0 || applyAt < 0 || syncAt > renderAt || applyAt < siteAt) {
+    fail("intro sync must precede render; intro paint must follow the persistent-mark site tick");
+  }
+}
+if (/if\s*\(\s*quietModeActive\s*\(\s*\)\s*\)\s*\{[\s\S]*return;[\s\S]*syncOpeningIntro/.test(tickFn)) {
+  fail("quiet tick must not return before the authored intro");
+}
 if (!/gemOutStart\s*=\s*MOTION\.gemOutStart/.test(applyGem) || !/gemOutEnd\s*=\s*MOTION\.gemOutEnd/.test(applyGem)) {
   fail("applyGem must use the same MOTION gem-out window on desktop and mobile");
 }
@@ -517,5 +655,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback)"
+  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
 );

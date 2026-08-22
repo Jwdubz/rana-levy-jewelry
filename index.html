@@ -99,6 +99,27 @@
       display: block;
     }
 
+    /* Cold-load opening: black → line → gem → header. Lifted by .is-opening-intro-done. */
+    html:not(.is-opening-intro-done) #siteHeader {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    html:not(.is-opening-intro-done) .mark {
+      opacity: 0 !important;
+    }
+
+    html:not(.is-opening-intro-done) .setup {
+      opacity: 0 !important;
+    }
+
+    html:not(.is-opening-intro-done) .world-gem canvas,
+    html:not(.is-opening-intro-done) #gemFallback,
+    html:not(.is-opening-intro-done) #gemFallback.is-ready {
+      opacity: 0 !important;
+      visibility: hidden !important;
+    }
+
     #gemFallback {
       position: absolute;
       left: 50%;
@@ -751,6 +772,17 @@
         finalTextEnd: 0.86
       };
 
+      // One-shot cold-load intro on the page clock. Does not own later scroll cues.
+      const INTRO = {
+        blackHold: 0.38,
+        lineFade: 0.88,
+        lineHold: 0.30,
+        gemFade: 0.52,
+        headerDelay: 0.48,
+        headerFade: 0.40,
+        leaveProgress: 0.008
+      };
+
       // Physical opening span: sticky viewport + choreography travel.
       // MOTION cue fractions remain authored against the 180svh choreography.
       // The opening-final hold is retired; Custom Gems is the last opening rest.
@@ -958,6 +990,16 @@
         headerYield: 0,
         // Opening film: "cover" under the live gem; "studio" at the headline rest; retired: null.
         openingDecoderAuthority: null
+      };
+
+      const openingIntro = {
+        armed: false,
+        origin: 0,
+        passed: false,
+        done: false,
+        line: 0,
+        gem: 0,
+        header: 0
       };
 
       function clamp(v, a, b) {
@@ -1502,6 +1544,122 @@ void main(){
         markEl.style.transform = "translate3d(" + translateX + "px, 0, 0)";
       }
 
+      function introWindow(elapsed, start, duration) {
+        if (duration <= 0) return elapsed >= start ? 1 : 0;
+        return smoothstep((elapsed - start) / duration);
+      }
+
+      function syncOpeningIntro(now, progress, armClock) {
+        if (progress > INTRO.leaveProgress || openingIntro.passed) {
+          openingIntro.passed = true;
+          openingIntro.done = true;
+          openingIntro.line = 1;
+          openingIntro.gem = 1;
+          openingIntro.header = 1;
+          return;
+        }
+        if (openingIntro.done) {
+          openingIntro.line = 1;
+          openingIntro.gem = 1;
+          openingIntro.header = 1;
+          return;
+        }
+        if (!openingIntro.armed) {
+          if (armClock === false) {
+            openingIntro.line = 0;
+            openingIntro.gem = 0;
+            openingIntro.header = 0;
+            return;
+          }
+          openingIntro.armed = true;
+          openingIntro.origin = now;
+        }
+        const elapsed = Math.max(0, (now - openingIntro.origin) / 1000);
+        const lineStart = INTRO.blackHold;
+        const gemStart = INTRO.blackHold + INTRO.lineFade + INTRO.lineHold;
+        const headerStart = gemStart + INTRO.gemFade + INTRO.headerDelay;
+        openingIntro.line = introWindow(elapsed, lineStart, INTRO.lineFade);
+        openingIntro.gem = introWindow(elapsed, gemStart, INTRO.gemFade);
+        openingIntro.header = introWindow(elapsed, headerStart, INTRO.headerFade);
+        if (openingIntro.header >= 1) {
+          openingIntro.done = true;
+        }
+      }
+
+      function applyOpeningIntro() {
+        const line = openingIntro.line;
+        const gem = openingIntro.gem;
+        const header = openingIntro.header;
+
+        if (openingIntro.done) {
+          document.documentElement.classList.add("is-opening-intro-done");
+          if (gemCanvas) {
+            gemCanvas.style.removeProperty("opacity");
+            if (gemEngine && gemEngine.live) {
+              gemCanvas.style.removeProperty("visibility");
+            } else if (!gemEngine || !gemEngine.live) {
+              gemCanvas.style.visibility = "hidden";
+            }
+          }
+          if (gemFallback) {
+            gemFallback.style.removeProperty("opacity");
+            gemFallback.style.removeProperty("visibility");
+          }
+          if (siteHeader) {
+            siteHeader.style.removeProperty("opacity");
+            siteHeader.style.removeProperty("visibility");
+            siteHeader.style.removeProperty("pointer-events");
+          }
+          return;
+        }
+
+        document.documentElement.classList.remove("is-opening-intro-done");
+
+        if (setupLine) {
+          const base = parseFloat(setupLine.style.opacity);
+          const setupOpacity = (Number.isFinite(base) ? base : 1) * line;
+          setupLine.style.setProperty("opacity", String(setupOpacity), "important");
+          setupLine.style.visibility = setupOpacity < 0.02 ? "hidden" : "visible";
+        }
+
+        if (gemCanvas) {
+          gemCanvas.style.setProperty("opacity", String(gem), "important");
+          if (gem < 0.02) {
+            gemCanvas.style.setProperty("visibility", "hidden", "important");
+          } else if (gemEngine && gemEngine.live) {
+            gemCanvas.style.setProperty("visibility", "visible", "important");
+          } else {
+            gemCanvas.style.setProperty("visibility", "hidden", "important");
+          }
+        }
+        if (gemFallback) {
+          const ready = gemFallback.classList.contains("is-ready");
+          const show = ready && gem >= 0.02;
+          gemFallback.style.setProperty("opacity", String(ready ? gem : 0), "important");
+          gemFallback.style.setProperty(
+            "visibility",
+            show ? "visible" : "hidden",
+            "important"
+          );
+        }
+
+        if (siteHeader) {
+          siteHeader.style.setProperty("opacity", String(header), "important");
+          siteHeader.style.setProperty(
+            "visibility",
+            header < 0.02 ? "hidden" : "visible",
+            "important"
+          );
+          siteHeader.style.pointerEvents = header < 0.98 ? "none" : "";
+        }
+        if (sitePrimaryNav && header < 0.98) {
+          sitePrimaryNav.style.pointerEvents = "none";
+        }
+        if (markEl) {
+          markEl.style.setProperty("opacity", String(0.94 * header), "important");
+        }
+      }
+
       function applyCopy(progress) {
         const mobile = state.isMobile;
         // Sequential worlds: setup-out completes, then gem yields, then headline enters.
@@ -1750,7 +1908,9 @@ void main(){
           state.visualProgress = state.targetProgress;
         }
         // Physical progress is measured/smoothed; render consumes remapped timeline.
+        syncOpeningIntro(performance.now(), openingTimeline(state.visualProgress));
         render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
+        applyOpeningIntro();
         if (gemEngine) gemEngine.resize();
       }
 
@@ -1784,6 +1944,7 @@ void main(){
         }
 
         // All MOTION cues run on the remapped choreography timeline.
+        syncOpeningIntro(now, openingTimeline(state.visualProgress));
         render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
         if (gemEngine) gemEngine.frame(now);
 
@@ -1791,6 +1952,9 @@ void main(){
         if (typeof window.__ranaSiteTick === "function") {
           window.__ranaSiteTick(dt);
         }
+
+        // After persistent-mark paint, so the intro can still hide the official plate.
+        applyOpeningIntro();
 
         // After siteTick may retire Opening, re-evaluate opening decoder authority
         // so is-live cannot lag a sticky handoff by waiting for the next scroll.
@@ -2056,7 +2220,9 @@ void main(){
       state.targetProgress = measureScrollProgress();
       state.visualProgress = state.targetProgress;
       gemEngine = createTurningColorsGem(gemCanvas, gemFallback, quietModeActive());
+      syncOpeningIntro(performance.now(), openingTimeline(state.visualProgress), false);
       render(openingTimeline(state.visualProgress), 0, 0);
+      applyOpeningIntro();
       if (gemEngine) gemEngine.frame(performance.now());
 
       loadMark();
@@ -2118,6 +2284,7 @@ void main(){
       // OPENING_SPAN + openingTimeline are the shared physical→choreography remap
       // consumed by the inline renderer and site.js persistent-mark state.
       window.MOTION = MOTION;
+      window.INTRO = INTRO;
       window.OPENING_SPAN = OPENING_SPAN;
       window.openingTimeline = openingTimeline;
 
