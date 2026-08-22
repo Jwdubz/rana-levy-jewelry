@@ -777,9 +777,9 @@
         blackHold: 0.38,
         lineFade: 0.88,
         lineHold: 0.30,
-        gemFade: 0.52,
+        gemFade: 1.12,
         headerDelay: 0.48,
-        headerFade: 0.40,
+        headerFade: 0.92,
         leaveProgress: 0.008
       };
 
@@ -1013,6 +1013,12 @@
       function smoothstep(t) {
         const x = clamp(t, 0, 1);
         return x * x * (3 - 2 * x);
+      }
+
+      function easeOutCubic(t) {
+        const x = clamp(t, 0, 1);
+        const inv = 1 - x;
+        return 1 - inv * inv * inv;
       }
 
       function windowProgress(p, start, end) {
@@ -1544,9 +1550,10 @@ void main(){
         markEl.style.transform = "translate3d(" + translateX + "px, 0, 0)";
       }
 
-      function introWindow(elapsed, start, duration) {
+      function introWindow(elapsed, start, duration, ease) {
         if (duration <= 0) return elapsed >= start ? 1 : 0;
-        return smoothstep((elapsed - start) / duration);
+        const shaped = typeof ease === "function" ? ease : smoothstep;
+        return shaped((elapsed - start) / duration);
       }
 
       function syncOpeningIntro(now, progress, armClock) {
@@ -1579,8 +1586,8 @@ void main(){
         const gemStart = INTRO.blackHold + INTRO.lineFade + INTRO.lineHold;
         const headerStart = gemStart + INTRO.gemFade + INTRO.headerDelay;
         openingIntro.line = introWindow(elapsed, lineStart, INTRO.lineFade);
-        openingIntro.gem = introWindow(elapsed, gemStart, INTRO.gemFade);
-        openingIntro.header = introWindow(elapsed, headerStart, INTRO.headerFade);
+        openingIntro.gem = introWindow(elapsed, gemStart, INTRO.gemFade, easeOutCubic);
+        openingIntro.header = introWindow(elapsed, headerStart, INTRO.headerFade, easeOutCubic);
         if (openingIntro.header >= 1) {
           openingIntro.done = true;
         }

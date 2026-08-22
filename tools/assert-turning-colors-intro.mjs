@@ -450,14 +450,14 @@ if (!(lineFade >= 0.8 && lineFade <= 1.1)) {
 if (!(lineHold >= 0.25 && lineHold <= 0.4)) {
   fail("gem must wait 0.25–0.4s after the line is in (got lineHold=" + lineHold + ")");
 }
-if (!(headerDelay >= 0.4 && headerDelay <= 0.7)) {
-  fail("header must wait 0.4–0.7s after the gem is visible (got headerDelay=" + headerDelay + ")");
+if (!(headerDelay >= 0.45 && headerDelay <= 0.55)) {
+  fail("header must wait 0.45–0.55s after the gem is visible (got headerDelay=" + headerDelay + ")");
 }
-if (!(gemFade > 0 && gemFade <= 0.8)) {
-  fail("gem fade must stay a short authored reveal (got " + gemFade + ")");
+if (!(gemFade >= 1.05 && gemFade <= 1.2)) {
+  fail("gem fade must stay the authored slower reveal (got " + gemFade + ")");
 }
-if (!(headerFade > 0 && headerFade <= 0.7)) {
-  fail("header fade must stay a short authored reveal (got " + headerFade + ")");
+if (!(headerFade >= 0.85 && headerFade <= 1)) {
+  fail("header fade must stay the authored slower reveal (got " + headerFade + ")");
 }
 const lineEnd = blackHold + lineFade;
 const gemStart = lineEnd + lineHold;
@@ -467,7 +467,7 @@ const headerEnd = headerStart + headerFade;
 if (!(blackHold < lineEnd && lineEnd < gemStart && gemEnd < headerStart)) {
   fail("intro phases must stay black → line → gem → header");
 }
-if (!(headerEnd <= 3.6)) {
+if (!(headerEnd > 3.6 && headerEnd <= 4.8)) {
   fail("intro must stay one opening, not a title-card show (headerEnd=" + headerEnd + ")");
 }
 if (!(leaveProgress > 0 && leaveProgress <= 0.02)) {
@@ -495,6 +495,28 @@ if (!/INTRO\.blackHold/.test(syncIntro) || !/INTRO\.lineFade/.test(syncIntro) ||
 }
 if (!/INTRO\.headerDelay/.test(syncIntro) || !/INTRO\.headerFade/.test(syncIntro)) {
   fail("syncOpeningIntro must author header after the gem from INTRO");
+}
+const introWin = extractFn(index, "introWindow");
+const easeOut = extractFn(index, "easeOutCubic");
+if (!introWin) fail("introWindow must remain the intro opacity clock");
+if (!easeOut) fail("gem and header fades must use cubic ease-out");
+if (!/clamp\(\s*t,\s*0,\s*1\s*\)/.test(easeOut) || !/1 - inv \* inv \* inv/.test(easeOut)) {
+  fail("cubic ease-out must stay 1-(1-t)^3 with no bounce or overshoot");
+}
+if (/bounce|elastic|overshoot|backIn|backOut/i.test(easeOut) || /bounce|elastic|overshoot/i.test(introWin)) {
+  fail("intro easing must not bounce or overshoot");
+}
+if (!/smoothstep/.test(introWin)) {
+  fail("introWindow must keep smoothstep for the line fade");
+}
+if (!/introWindow\(\s*elapsed,\s*lineStart,\s*INTRO\.lineFade\s*\)/.test(syncIntro)) {
+  fail("line fade must keep the existing introWindow / smoothstep curve");
+}
+if (!/introWindow\(\s*elapsed,\s*gemStart,\s*INTRO\.gemFade,\s*easeOutCubic\s*\)/.test(syncIntro)) {
+  fail("gem fade must use cubic ease-out");
+}
+if (!/introWindow\(\s*elapsed,\s*headerStart,\s*INTRO\.headerFade,\s*easeOutCubic\s*\)/.test(syncIntro)) {
+  fail("header fade must use cubic ease-out");
 }
 if (!/setupLine[\s\S]*openingIntro\.line|const line = openingIntro\.line[\s\S]*setupLine/.test(applyIntro)) {
   fail("applyOpeningIntro must fade #setupLine on the line phase");
