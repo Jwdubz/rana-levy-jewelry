@@ -996,7 +996,7 @@ in vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
 precision highp float;
 out vec4 o;
 uniform vec2 uRes; uniform float uTime; uniform vec2 uOrbit;
-uniform float uShift, uSpin, uEnc;
+uniform float uShift, uSpin, uEnc, uZoom;
 #define PI 3.14159265359
 #define F 16
 float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
@@ -1025,6 +1025,7 @@ bool hit(vec3 ro, vec3 rd, out float t1, out float t2, out vec3 nn){
 void main(){
   float s=min(uRes.x,uRes.y);
   vec2 uv=(gl_FragCoord.xy-.5*uRes)/s;
+  uv/=uZoom;
   uv.y += 0.02;
   float az=uTime*uSpin+uOrbit.x, el=0.19+uOrbit.y;
   vec3 ro=vec3(sin(az)*cos(el),sin(el),cos(az)*cos(el))*5.40; ro.y+=0.10;
@@ -1263,6 +1264,7 @@ void main(){
           gl.uniform1f(U(pS, "uShift"), 0);
           gl.uniform1f(U(pS, "uSpin"), spin);
           gl.uniform1f(U(pS, "uEnc"), ENC);
+          gl.uniform1f(U(pS, "uZoom"), state.isMobile ? 3 : 1);
           gl.drawArrays(gl.TRIANGLES, 0, 3);
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, bA.f);

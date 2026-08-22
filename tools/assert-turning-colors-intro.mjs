@@ -130,6 +130,16 @@ if (!/const GEM_VERT/.test(index) || !/const GEM_SCENE/.test(index)) {
 if (!/min\(uRes\.x,\s*uRes\.y\)/.test(index)) {
   fail("gem projection must size the stone by the shorter axis so portrait widths keep the stone in frame");
 }
+{
+  const gemScene = (index.match(/const GEM_SCENE = `[\s\S]*?`;/) || [])[0] || "";
+  if (!gemScene) fail("GEM_SCENE source must remain extractable");
+  if (!/\buniform float uShift, uSpin, uEnc, uZoom;/.test(gemScene)) {
+    fail("GEM_SCENE must declare uZoom with the live scene uniforms");
+  }
+  if (!/vec2 uv=\(gl_FragCoord\.xy-\.5\*uRes\)\/s;\s*uv\/=uZoom;/.test(gemScene)) {
+    fail("GEM_SCENE must scale ray-plane UV/lens coordinates by inverse uZoom at full canvas resolution");
+  }
+}
 if (!/const GEM_BLUR/.test(index) || !/const GEM_COMP/.test(index)) {
   fail("must port the historical BLUR/COMP bloom composite, minus omitted treatments");
 }
@@ -165,6 +175,12 @@ const createGem = extractFn(index, "createTurningColorsGem");
 if (!createGem) fail("createTurningColorsGem must exist");
 if (!/webgl2/.test(createGem)) {
   fail("live path must request a WebGL2 context");
+}
+if (!/uniform1f\(\s*U\(\s*pS,\s*["']uZoom["']\s*\)\s*,\s*state\.isMobile\s*\?\s*3\s*:\s*1\s*\)/.test(createGem)) {
+  fail("live WebGL uZoom must be 3 on mobile (state.isMobile) and 1 on desktop");
+}
+if (/style\.(transform|zoom)|canvas\.style\.transform/.test(createGem)) {
+  fail("must not CSS-transform or raster-scale the live gem canvas");
 }
 if (/paintGemFallback/.test(createGem) || /paintGemFallback/.test(index)) {
   fail("paintGemFallback Canvas2D schematic must be absent");
@@ -301,6 +317,13 @@ if (!/#gemFallback[\s\S]{0,220}min\(100vmin,\s*50vw\)/.test(index)) {
 }
 if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*300vmin/.test(index)) {
   fail("mobile fallback square must be 3 viewport-minimum axes wide");
+}
+{
+  const canvasCss = (index.match(/\.world-gem canvas\s*\{[^}]+\}/) || [])[0] || "";
+  if (!canvasCss) fail("live gem canvas CSS must remain extractable");
+  if (/transform:|scale\(/.test(canvasCss)) {
+    fail("must not CSS-transform the live gem canvas; zoom belongs in WebGL scene math");
+  }
 }
 if (/#gemFallback[\s\S]{0,280}(box-shadow|radial-gradient|vignette|mask-image|border-radius)/.test(index)) {
   fail("fallback image must not introduce a visible square, frame, mask, or vignette");
@@ -494,5 +517,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback)"
+  "PASS: turning-colors intro (black live-gem prologue on opening-start; Some stones turn colors.; original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed intro; live uZoom 3 on mobile and 1 on desktop; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback)"
 );
