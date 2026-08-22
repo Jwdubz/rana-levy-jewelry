@@ -433,8 +433,8 @@
       }
 
       #gemFallback {
-        width: 250vmin;
-        height: 250vmin;
+        width: 150vmin;
+        height: 150vmin;
       }
 
       .headline {
@@ -1264,7 +1264,7 @@ void main(){
           gl.uniform1f(U(pS, "uShift"), 0);
           gl.uniform1f(U(pS, "uSpin"), spin);
           gl.uniform1f(U(pS, "uEnc"), ENC);
-          gl.uniform1f(U(pS, "uZoom"), state.isMobile ? 2.5 : 1);
+          gl.uniform1f(U(pS, "uZoom"), state.isMobile ? 1.5 : 1);
           gl.drawArrays(gl.TRIANGLES, 0, 3);
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, bA.f);
