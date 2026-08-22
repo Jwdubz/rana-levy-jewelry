@@ -150,8 +150,17 @@ if (!/html:not\(\.is-opening-intro-done\)\s+#gemHost[\s\S]{0,160}opacity:\s*0/.t
 if (!/html:not\(\.is-opening-intro-done\)\s+#gemHost[\s\S]{0,280}clip-path:\s*inset\(100%\s*0\s*0\s*0\)/.test(index)) {
   fail("cold-load CSS must clip #gemHost hidden-below so the wipe starts covered");
 }
+if (!/html:not\(\.is-opening-intro-done\)\s+#gemCanvas[\s\S]{0,160}clip-path:\s*inset\(100%\s*0\s*0\s*0\)/.test(index)) {
+  fail("cold-load CSS must clip #gemCanvas hidden-below so mobile first paint cannot show a finished stone");
+}
+if (!/\.gem-host[\s\S]{0,240}overflow:\s*hidden/.test(index)) {
+  fail("gem host must overflow-hidden so the 150vmin mobile fallback stays inside the wipe");
+}
 if (/html:not\(\.is-opening-intro-done\)\s+\.world-gem canvas[\s\S]{0,80}visibility:\s*hidden/.test(index)) {
-  fail("cold-load CSS must not visibility-hide the live canvas; the host wipe owns first paint");
+  fail("cold-load CSS must not visibility-hide the live canvas; clip and scissor own first paint");
+}
+if (/html:not\(\.is-opening-intro-done\)\s+#gemCanvas[\s\S]{0,160}visibility:\s*hidden/.test(index)) {
+  fail("cold-load CSS must not visibility-hide #gemCanvas for the whole intro or the wipe cannot paint");
 }
 if (/html:not\(\.is-opening-intro-done\)[\s\S]{0,220}#worldGem/.test(index)) {
   fail("cold-load CSS must not hide #worldGem; black cover has to stay up so studio cannot flash");
@@ -266,6 +275,15 @@ if (/prefers-reduced-motion/.test(createGem)) {
 }
 if (!/api\.cover < 0\.02/.test(createGem) && !/cover < 0\.02/.test(createGem)) {
   fail("renderer must skip the raytrace once the prologue no longer covers");
+}
+if (!/SCISSOR_TEST/.test(createGem) || !/scissor\(\s*0,\s*0,\s*W/.test(createGem)) {
+  fail("live composite must scissor from the bottom-left so the painted canvas wipes up on mobile");
+}
+if (!/openingIntro\.gem/.test(createGem)) {
+  fail("gem scissor must share openingIntro.gem");
+}
+if (!/!stillDrawn \|\| !openingIntro\.done/.test(createGem)) {
+  fail("quiet still must keep drawing while the intro wipe is moving");
 }
 
 if (/function\s+paintGemFallback|function\s+convexGemSilhouette|function\s+gemRing|function\s+gemHueRgb|function\s+gemRgbCss|function\s+mixRgb/.test(index)) {
@@ -555,6 +573,12 @@ if (!/\(1\s*-\s*gem\)\s*\*\s*100/.test(applyIntro)) {
 if (!/clip-path/.test(applyIntro) || !/inset\(/.test(applyIntro)) {
   fail("gem host must wipe-up with clip-path inset during the gem phase");
 }
+if (!/gemCanvas\.style\.setProperty\(\s*["']clip-path["']/.test(applyIntro)) {
+  fail("mobile compositors ignore parent clip; #gemCanvas must receive the same wipe-up clip-path");
+}
+if (!/mask-image/.test(applyIntro) || !/linear-gradient\(\s*to top/.test(applyIntro)) {
+  fail("gem wipe must also set a to-top mask-image so WebKit phones clip the painted canvas");
+}
 if (!/% 0 0 0/.test(applyIntro)) {
   fail("wipe must travel bottom → top (inset top only; right/bottom/left stay 0)");
 }
@@ -717,5 +741,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
+  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); mobile painted-canvas wipe (canvas clip-path + mask-image + bottom-left scissor on openingIntro.gem; host overflow contains 150vmin fallback; quiet still redraws while wipe moves); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
 );
