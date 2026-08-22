@@ -299,8 +299,8 @@ if (!/\.is-quiet\s+#gemFallback[\s\S]{0,80}animation:\s*none/.test(index)) {
 if (!/#gemFallback[\s\S]{0,220}min\(100vmin,\s*50vw\)/.test(index)) {
   fail("desktop fallback square must size to min(100vmin, 50vw)");
 }
-if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*100vmin/.test(index)) {
-  fail("mobile fallback square must be one viewport-minimum axis wide");
+if (!/@media \(max-width: 700px\)[\s\S]*#gemFallback[\s\S]{0,80}width:\s*150vmin/.test(index)) {
+  fail("mobile fallback square must be 1.5 viewport-minimum axes wide");
 }
 if (/#gemFallback[\s\S]{0,280}(box-shadow|radial-gradient|vignette|mask-image|border-radius)/.test(index)) {
   fail("fallback image must not introduce a visible square, frame, mask, or vignette");
