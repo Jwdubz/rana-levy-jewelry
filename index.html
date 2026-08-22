@@ -360,6 +360,42 @@
       display: none;
     }
 
+    .scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: max(0.85rem, calc(env(safe-area-inset-bottom, 0px) + 0.55rem));
+      transform: translate3d(-50%, 0, 0);
+      z-index: 8;
+      margin: 0;
+      font-size: clamp(0.72rem, 1.3vw, 0.9rem);
+      font-weight: 400;
+      letter-spacing: 0.28em;
+      line-height: 1;
+      white-space: nowrap;
+      pointer-events: none;
+      color: transparent;
+      background-image: linear-gradient(
+        105deg,
+        #d7b9ff 0%,
+        #a98cff 28%,
+        #ff9cc9 58%,
+        #f4ddb0 100%
+      );
+      background-size: 180% 100%;
+      background-position: 18% 50%;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      text-shadow: none;
+      filter: drop-shadow(0 2px 18px rgba(0, 0, 0, 0.32));
+      opacity: 0;
+    }
+
+    html:not(.is-opening-intro-done) #scrollCue {
+      opacity: 0;
+      visibility: hidden;
+    }
+
     /* Desktop keeps the host clip wipe. Phones ignore clip/mask/scissor on
        a live WebGL canvas, so mobile uses this opaque cover instead. */
     #gemReveal {
@@ -551,6 +587,12 @@
         white-space: nowrap;
         text-align: center;
       }
+
+      .scroll-cue {
+        bottom: max(0.7rem, calc(env(safe-area-inset-bottom, 0px) + 0.4rem));
+        font-size: clamp(0.68rem, 3.1vw, 0.8rem);
+        letter-spacing: 0.26em;
+      }
     }
 
     @media (pointer: coarse) {
@@ -720,6 +762,7 @@
         <div class="mark" id="mark" aria-hidden="true"></div>
 
         <p class="type setup" id="setupLine">Some stones turn colors.</p>
+        <p class="scroll-cue" id="scrollCue" aria-hidden="true">SCROLL</p>
 
         <div class="copy-dock-opening" id="openingCopyDock" aria-hidden="true"></div>
 
@@ -1034,6 +1077,7 @@
       const passage = document.getElementById("opening");
       const markEl = document.getElementById("mark");
       const setupLine = document.getElementById("setupLine");
+      const scrollCue = document.getElementById("scrollCue");
       const headline = document.getElementById("headline");
       const openingCopyDock = document.getElementById("openingCopyDock");
       const heads = document.getElementById("heads");
@@ -1742,6 +1786,20 @@ void main(){
         }
       }
 
+      function paintScrollCue() {
+        if (!scrollCue) return;
+        let opacity;
+        if (!openingIntro.done) {
+          opacity = openingIntro.header;
+        } else {
+          const progress = openingTimeline(state.visualProgress);
+          const setupT = windowProgress(progress, MOTION.setupOutStart, MOTION.setupOutEnd);
+          opacity = 1 - setupT;
+        }
+        scrollCue.style.opacity = String(opacity);
+        scrollCue.style.visibility = opacity < 0.02 ? "hidden" : "visible";
+      }
+
       function applyOpeningIntro() {
         const line = openingIntro.line;
         const gem = openingIntro.gem;
@@ -1782,6 +1840,7 @@ void main(){
             siteHeader.style.removeProperty("visibility");
             siteHeader.style.removeProperty("pointer-events");
           }
+          paintScrollCue();
           return;
         }
 
@@ -1863,6 +1922,7 @@ void main(){
         if (markEl) {
           markEl.style.setProperty("opacity", String(0.94 * header), "important");
         }
+        paintScrollCue();
       }
 
       function applyCopy(progress) {
