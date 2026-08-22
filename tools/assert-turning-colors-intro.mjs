@@ -70,8 +70,14 @@ if (!/\.scroll-cue[\s\S]{0,900}#d7b9ff[\s\S]{0,80}#a98cff[\s\S]{0,80}#ff9cc9[\s\
 if (!/\.scroll-cue[\s\S]{0,900}-webkit-background-clip:\s*text[\s\S]{0,80}background-clip:\s*text/.test(index)) {
   fail("SCROLL color must clip the gradient to the word");
 }
+if (!/\.scroll-cue[\s\S]{0,80}position:\s*fixed/.test(index)) {
+  fail("SCROLL must be viewport-fixed so every scrollable beat can show it");
+}
 if (/@media \(max-width: 700px\)[\s\S]*#scrollCue[\s\S]{0,80}display:\s*none/.test(index)) {
   fail("SCROLL must remain visible on mobile");
+}
+if (/id="scene"[\s\S]*id="scrollCue"[\s\S]*id="hand"/.test(index)) {
+  fail("SCROLL must sit outside the opening scene so later sticky beats cannot cover it");
 }
 if (!/id="headline"[\s\S]*Custom Gems Turn[\s\S]*Heads/.test(index)) {
   fail("opening-headline must remain Custom Gems Turn Heads");
@@ -595,8 +601,15 @@ if (!paintScroll) fail("paintScrollCue must own the SCROLL cue on desktop and mo
 if (!/openingIntro\.header/.test(paintScroll)) {
   fail("SCROLL must fade in with the header, not before the gem");
 }
-if (!/MOTION\.setupOutStart/.test(paintScroll) || !/MOTION\.setupOutEnd/.test(paintScroll)) {
-  fail("SCROLL must leave with the setup line once the visitor starts scrolling");
+if (!/pastLastScrollableBeat/.test(paintScroll)) {
+  fail("SCROLL must stay through every rest except the last authored beat");
+}
+const pastLast = extractFn(index, "pastLastScrollableBeat");
+if (!pastLast || !/collectRests/.test(pastLast) || !/last\.start/.test(pastLast)) {
+  fail("SCROLL must hide on the terminal rest using the authored rest map");
+}
+if (/MOTION\.setupOutStart/.test(paintScroll) || /MOTION\.setupOutEnd/.test(paintScroll)) {
+  fail("SCROLL must not die with the setup line; later beats still scroll");
 }
 if (!/paintScrollCue\s*\(\s*\)/.test(applyIntro)) {
   fail("applyOpeningIntro must paint SCROLL on the intro clock");
@@ -799,5 +812,5 @@ if (manageCoverAt < 0 || manageHydrateAt < 0 || manageHydrateAt < manageCoverAt)
 }
 
 console.log(
-  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; spectral SCROLL cue at the opening floor on desktop and mobile; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); mobile cover-sheet wipe (#gemReveal black height 100%→0 from the top on smoothstep openingIntro.wipe; waits until live canvas or fallback is presentable; host stays visible; no mobile visibility pop); mobile painted-canvas wipe (canvas clip-path + mask-image + bottom-left scissor on openingIntro.gem; host overflow contains 150vmin fallback; quiet still redraws while wipe moves); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
+  "PASS: turning-colors intro (four-phase cold-load black → Some stones turn colors. → gem → header on opening-start; spectral SCROLL cue fixed on every scrollable beat on desktop and mobile, hidden on the last rest; gem host wipe-up+fade (clip-path inset bottom→top plus interpolated opacity across gemFade; no canvas/fallback opacity pop); mobile cover-sheet wipe (#gemReveal black height 100%→0 from the top on smoothstep openingIntro.wipe; waits until live canvas or fallback is presentable; host stays visible; no mobile visibility pop); mobile painted-canvas wipe (canvas clip-path + mask-image + bottom-left scissor on openingIntro.gem; host overflow contains 150vmin fallback; quiet still redraws while wipe moves); original studio first-beat on opening-headline with Custom Gems Turn Heads; sequential setup-out then gem-out then headline-in by 0.48; one studio-opening-cluster-bench-engraving video; no opening ring world; WebGL2 lineage without halo/vignette/timed gem-boot; live uZoom 1.5 on mobile and 1 on desktop; mobile fallback 150vmin square; restore keeps fallback; resize/dispose release GL targets; quiet still; two-rest map opening-start then opening-headline; cover|studio decoder authority at gemOutEnd on desktop and mobile; reverse cover resets studio to time zero; forced ?gem=fallback genuine-gem image; lazy data-src hydration; no paintGemFallback/Canvas2D geometry; no 2D-plane rotation; quiet disables fallback animation; cover hides fallback; one-shot intro snaps to composed end-state on reverse)"
 );
