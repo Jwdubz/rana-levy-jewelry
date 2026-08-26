@@ -322,7 +322,7 @@ if (!/display:\s*block/.test(openingDock) || !/background:\s*#020005/.test(openi
 if (!/work-copy-dock/.test(stylesMobile) || !/--work-copy-dock-h/.test(stylesMobile)) {
   fail("mobile terminal must author a black copy region below the pink ring");
 }
-const mobileHeadline = (indexMobile.match(/\.setup\s*\{[\s\S]*?\}/) || [""])[0];
+const mobileHeadline = (indexMobile.match(/\.headline\s*\{[\s\S]*?\}/) || [""])[0];
 const mobileHeadlineRun = (indexMobile.match(/\.headline-run\s*\{[\s\S]*?\}/) || [""])[0];
 if (!/white-space:\s*nowrap/.test(mobileHeadlineRun)) {
   fail("mobile .headline-run must stay one nowrap line");
@@ -331,19 +331,19 @@ if (/max-width:\s*18ch/.test(mobileHeadlineRun) || /max-width:\s*18ch/.test(mobi
   fail("mobile Custom Gems must not use an artificial 18ch wrap cap");
 }
 if (!/white-space:\s*nowrap/.test(mobileHeadline)) {
-  fail("mobile first-beat caption must keep the line nowrap");
+  fail("mobile .headline dock must keep the line nowrap");
 }
-if (!/text-align:\s*center/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must preserve the original centered caption alignment");
+if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must remain centered in the authored dark field");
 }
-if (/display:\s*flex/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must not retain the later oversized flex-headline treatment");
+if (!/display:\s*flex/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must stay a flex-centered band line");
 }
-if (!/bottom:\s*11svh/.test(mobileHeadline) || !/width:\s*100%/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must preserve the original first-beat caption position");
+if (!/bottom:\s*0/.test(mobileHeadline) || !/height:\s*var\(--opening-copy-dock-h,\s*18dvh\)/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must preserve the approved 18dvh headline field");
 }
-if (!/transform:\s*translate3d\(0,\s*0,\s*0\)/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must preserve the original first-beat caption transform");
+if (!/translate:\s*0\s+-8\.25dvh/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must preserve the approved dark-field optical position");
 }
 if (/color:\s*#2A171F/.test(mobileHeadline)) {
   fail("mobile Custom Gems must not retain the unrequested plum recolor");
@@ -351,17 +351,20 @@ if (/color:\s*#2A171F/.test(mobileHeadline)) {
 if (!/\.type\s*\{[\s\S]{0,220}color:\s*#fffaf5/.test(index)) {
   fail("mobile Custom Gems must inherit the original cream ink #fffaf5");
 }
-if (!/padding:\s*0\s+4\.5vw/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must preserve the original caption edge allowance");
+if (!/padding:\s*0\s+0\.85rem/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must keep safe horizontal dock padding");
 }
-const headFont = (indexMobile.match(/\.setup\s*\{[\s\S]*?font-size:\s*([^;]+);/) || [])[1] || "";
-if (!/^1\.12rem$/.test(headFont.trim())) {
-  fail("mobile Custom Gems must restore the original 1.12rem first-beat caption size (got " + headFont + ")");
+const headFont = (indexMobile.match(/\.headline\s*\{[\s\S]*?font-size:\s*([^;]+);/) || [])[1] || "";
+if (!/clamp\(\s*1\.45rem\s*,\s*7\.4vw\s*,\s*2\.25rem\s*\)/.test(headFont)) {
+  fail("mobile Custom Gems must keep the viewport-safe display clamp 1.45rem / 7.4vw / 2.25rem (got " + headFont + ")");
 }
 
 function modeledHeadlinePx(width) {
   const rem = 16;
-  return 1.12 * rem;
+  const min = 1.45 * rem;
+  const max = 2.25 * rem;
+  const fluid = 0.074 * width;
+  return Math.max(min, Math.min(max, fluid));
 }
 const oneLineFit = [
   { width: 320, maxPx: 24 },
@@ -372,7 +375,7 @@ for (const row of oneLineFit) {
   const px = modeledHeadlinePx(row.width);
   if (px > row.maxPx) {
     fail(
-      "mobile Custom Gems caption at " +
+      "mobile Custom Gems clamp at " +
         row.width +
         "px is " +
         px.toFixed(2) +
@@ -472,7 +475,7 @@ if (!/Custom Gems Turn /.test(liveHeadlineInner)) {
 }
 if (!/<span class="headline-run">Custom Gems Turn <span class="heads" id="heads">Heads<\/span><\/span>/.test(liveHeadlineInner)) {
   fail(
-    "caption must keep Gems/Turn/Heads in one inline .headline-run so the original spacing remains exact"
+    "headline must keep Gems/Turn/Heads in one .headline-run flex item so mobile display:flex cannot eat the word spaces"
   );
 }
 if (/Gems\s*<\/span>\s*(?:<span[^>]*\bbreak\b[\s\S]*?<\/span>\s*)?(?:<span[^>]*>\s*)?Turn/.test(liveHeadlineInner)) {
@@ -498,10 +501,7 @@ const retiredCollapsedHeadline =
   '          <span class="line">Custom Gems</span><span class="break"></span>\n' +
   '          <span class="line"> Turn <span class="heads" id="heads">Heads</span></span>\n' +
   "        </h1>";
-const retiredVisible = visibleHeadlineText(
-  retiredCollapsedHeadline,
-  ".headline .break{display:none}.headline{display:flex}"
-);
+const retiredVisible = visibleHeadlineText(retiredCollapsedHeadline, indexMobile);
 if (retiredVisible === REQUIRED_HEADLINE) {
   fail(
     "headline oracle is too weak: the retired Gems/break/Turn split still reports the required spaced line"
@@ -587,5 +587,5 @@ if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; Custom Gems uses the original 1.12rem first-beat caption treatment with exact spacing; approved dark opening field preserved; three rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; approved dark opening field preserved; three rests; no blur/vignette filler)"
 );
