@@ -227,24 +227,16 @@
       white-space: nowrap;
     }
 
-    .headline {
+    .setup {
       left: 50%;
-      top: 50%;
-      transform: translate3d(-50%, -50%, 0);
-      font-size: clamp(4.1rem, 6.8vw, 7.2rem);
+      bottom: 12svh;
+      transform: translate3d(-50%, 0, 0);
+      font-size: clamp(1.15rem, 2vw, 1.75rem);
       font-weight: 400;
-      line-height: 0.9;
-      letter-spacing: -0.01em;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
       opacity: 1;
       text-align: center;
-    }
-
-    .headline .line {
-      display: inline;
-    }
-
-    .headline .break {
-      display: none;
     }
 
     .headline-run {
@@ -400,33 +392,24 @@
         height: 100%;
       }
 
-      .headline {
+      .setup {
         left: 0;
         right: 0;
+        width: 100%;
         top: auto;
-        bottom: 0;
-        height: var(--opening-copy-dock-h, 18dvh);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transform: none;
-        translate: 0 -8.25dvh;
-        font-size: clamp(1.45rem, 7.4vw, 2.25rem);
-        line-height: 1.05;
+        bottom: 11svh;
+        transform: translate3d(0, 0, 0);
+        font-size: 1.12rem;
+        line-height: 1.25;
         text-align: center;
         white-space: nowrap;
         max-width: none;
-        padding: 0 0.85rem;
+        padding: 0 4.5vw;
         box-sizing: border-box;
-        text-shadow: none;
-      }
-
-      .headline .line {
-        display: inline;
-      }
-
-      .headline .break {
-        display: none;
+        text-shadow:
+          0 1px 2px rgba(2, 0, 5, 0.55),
+          0 2px 22px rgba(2, 0, 5, 0.5),
+          0 0 36px rgba(2, 0, 5, 0.28);
       }
 
       .headline-run {
@@ -571,7 +554,7 @@
 
         <div class="copy-dock-opening" id="openingCopyDock" aria-hidden="true"></div>
 
-        <h1 class="type headline" id="headline"><span class="headline-run">Custom Gems Turn <span class="heads" id="heads">Heads</span></span></h1>
+        <h1 class="type setup" id="headline"><span class="headline-run">Custom Gems Turn <span class="heads" id="heads">Heads</span></span></h1>
       </div>
     </section>
 
@@ -1123,13 +1106,13 @@
         const headOutStart = mobile ? MOTION.headlineOutStartMobile : MOTION.headlineOutStart;
         const headOutEnd = mobile ? MOTION.headlineOutEndMobile : MOTION.headlineOutEnd;
         const headOut = windowProgress(progress, headOutStart, headOutEnd);
-        const headY = headOut > 0 ? lerp(0, -4, headOut) : 0;
+        const headY = headOut > 0 ? lerp(0, -5, headOut) : 0;
         const headOpacity = headOut > 0 ? 1 - headOut : 1;
 
         if (mobile) {
-          headline.style.transform = "none";
+          headline.style.transform = "translate3d(0, " + headY + "svh, 0)";
         } else {
-          headline.style.transform = "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
+          headline.style.transform = "translate3d(-50%, " + headY + "svh, 0)";
         }
         headline.style.opacity = String(headOpacity);
         headline.style.visibility = headOpacity < 0.02 ? "hidden" : "visible";

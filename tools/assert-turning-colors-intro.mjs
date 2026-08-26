@@ -106,8 +106,8 @@ if (!/\.scroll-cue[\s\S]{0,900}#d7b9ff[\s\S]{0,80}#a98cff[\s\S]{0,80}#ff9cc9[\s\
 if (!/id="headline"[\s\S]*Custom Gems Turn[\s\S]*Heads/.test(index)) {
   fail("opening must remain Custom Gems Turn Heads");
 }
-if (!/\.headline[\s\S]{0,240}opacity:\s*1/.test(index)) {
-  fail("headline must be composed at progress zero, not faded in after a gem");
+if (!/\.setup[\s\S]{0,280}font-size:\s*clamp\(1\.15rem,\s*2vw,\s*1\.75rem\)[\s\S]{0,160}opacity:\s*1/.test(index)) {
+  fail("Custom Gems must preserve the original first-beat caption typography and be visible at progress zero");
 }
 
 if (!/id="worldStudio"/.test(opening) || !/id="studioStack"/.test(opening) || !/id="studioVideo"/.test(opening)) {
@@ -244,5 +244,5 @@ if (!/rebuildLogo/.test(index) || !/data\[i\] = 255/.test(index) || !/data\[i \+
 }
 
 console.log(
-  "PASS: rings-first opening (cold-load studio film + Custom Gems Turn Heads at progress zero; approved dark visual system and original cream headline/chrome preserved; no gem/setup/INTRO/second rest; studio decoder immediate; reverse restores first frame; SCROLL preserved)"
+  "PASS: rings-first opening (cold-load studio film + Custom Gems Turn Heads in the original first-beat caption typography at progress zero; approved dark visual system and cream chrome preserved; no gem/old setup copy/INTRO/second rest; studio decoder immediate; reverse restores first frame; SCROLL preserved)"
 );
