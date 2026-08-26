@@ -45,6 +45,8 @@ const BASE = "8a8832c26eb55fec664c6cd884ce8eccd23c82cd";
 
 const NEW_VIDEO = "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4";
 const NEW_POSTER = "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg";
+const LIVE_VIDEO = "assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.mp4";
+const LIVE_POSTER = "assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg";
 const OLD_VIDEO = "assets/studio-opening-cluster-bench-engraving-portrait.mp4";
 const OLD_POSTER = "assets/studio-opening-cluster-bench-engraving-portrait.jpg";
 const DESKTOP_VIDEO = "assets/studio-opening-cluster-bench-engraving.mp4";
@@ -385,6 +387,9 @@ const parentIndex = gitShow(PARENT, "index.html");
 if (parentIndex.includes(NEW_VIDEO) || parentIndex.includes(NEW_POSTER)) {
   fail(`parent ${PARENT} already wires ${NEW_VIDEO}; fail-before contract is broken`);
 }
+if (parentIndex.includes(LIVE_VIDEO) || parentIndex.includes(LIVE_POSTER)) {
+  fail(`parent ${PARENT} already wires blush-band derivatives; fail-before contract is broken`);
+}
 if (
   !parentIndex.includes(`data-mobile-src="${REJECTED_VIDEO}"`) &&
   !parentIndex.includes(`data-mobile-src="${OLD_VIDEO}"`)
@@ -394,8 +399,11 @@ if (
   );
 }
 
-for (const rel of [NEW_VIDEO, NEW_POSTER, OLD_VIDEO, OLD_POSTER, DESKTOP_VIDEO, DESKTOP_POSTER]) {
+for (const rel of [NEW_VIDEO, NEW_POSTER, LIVE_VIDEO, LIVE_POSTER, OLD_VIDEO, OLD_POSTER, DESKTOP_VIDEO, DESKTOP_POSTER]) {
   if (!fs.existsSync(path.join(root, rel))) fail(`missing ${rel}`);
+}
+if (LIVE_VIDEO === NEW_VIDEO || LIVE_POSTER === NEW_POSTER) {
+  fail("blush-band mobile derivatives must be uniquely named, not overwrite the black-band source");
 }
 if (NEW_VIDEO === OLD_VIDEO || NEW_POSTER === OLD_POSTER) {
   fail("new mobile opening assets must be uniquely named, not overwrite the prior portrait");
@@ -406,17 +414,20 @@ if (fs.existsSync(path.join(root, REJECTED_VIDEO)) || fs.existsSync(path.join(ro
   );
 }
 
-const openingWorld = index.slice(index.indexOf('id="worldStudio"'), index.indexOf('id="worldGem"'));
+const openingWorld = index.slice(index.indexOf('id="worldStudio"'), index.indexOf('id="causticLight"'));
 if (!openingWorld) fail("could not isolate opening studio world");
 
 const studioVideoBlock = index.match(/id="studioVideo"[\s\S]*?<\/video>/);
 if (!studioVideoBlock) fail("studioVideo element must be present");
 const studioMarkup = studioVideoBlock[0];
-if (!studioMarkup.includes(`data-mobile-src="${NEW_VIDEO}"`)) {
-  fail(`studioVideo data-mobile-src must be ${NEW_VIDEO}`);
+if (!studioMarkup.includes(`data-mobile-src="${LIVE_VIDEO}"`)) {
+  fail(`studioVideo data-mobile-src must be the blush-band derivative ${LIVE_VIDEO}`);
 }
-if (!studioMarkup.includes(`data-mobile-poster="${NEW_POSTER}"`)) {
-  fail(`studioVideo data-mobile-poster must be ${NEW_POSTER}`);
+if (!studioMarkup.includes(`data-mobile-poster="${LIVE_POSTER}"`)) {
+  fail(`studioVideo data-mobile-poster must be the blush-band derivative ${LIVE_POSTER}`);
+}
+if (studioMarkup.includes(`data-mobile-src="${NEW_VIDEO}"`) || studioMarkup.includes(`data-mobile-poster="${NEW_POSTER}"`)) {
+  fail("studioVideo must not keep the black-band mobile-wide files as the live mobile source");
 }
 if (studioMarkup.includes(OLD_VIDEO) || studioMarkup.includes(`data-mobile-poster="${OLD_POSTER}"`)) {
   fail("studioVideo must not keep the prior tight portrait as mobile film/poster");
@@ -438,11 +449,11 @@ if (!/poster="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(studioM
 }
 
 const studioStackBlock = index.match(
-  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="world world-gem"/
+  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="caustic-light"/
 );
 if (!studioStackBlock) fail("could not extract worldStudio media stack");
-if (!studioStackBlock[0].includes(`data-mobile-src="${NEW_POSTER}"`)) {
-  fail(`studio fallback image data-mobile-src must be ${NEW_POSTER}`);
+if (!studioStackBlock[0].includes(`data-mobile-src="${LIVE_POSTER}"`)) {
+  fail(`studio fallback image data-mobile-src must be the blush-band derivative ${LIVE_POSTER}`);
 }
 if (!studioStackBlock[0].includes(`data-desktop-src="${DESKTOP_POSTER}"`)) {
   fail("studio fallback image desktop still must remain unchanged");

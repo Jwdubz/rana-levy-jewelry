@@ -18,7 +18,7 @@
  * controller scrollTo may move the passage. Detach restores the exact
  * prior inline touch-action and overflow values. A second contact
  * interrupts ownership but keeps the origin.
- * Destinations are the Opening headline composed frame,
+ * Destinations are the one composed Opening rest at progress zero,
  * BEAT_DWELL Hand/Work plateaus — inverted from the existing remap
  * mathematics, then snapped to
  * reachable whole CSS pixels. Adjacent
@@ -663,16 +663,6 @@
     var rests = [];
     var open0 = scrollYForSectionProgress(opening, 0);
     rests.push({ id: "opening-start", start: open0, end: open0 });
-
-    var openingHeadline = deriveOpeningHeadlinePhysical(span);
-    if (openingHeadline) {
-      var headY = scrollYForSectionProgress(opening, openingHeadline.startP);
-      rests.push({
-        id: "opening-headline",
-        start: headY,
-        end: headY
-      });
-    }
 
     var handTravel = sectionTravel(hand);
     var i;

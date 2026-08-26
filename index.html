@@ -46,7 +46,7 @@
     }
 
     html {
-      background: #020005;
+      background: #F4E3E8;
       color: #fffaf5;
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
@@ -56,7 +56,7 @@
       min-height: 100%;
       overflow-x: hidden;
       font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-      background: #020005;
+      background: #F4E3E8;
       color: #fffaf5;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -89,7 +89,7 @@
 
     .world-studio,
     .world-ring {
-      background: #020005;
+      background: #F4E3E8;
     }
 
     .world-studio {
@@ -100,96 +100,6 @@
       z-index: 2;
       /* Cinema plate underneath; revealed by diagonal feathered mask only. */
       will-change: transform, mask-image, -webkit-mask-image;
-    }
-
-    .world-gem {
-      z-index: 3;
-      background: #000;
-      pointer-events: none;
-    }
-
-    .world-gem canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* Shared paint host: canvas + fallback wipe/fade together. Not the black world.
-       overflow/contain keep the 150vmin mobile fallback inside the wipe box;
-       mobile WebGL still gets its own clip + scissor because compositors
-       often ignore ancestor clip-path on a live canvas. */
-    .gem-host {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      overflow: hidden;
-      isolation: isolate;
-      contain: paint;
-    }
-
-    /* Cold-load opening: black → line → gem → header. Lifted by .is-opening-intro-done. */
-    html:not(.is-opening-intro-done) #siteHeader {
-      opacity: 0;
-      visibility: hidden;
-    }
-
-    html:not(.is-opening-intro-done) .mark {
-      opacity: 0 !important;
-    }
-
-    html:not(.is-opening-intro-done) .setup {
-      opacity: 0 !important;
-    }
-
-    html:not(.is-opening-intro-done) #gemHost {
-      opacity: 0 !important;
-      visibility: hidden !important;
-      clip-path: inset(100% 0 0 0);
-      -webkit-clip-path: inset(100% 0 0 0);
-    }
-
-    html:not(.is-opening-intro-done) #gemCanvas {
-      clip-path: inset(100% 0 0 0);
-      -webkit-clip-path: inset(100% 0 0 0);
-    }
-
-    #gemFallback {
-      position: absolute;
-      left: 50%;
-      top: calc(50% + 2vmin);
-      width: min(100vmin, 50vw);
-      height: min(100vmin, 50vw);
-      transform: translate3d(-50%, -50%, 0);
-      display: block;
-      visibility: hidden;
-      opacity: 0;
-      pointer-events: none;
-      user-select: none;
-      -webkit-user-drag: none;
-      border: 0;
-      outline: none;
-      background: transparent;
-      object-fit: contain;
-    }
-
-    #gemFallback.is-ready {
-      visibility: visible;
-      opacity: 1;
-      animation: gem-fallback-spectral 18s ease-in-out infinite;
-    }
-
-    @keyframes gem-fallback-spectral {
-      0%,
-      100% {
-        filter: hue-rotate(-8deg) saturate(1.05) brightness(1.01);
-      }
-      50% {
-        filter: hue-rotate(10deg) saturate(1.12) brightness(1.03);
-      }
     }
 
     .caustic-light {
@@ -214,7 +124,7 @@
       transform-origin: center center;
       will-change: transform;
       overflow: hidden;
-      background: #020005;
+      background: #F4E3E8;
     }
 
     .media-stack img,
@@ -317,26 +227,15 @@
       white-space: nowrap;
     }
 
-    .setup {
-      left: 50%;
-      bottom: 12svh;
-      transform: translate3d(-50%, 0, 0);
-      font-size: clamp(1.15rem, 2vw, 1.75rem);
-      font-weight: 400;
-      letter-spacing: 0.01em;
-      line-height: 1.2;
-      opacity: 1;
-    }
-
     .headline {
       left: 50%;
       top: 50%;
-      transform: translate3d(-50%, calc(-50% + 6svh), 0);
+      transform: translate3d(-50%, -50%, 0);
       font-size: clamp(4.1rem, 6.8vw, 7.2rem);
       font-weight: 400;
       line-height: 0.9;
       letter-spacing: -0.01em;
-      opacity: 0;
+      opacity: 1;
       text-align: center;
     }
 
@@ -408,19 +307,7 @@
       opacity: 0;
     }
 
-    html:not(.is-opening-intro-done) #scrollCue,
-    html:not(.is-opening-intro-done) .scroll-cue--scene {
-      opacity: 0;
-      visibility: hidden;
-    }
-
     .scroll-cue--scene {
-      display: none;
-    }
-
-    /* Desktop keeps the host clip wipe. Phones ignore clip/mask/scissor on
-       a live WebGL canvas, so mobile uses this opaque cover instead. */
-    #gemReveal {
       display: none;
     }
 
@@ -442,17 +329,15 @@
       /*
         True full-screen mobile opening oracle:
         The complete visible viewport is the carrier. The mobile opening
-        derivative fills .media-stack edge-to-edge (inset:0; width/height 100%)
-        with square unmasked edges and object-fit:cover. Honest black
-        negative space may exist inside that derivative so more of the
-        approved landscape frame is visible; CSS must not add contain-as-strip,
-        vignette, blur atmosphere, duplicate/echo filler, gradient filler,
-        card chrome, or a media filter. JS keeps mobile scale at 1.
+        blush-band derivative fills .media-stack edge-to-edge (inset:0; width/height 100%)
+        with square unmasked edges and object-fit:cover. The approved 517-frame
+        center edit stays uncropped; only the baked black letterbox is blush paper.
+        CSS must not add contain-as-strip, vignette, blur atmosphere, duplicate/echo
+        filler, gradient filler, card chrome, or a media filter. JS keeps mobile scale at 1.
       */
       .world-studio,
       .world-ring {
-        /* Fallback under full-viewport media only — never a visible surround. */
-        background: #020005;
+        background: #F4E3E8;
       }
 
       .world-studio .media-stack,
@@ -493,85 +378,26 @@
         width: min(46vw, 11rem);
       }
 
-      .setup {
-        left: 0;
-        right: 0;
-        width: 100%;
-        bottom: 11svh;
-        transform: translate3d(0, 0, 0);
-        font-size: 1.12rem;
-        line-height: 1.25;
-        text-align: center;
-        white-space: nowrap;
-        max-width: none;
-        padding: 0 4.5vw;
-        box-sizing: border-box;
-        text-shadow:
-          0 1px 2px rgba(2, 0, 5, 0.55),
-          0 2px 22px rgba(2, 0, 5, 0.5),
-          0 0 36px rgba(2, 0, 5, 0.28);
-      }
-
       .scene {
-        --opening-copy-dock-h: 18dvh;
+        --opening-copy-dock-h: 29.230769%;
       }
 
       .copy-dock-opening {
-        display: block;
+        display: none;
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 7;
         height: 0;
-        background: #020005;
+        background: transparent;
         pointer-events: none;
       }
 
-      /* Beat-1 plate stays the carrier through ring. Type sits in the
-         derivative's black; the dock must not resize the video. */
       .world-studio,
-      .world-ring,
-      .world-gem {
+      .world-ring {
         inset: 0;
         height: 100%;
-      }
-
-      #gemFallback {
-        width: 150vmin;
-        height: 150vmin;
-      }
-
-      .world-gem {
-        overflow: hidden;
-      }
-
-      #gemReveal {
-        display: block;
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        height: 100%;
-        z-index: 2;
-        background: #000;
-        pointer-events: none;
-      }
-
-      /* Keep the painted stone present; the sheet is the wipe.
-         Visibility-hiding the host is what popped the finished frame. */
-      html:not(.is-opening-intro-done) #gemHost {
-        opacity: 1 !important;
-        visibility: visible !important;
-        clip-path: none;
-        -webkit-clip-path: none;
-        -webkit-mask-image: none;
-        mask-image: none;
-      }
-
-      html:not(.is-opening-intro-done) #gemCanvas {
-        clip-path: none;
-        -webkit-clip-path: none;
       }
 
       .headline {
@@ -579,13 +405,12 @@
         right: 0;
         top: auto;
         bottom: 0;
-        height: var(--opening-copy-dock-h, 18dvh);
+        height: 29.230769%;
         display: flex;
         align-items: center;
         justify-content: center;
         transform: none;
-        /* Center the line across the derivative's black field plus its copy dock. */
-        translate: 0 -8.25dvh;
+        translate: none;
         font-size: clamp(1.45rem, 7.4vw, 2.25rem);
         line-height: 1.05;
         text-align: center;
@@ -633,36 +458,6 @@
       .light-wash {
         display: none;
       }
-
-      .world-gem {
-        overflow: hidden;
-      }
-
-      #gemReveal {
-        display: block;
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        height: 100%;
-        z-index: 2;
-        background: #000;
-        pointer-events: none;
-      }
-
-      html:not(.is-opening-intro-done) #gemHost {
-        opacity: 1 !important;
-        visibility: visible !important;
-        clip-path: none;
-        -webkit-clip-path: none;
-        -webkit-mask-image: none;
-        mask-image: none;
-      }
-
-      html:not(.is-opening-intro-done) #gemCanvas {
-        clip-path: none;
-        -webkit-clip-path: none;
-      }
     }
 
     .is-quiet .light-wash {
@@ -671,12 +466,6 @@
 
     .is-quiet .media-stack video {
       opacity: 0 !important;
-    }
-
-    .is-quiet #gemFallback,
-    .is-quiet #gemFallback.is-ready {
-      animation: none;
-      filter: none;
     }
   </style>
   <link rel="stylesheet" href="styles.css">
@@ -744,7 +533,7 @@
             <img
               src="assets/studio-opening-cluster-bench-engraving.jpg"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.jpg"
-              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"
               alt=""
               width="2160"
               height="1080"
@@ -757,10 +546,10 @@
               height="1080"
               data-src="assets/studio-opening-cluster-bench-engraving.mp4"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"
-              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.mp4"
               poster="assets/studio-opening-cluster-bench-engraving.jpg"
               data-desktop-poster="assets/studio-opening-cluster-bench-engraving.jpg"
-              data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"
+              data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"
               muted
               loop
               playsinline
@@ -771,25 +560,6 @@
           </div>
         </div>
 
-        <div class="world world-gem" id="worldGem">
-          <div class="gem-host" id="gemHost">
-            <img
-              id="gemFallback"
-              data-src="assets/turning-colors-gem-fallback.png"
-              alt=""
-              width="1254"
-              height="1254"
-              decoding="async"
-              aria-hidden="true"
-            >
-            <canvas
-              id="gemCanvas"
-              aria-label="A brilliant-cut gemstone turning slowly against black, rendered live, its facets carrying the spectrum."
-            ></canvas>
-          </div>
-          <div class="gem-reveal" id="gemReveal" aria-hidden="true"></div>
-        </div>
-
         <div class="caustic-light" id="causticLight" aria-hidden="true"></div>
         <div class="veil" aria-hidden="true"></div>
         <div class="light-wash" id="lightWash" aria-hidden="true"></div>
@@ -797,7 +567,6 @@
 
         <div class="mark" id="mark" aria-hidden="true"></div>
 
-        <p class="type setup" id="setupLine">Some stones turn colors.</p>
         <p class="scroll-cue scroll-cue--scene" id="scrollCueOpening" aria-hidden="true">SCROLL</p>
 
         <div class="copy-dock-opening" id="openingCopyDock" aria-hidden="true"></div>
@@ -929,41 +698,24 @@
         pointerTravelVw: 1.8,
         markStart: 0.06,
         markEnd: 0.34,
-        setupOutStart: 0.10,
-        setupOutEnd: 0.18,
-        headlineInStart: 0.28,
-        headlineInEnd: 0.48,
         headlineOutStart: 0.68,
         headlineOutEnd: 0.84,
+        headlineOutStartMobile: 0.62,
+        headlineOutEndMobile: 0.74,
         handoffStart: 0.31,
         handoffEnd: 0.62,
-        gemOutStart: 0.18,
-        gemOutEnd: 0.28,
         finalTextStart: 0.68,
         finalTextEnd: 0.86
       };
 
-      // One-shot cold-load intro on the page clock. Does not own later scroll cues.
-      const INTRO = {
-        blackHold: 0.38,
-        lineFade: 0.88,
-        lineHold: 0.30,
-        gemFade: 1.12,
-        headerDelay: 0.48,
-        headerFade: 0.92,
-        leaveProgress: 0.008
-      };
-
       // Physical opening span: sticky viewport + choreography travel.
       // MOTION cue fractions remain authored against the 180svh choreography.
-      // The opening-final hold is retired; Custom Gems is the last opening rest.
+      // One composed opening rest: the rings film and headline at progress zero.
       // Mobile live sticky is 100dvh; travel stays these svh distances.
       const OPENING_SPAN = {
         stickySvh: 100,
         choreographySvh: 180,
-        terminalHoldSvh: 0,
-        // Fully composed mobile #headline center inside 0.48–0.62.
-        headlineChoreography: 0.55
+        terminalHoldSvh: 0
       };
       // Physical progress (0–1 over choreography+hold travel) at which all cues reach terminal.
       OPENING_SPAN.choreographyEnd =
@@ -1113,7 +865,6 @@
       // Opening passage only — whole-site progress is handled by the site tick hook.
       const passage = document.getElementById("opening");
       const markEl = document.getElementById("mark");
-      const setupLine = document.getElementById("setupLine");
       const scrollCue = document.getElementById("scrollCue");
       const scrollCueOpening = document.getElementById("scrollCueOpening");
       const scrollCueHand = document.getElementById("scrollCueHand");
@@ -1122,11 +873,6 @@
       const heads = document.getElementById("heads");
       const sceneEl = document.getElementById("scene");
       const worldStudio = document.getElementById("worldStudio");
-      const worldGem = document.getElementById("worldGem");
-      const gemHost = document.getElementById("gemHost");
-      const gemReveal = document.getElementById("gemReveal");
-      const gemCanvas = document.getElementById("gemCanvas");
-      const gemFallback = document.getElementById("gemFallback");
       const studioStack = document.getElementById("studioStack");
       const studioVideo = document.getElementById("studioVideo");
       const lightWash = document.getElementById("lightWash");
@@ -1164,21 +910,14 @@
         indexOpen: false,
         indexLastFocus: null,
         headerYield: 0,
-        // Opening film: "cover" under the live gem; "studio" at the headline rest; retired: null.
-        openingDecoderAuthority: null
+        // Opening film: studio immediately when Opening owns the viewport; retired: null.
+        openingDecoderAuthority: null,
+        openingAtStart: true
       };
 
       const openingIntro = {
-        armed: false,
-        origin: 0,
-        passed: false,
-        done: false,
-        gemArmed: false,
-        gemOrigin: 0,
-        line: 0,
-        gem: 0,
-        wipe: 0,
-        header: 0
+        done: true,
+        header: 1
       };
 
       function clamp(v, a, b) {
@@ -1210,432 +949,6 @@
       // scroll distances; the remaining terminalHoldSvh holds every cue at 1.
       function openingTimeline(physicalProgress) {
         return clamp(physicalProgress / OPENING_SPAN.choreographyEnd, 0, 1);
-      }
-
-      // Turning Colors live gem — ported from the historical #gl / VERT / SCENE /
-      // BLUR / COMP renderer. Halo, compositor darkening, forced spin, and the
-      // locked timed intro are omitted. The loop is driven by the page clock
-      // and stops once this opening rest is no longer covering.
-      const GEM_VERT = `#version 300 es
-in vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
-
-      const GEM_SCENE = `#version 300 es
-precision highp float;
-out vec4 o;
-uniform vec2 uRes; uniform float uTime; uniform vec2 uOrbit;
-uniform float uShift, uSpin, uEnc, uZoom;
-#define PI 3.14159265359
-#define F 16
-float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
-vec3 pal(float t){ return .5+.5*cos(6.28318*(t+vec3(0.,0.33,0.67))); }
-void pl(int i, out vec3 n, out float d){
-  if(i==0){ n=vec3(0.,1.,0.); d=0.40; return; }
-  int k=i-1;
-  if(k<F){ float a=(float(k)+.5)/float(F)*2.*PI; n=normalize(vec3(cos(a),0.80,sin(a))); d=0.535; return; }
-  k-=F;
-  if(k<F){ float a=float(k)/float(F)*2.*PI; n=normalize(vec3(cos(a),0.,sin(a))); d=0.50; return; }
-  k-=F; float a=(float(k)+.5)/float(F)*2.*PI; n=normalize(vec3(cos(a),-0.84,sin(a))); d=0.40;
-}
-bool hit(vec3 ro, vec3 rd, out float t1, out float t2, out vec3 nn){
-  t1=-1e9; t2=-1e9; float tf=1e9; nn=vec3(0.);
-  for(int i=0;i<1+F*3;i++){
-    vec3 n; float d; pl(i,n,d);
-    float den=dot(n,rd), dist=d-dot(n,ro);
-    if(abs(den)<1e-7){ if(dist<0.) return false; continue; }
-    float t=dist/den;
-    if(den<0.){ if(t>t1){ t2=t1; t1=t; nn=n; } else if(t>t2) t2=t; }
-    else if(t<tf) tf=t;
-    if(t1>tf) return false;
-  }
-  return tf>0.;
-}
-void main(){
-  float s=min(uRes.x,uRes.y);
-  vec2 uv=(gl_FragCoord.xy-.5*uRes)/s;
-  uv/=uZoom;
-  uv.y += 0.02;
-  float az=uTime*uSpin+uOrbit.x, el=0.19+uOrbit.y;
-  vec3 ro=vec3(sin(az)*cos(el),sin(el),cos(az)*cos(el))*5.40; ro.y+=0.10;
-  vec3 ww=normalize(vec3(0.,-0.02,0.)-ro);
-  vec3 uu=normalize(cross(vec3(0.,1.,0.),ww)), vv=cross(ww,uu);
-  vec3 rd=normalize(uv.x*uu+uv.y*vv+2.0*ww);
-  float hue0 = uShift + uTime*0.055;
-  vec3 col=vec3(0.);
-  float t1,t2; vec3 nn;
-  bool H=hit(ro,rd,t1,t2,nn)&&t1>0.;
-  if(H){
-    vec3 pos=ro+rd*t1;
-    float hp = hue0 + dot(nn,vec3(.31,.19,.44))*0.62 + length(pos)*0.42;
-    vec3 T=pal(hp), FL=pal(hp+0.11);
-    float core=pow(1.-clamp(length(pos)/0.62,0.,1.),1.15);
-    col=T*(0.30+2.2*core);
-    float f=sin(dot(pos,vec3(11.,7.,5.))+uTime*.7)*sin(dot(pos,vec3(-6.,13.,9.))-uTime*.5)*sin(dot(pos,vec3(4.,-9.,14.))+uTime*.3);
-    col+=FL*pow(max(1.-abs(f),0.),16.)*(0.5+2.8*core);
-    col+=FL*pow(1.-max(dot(-rd,nn),0.),3.)*1.2;
-    col+=(FL*.6+vec3(1.))*pow(1.-smoothstep(0.,0.016,t1-t2),3.0)*2.6;
-    col+=vec3(1.,.99,.96)*pow(max(dot(reflect(rd,nn),normalize(vec3(.42,.74,-.52))),0.),240.)*24.;
-    col+=FL*pow(max(dot(reflect(rd,nn),normalize(vec3(-.62,.35,.60))),0.),160.)*10.;
-    col+=FL*step(.9962,hash(floor(pos.xy*80.)+vec2(floor(pos.z*80.),floor(uTime*2.))))*5.;
-  }
-  o=vec4(col*uEnc,1.);
-}`;
-
-      const GEM_BLUR = `#version 300 es
-precision highp float;
-out vec4 o;
-uniform sampler2D uT; uniform vec2 uDst,uTexel,uDir; uniform float uDec,uEnc,uBright;
-void main(){
-  vec2 uv=gl_FragCoord.xy/uDst;
-  float w[5]=float[5](.227,.194,.121,.054,.016);
-  vec3 a=vec3(0.);
-  for(int i=-4;i<=4;i++){
-    vec3 s=texture(uT,uv+uDir*uTexel*float(i)*2.).rgb*uDec;
-    if(uBright>.5) s=max(s-vec3(.9),vec3(0.));
-    a+=s*w[i<0?-i:i];
-  }
-  o=vec4(a*uEnc,1.);
-}`;
-
-      const GEM_COMP = `#version 300 es
-precision highp float;
-out vec4 o;
-uniform sampler2D uS,uB; uniform vec2 uRes; uniform float uDec,uExp;
-void main(){
-  vec2 uv=gl_FragCoord.xy/uRes;
-  vec3 c=texture(uS,uv).rgb*uDec + texture(uB,uv).rgb*uDec*1.9;
-  c*=uExp;
-  c=vec3(1.)-exp(-c*1.15);
-  c=pow(max(c,vec3(0.)),vec3(1./2.2));
-  o=vec4(c,1.);
-}`;
-
-      const GEM_STILL_TIME = 2.4;
-      const GEM_SPIN = 0.32;
-      let gemEngine = null;
-
-      function createTurningColorsGem(liveCanvas, fallbackImage, quiet) {
-        const api = {
-          cover: 1,
-          live: false,
-          quiet: !!quiet,
-          resize: function () {},
-          frame: function () {},
-          setCover: function (t) {
-            api.cover = t;
-          },
-          dispose: function () {}
-        };
-        const t0 = performance.now();
-        const forceFallback = params.get("gem") === "fallback";
-        let usingFallback = false;
-
-        function showFallback() {
-          usingFallback = true;
-          api.live = false;
-          if (liveCanvas) liveCanvas.style.visibility = "hidden";
-          if (!fallbackImage) return;
-          const url = fallbackImage.getAttribute("data-src");
-          if (!url) return;
-          function revealFallbackImage() {
-            fallbackImage.classList.add("is-ready");
-          }
-          if (!fallbackImage.getAttribute("src")) {
-            fallbackImage.addEventListener("load", revealFallbackImage, { once: true });
-            fallbackImage.src = url;
-          }
-          if (fallbackImage.complete && fallbackImage.naturalWidth) {
-            revealFallbackImage();
-          }
-        }
-
-        if (!liveCanvas || forceFallback) {
-          showFallback();
-          return api;
-        }
-
-        let gl = null;
-        try {
-          gl = liveCanvas.getContext("webgl2", {
-            antialias: false,
-            alpha: false,
-            premultipliedAlpha: false,
-            powerPreference: "default"
-          });
-        } catch (err) {
-          gl = null;
-        }
-        if (!gl) {
-          showFallback();
-          return api;
-        }
-
-        liveCanvas.style.visibility = "visible";
-
-        const fOK = !!gl.getExtension("EXT_color_buffer_float");
-        const ENC = fOK ? 1 : 0.25;
-        const DEC = fOK ? 1 : 4;
-        const shaders = [];
-        function compile(type, src) {
-          const obj = gl.createShader(type);
-          gl.shaderSource(obj, src);
-          gl.compileShader(obj);
-          if (!gl.getShaderParameter(obj, gl.COMPILE_STATUS)) {
-            throw new Error("gem shader");
-          }
-          shaders.push(obj);
-          return obj;
-        }
-        function program(fs) {
-          const p = gl.createProgram();
-          gl.attachShader(p, compile(gl.VERTEX_SHADER, GEM_VERT));
-          gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
-          gl.linkProgram(p);
-          if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-            throw new Error("gem program");
-          }
-          return p;
-        }
-
-        let pS;
-        let pB;
-        let pC;
-        try {
-          pS = program(GEM_SCENE);
-          pB = program(GEM_BLUR);
-          pC = program(GEM_COMP);
-        } catch (err) {
-          showFallback();
-          return api;
-        }
-
-        let vb = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, vb);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-        [pS, pB, pC].forEach(function (p) {
-          const loc = gl.getAttribLocation(p, "p");
-          gl.enableVertexAttribArray(loc);
-          gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-        });
-        const U = function (p, n) {
-          return gl.getUniformLocation(p, n);
-        };
-
-        function target(w, h) {
-          const t = gl.createTexture();
-          gl.bindTexture(gl.TEXTURE_2D, t);
-          if (fOK) {
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
-          } else {
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-          }
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          const f = gl.createFramebuffer();
-          gl.bindFramebuffer(gl.FRAMEBUFFER, f);
-          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
-          return { t: t, f: f, w: w, h: h };
-        }
-
-        function releaseTarget(tgt) {
-          if (!gl || !tgt) return;
-          if (tgt.f) {
-            gl.deleteFramebuffer(tgt.f);
-            tgt.f = null;
-          }
-          if (tgt.t) {
-            gl.deleteTexture(tgt.t);
-            tgt.t = null;
-          }
-        }
-
-        let W = 0;
-        let H = 0;
-        let scn = null;
-        let bA = null;
-        let bB = null;
-        let lost = false;
-        let stillDrawn = false;
-
-        function resize() {
-          if (lost || !gl) return;
-          const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-          const r = liveCanvas.getBoundingClientRect();
-          const nw = Math.max(1, Math.round((r.width || window.innerWidth) * dpr));
-          const nh = Math.max(1, Math.round((r.height || window.innerHeight) * dpr));
-          if (nw === W && nh === H) return;
-          releaseTarget(scn);
-          releaseTarget(bA);
-          releaseTarget(bB);
-          scn = null;
-          bA = null;
-          bB = null;
-          W = liveCanvas.width = nw;
-          H = liveCanvas.height = nh;
-          scn = target(nw, nh);
-          bA = target(Math.max(1, nw >> 1), Math.max(1, nh >> 1));
-          bB = target(Math.max(1, nw >> 1), Math.max(1, nh >> 1));
-          stillDrawn = false;
-        }
-
-        function draw(t) {
-          if (lost || !gl || !scn) return;
-          const spin = api.quiet ? 0 : GEM_SPIN;
-          gl.bindFramebuffer(gl.FRAMEBUFFER, scn.f);
-          gl.viewport(0, 0, scn.w, scn.h);
-          gl.useProgram(pS);
-          gl.uniform2f(U(pS, "uRes"), scn.w, scn.h);
-          gl.uniform1f(U(pS, "uTime"), t);
-          gl.uniform2f(U(pS, "uOrbit"), 0, 0);
-          gl.uniform1f(U(pS, "uShift"), 0);
-          gl.uniform1f(U(pS, "uSpin"), spin);
-          gl.uniform1f(U(pS, "uEnc"), ENC);
-          gl.uniform1f(U(pS, "uZoom"), state.isMobile ? 1.5 : 1);
-          gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-          gl.bindFramebuffer(gl.FRAMEBUFFER, bA.f);
-          gl.viewport(0, 0, bA.w, bA.h);
-          gl.useProgram(pB);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, scn.t);
-          gl.uniform1i(U(pB, "uT"), 0);
-          gl.uniform2f(U(pB, "uDst"), bA.w, bA.h);
-          gl.uniform2f(U(pB, "uTexel"), 1 / scn.w, 1 / scn.h);
-          gl.uniform2f(U(pB, "uDir"), 1, 0);
-          gl.uniform1f(U(pB, "uDec"), DEC);
-          gl.uniform1f(U(pB, "uEnc"), ENC);
-          gl.uniform1f(U(pB, "uBright"), 1);
-          gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-          gl.bindFramebuffer(gl.FRAMEBUFFER, bB.f);
-          gl.viewport(0, 0, bB.w, bB.h);
-          gl.bindTexture(gl.TEXTURE_2D, bA.t);
-          gl.uniform2f(U(pB, "uDst"), bB.w, bB.h);
-          gl.uniform2f(U(pB, "uTexel"), 1 / bA.w, 1 / bA.h);
-          gl.uniform2f(U(pB, "uDir"), 0, 1);
-          gl.uniform1f(U(pB, "uBright"), 0);
-          gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-          gl.viewport(0, 0, W, H);
-          // CSS clip-path on a parent is ignored by many mobile compositors
-          // once the stone is already in the WebGL buffer. Scissor the
-          // final blit so the painted frame itself wipes up. Origin is
-          // bottom-left, so growing height is a bottom → top reveal.
-          const wipe = openingIntro.done ? 1 : openingIntro.gem;
-          const visibleH = Math.max(0, Math.round(H * wipe));
-          gl.disable(gl.SCISSOR_TEST);
-          gl.clearColor(0, 0, 0, 1);
-          gl.clear(gl.COLOR_BUFFER_BIT);
-          if (visibleH <= 0) {
-            api.live = true;
-            return;
-          }
-          if (visibleH < H) {
-            gl.enable(gl.SCISSOR_TEST);
-            gl.scissor(0, 0, W, visibleH);
-          }
-          gl.useProgram(pC);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, scn.t);
-          gl.uniform1i(U(pC, "uS"), 0);
-          gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, bB.t);
-          gl.uniform1i(U(pC, "uB"), 1);
-          gl.uniform2f(U(pC, "uRes"), W, H);
-          gl.uniform1f(U(pC, "uDec"), DEC);
-          gl.uniform1f(U(pC, "uExp"), 1);
-          gl.drawArrays(gl.TRIANGLES, 0, 3);
-          if (visibleH < H) {
-            gl.disable(gl.SCISSOR_TEST);
-          }
-          api.live = true;
-        }
-
-        liveCanvas.addEventListener(
-          "webglcontextlost",
-          function (event) {
-            event.preventDefault();
-            lost = true;
-            api.live = false;
-            showFallback();
-          },
-          false
-        );
-        liveCanvas.addEventListener(
-          "webglcontextrestored",
-          function () {
-            // Resources from the lost context are invalid. This instance does
-            // not recreate programs/buffers, so the fallback stays for its life.
-            lost = true;
-            api.live = false;
-            showFallback();
-          },
-          false
-        );
-
-        api.resize = function () {
-          if (lost || usingFallback) {
-            return;
-          }
-          resize();
-          if (api.quiet) {
-            draw(GEM_STILL_TIME);
-            stillDrawn = openingIntro.done;
-          }
-        };
-        api.frame = function (now) {
-          if (lost || usingFallback) {
-            return;
-          }
-          if (api.cover < 0.02 || document.hidden) return;
-          resize();
-          if (api.quiet) {
-            if (!stillDrawn || !openingIntro.done) {
-              draw(GEM_STILL_TIME);
-              if (openingIntro.done) stillDrawn = true;
-            }
-            return;
-          }
-          draw((now - t0) / 1000);
-        };
-        api.dispose = function () {
-          lost = true;
-          api.live = false;
-          if (!gl) return;
-          releaseTarget(scn);
-          releaseTarget(bA);
-          releaseTarget(bB);
-          scn = null;
-          bA = null;
-          bB = null;
-          if (pS) gl.deleteProgram(pS);
-          if (pB) gl.deleteProgram(pB);
-          if (pC) gl.deleteProgram(pC);
-          pS = null;
-          pB = null;
-          pC = null;
-          for (let i = 0; i < shaders.length; i++) {
-            if (shaders[i]) gl.deleteShader(shaders[i]);
-          }
-          shaders.length = 0;
-          if (vb) {
-            gl.deleteBuffer(vb);
-            vb = null;
-          }
-          W = 0;
-          H = 0;
-        };
-
-        try {
-          resize();
-          draw(api.quiet ? GEM_STILL_TIME : 0);
-          stillDrawn = api.quiet && openingIntro.done;
-        } catch (err) {
-          showFallback();
-        }
-        return api;
       }
 
       function measureScrollProgress() {
@@ -1755,74 +1068,9 @@ void main(){
         return shaped((elapsed - start) / duration);
       }
 
-      function gemCanWipe() {
-        if (gemFallback && gemFallback.classList.contains("is-ready")) return true;
-        if (gemEngine && gemEngine.live) return true;
-        return false;
-      }
-
-      function syncOpeningIntro(now, progress, armClock) {
-        if (progress > INTRO.leaveProgress || openingIntro.passed) {
-          openingIntro.passed = true;
-          openingIntro.done = true;
-          openingIntro.gemArmed = true;
-          openingIntro.line = 1;
-          openingIntro.gem = 1;
-          openingIntro.wipe = 1;
-          openingIntro.header = 1;
-          return;
-        }
-        if (openingIntro.done) {
-          openingIntro.line = 1;
-          openingIntro.gem = 1;
-          openingIntro.wipe = 1;
-          openingIntro.header = 1;
-          return;
-        }
-        if (!openingIntro.armed) {
-          if (armClock === false) {
-            openingIntro.line = 0;
-            openingIntro.gem = 0;
-            openingIntro.wipe = 0;
-            openingIntro.header = 0;
-            return;
-          }
-          openingIntro.armed = true;
-          openingIntro.origin = now;
-        }
-        const elapsed = Math.max(0, (now - openingIntro.origin) / 1000);
-        const lineStart = INTRO.blackHold;
-        const gemStart = INTRO.blackHold + INTRO.lineFade + INTRO.lineHold;
-        openingIntro.line = introWindow(elapsed, lineStart, INTRO.lineFade);
-        const useSheet = state.isMobile || !state.finePointer;
-        if (elapsed < gemStart) {
-          openingIntro.gem = 0;
-          openingIntro.wipe = 0;
-          openingIntro.header = 0;
-          return;
-        }
-        if (!openingIntro.gemArmed) {
-          if (useSheet && !gemCanWipe()) {
-            openingIntro.gem = 0;
-            openingIntro.wipe = 0;
-            openingIntro.header = 0;
-            return;
-          }
-          openingIntro.gemArmed = true;
-          openingIntro.gemOrigin = now;
-        }
-        const gemElapsed = Math.max(0, (now - openingIntro.gemOrigin) / 1000);
-        openingIntro.gem = introWindow(gemElapsed, 0, INTRO.gemFade, easeOutCubic);
-        openingIntro.wipe = introWindow(gemElapsed, 0, INTRO.gemFade, smoothstep);
-        openingIntro.header = introWindow(
-          gemElapsed,
-          INTRO.gemFade + INTRO.headerDelay,
-          INTRO.headerFade,
-          easeOutCubic
-        );
-        if (openingIntro.header >= 1) {
-          openingIntro.done = true;
-        }
+      function syncOpeningIntro() {
+        openingIntro.done = true;
+        openingIntro.header = 1;
       }
 
       function pastLastScrollableBeat() {
@@ -1842,18 +1090,11 @@ void main(){
       }
 
       function paintScrollCue() {
-        let opacity;
-        if (!openingIntro.done) {
-          opacity = openingIntro.header;
-        } else if (pastLastScrollableBeat()) {
-          opacity = 0;
-        } else {
-          opacity = 1;
-        }
+        const opacity = pastLastScrollableBeat() ? 0 : 1;
         if (state.isMobile) {
           paintOneScrollCue(scrollCue, 0);
           paintOneScrollCue(scrollCueOpening, opacity);
-          paintOneScrollCue(scrollCueHand, openingIntro.done ? opacity : 0);
+          paintOneScrollCue(scrollCueHand, opacity);
         } else {
           paintOneScrollCue(scrollCue, opacity);
           paintOneScrollCue(scrollCueOpening, 0);
@@ -1862,176 +1103,40 @@ void main(){
       }
 
       function applyOpeningIntro() {
-        const line = openingIntro.line;
-        const gem = openingIntro.gem;
-        const header = openingIntro.header;
-
-        if (openingIntro.done) {
-          document.documentElement.classList.add("is-opening-intro-done");
-          if (gemHost) {
-            gemHost.style.removeProperty("opacity");
-            gemHost.style.removeProperty("visibility");
-            gemHost.style.removeProperty("clip-path");
-            gemHost.style.removeProperty("-webkit-clip-path");
-            gemHost.style.removeProperty("-webkit-mask-image");
-            gemHost.style.removeProperty("mask-image");
-          }
-          if (gemCanvas) {
-            gemCanvas.style.removeProperty("opacity");
-            gemCanvas.style.removeProperty("clip-path");
-            gemCanvas.style.removeProperty("-webkit-clip-path");
-            gemCanvas.style.removeProperty("-webkit-mask-image");
-            gemCanvas.style.removeProperty("mask-image");
-            if (gemEngine && gemEngine.live) {
-              gemCanvas.style.removeProperty("visibility");
-            } else if (!gemEngine || !gemEngine.live) {
-              gemCanvas.style.visibility = "hidden";
-            }
-          }
-          if (gemFallback) {
-            gemFallback.style.removeProperty("opacity");
-            gemFallback.style.removeProperty("visibility");
-          }
-          if (gemReveal) {
-            gemReveal.style.height = "0";
-            gemReveal.style.visibility = "hidden";
-          }
-          if (siteHeader) {
-            siteHeader.style.removeProperty("opacity");
-            siteHeader.style.removeProperty("visibility");
-            siteHeader.style.removeProperty("pointer-events");
-          }
-          paintScrollCue();
-          return;
-        }
-
-        document.documentElement.classList.remove("is-opening-intro-done");
-
-        if (setupLine) {
-          const base = parseFloat(setupLine.style.opacity);
-          const setupOpacity = (Number.isFinite(base) ? base : 1) * line;
-          setupLine.style.setProperty("opacity", String(setupOpacity), "important");
-          setupLine.style.visibility = setupOpacity < 0.02 ? "hidden" : "visible";
-        }
-
-        const useSheet = state.isMobile || !state.finePointer;
-        const wipeT = useSheet ? openingIntro.wipe : gem;
-        if (gemReveal) {
-          if (useSheet) {
-            gemReveal.style.visibility = "visible";
-            gemReveal.style.height = 100 * (1 - wipeT) + "%";
-          } else {
-            gemReveal.style.height = "0";
-            gemReveal.style.visibility = "hidden";
-          }
-        }
-
-        if (gemHost) {
-          if (useSheet) {
-            gemHost.style.removeProperty("opacity");
-            gemHost.style.setProperty("visibility", "visible", "important");
-            gemHost.style.removeProperty("clip-path");
-            gemHost.style.removeProperty("-webkit-clip-path");
-            gemHost.style.removeProperty("-webkit-mask-image");
-            gemHost.style.removeProperty("mask-image");
-            if (gemCanvas) {
-              gemCanvas.style.removeProperty("clip-path");
-              gemCanvas.style.removeProperty("-webkit-clip-path");
-              gemCanvas.style.removeProperty("-webkit-mask-image");
-              gemCanvas.style.removeProperty("mask-image");
-            }
-          } else {
-            const wipeTop = (1 - gem) * 100;
-            const wipe = "inset(" + wipeTop + "% 0 0 0)";
-            const mask =
-              "linear-gradient(to top, #000 0%, #000 " +
-              gem * 100 +
-              "%, transparent " +
-              gem * 100 +
-              "%)";
-            gemHost.style.setProperty("opacity", String(gem), "important");
-            gemHost.style.setProperty("clip-path", wipe, "important");
-            gemHost.style.setProperty("-webkit-clip-path", wipe, "important");
-            gemHost.style.setProperty("-webkit-mask-image", mask, "important");
-            gemHost.style.setProperty("mask-image", mask, "important");
-            gemHost.style.setProperty(
-              "visibility",
-              gem < 0.02 ? "hidden" : "visible",
-              "important"
-            );
-            if (gemCanvas) {
-              gemCanvas.style.setProperty("clip-path", wipe, "important");
-              gemCanvas.style.setProperty("-webkit-clip-path", wipe, "important");
-              gemCanvas.style.setProperty("-webkit-mask-image", mask, "important");
-              gemCanvas.style.setProperty("mask-image", mask, "important");
-            }
-          }
-        }
-
+        document.documentElement.classList.add("is-opening-composed");
         if (siteHeader) {
-          siteHeader.style.setProperty("opacity", String(header), "important");
-          siteHeader.style.setProperty(
-            "visibility",
-            header < 0.02 ? "hidden" : "visible",
-            "important"
-          );
-          siteHeader.style.pointerEvents = header < 0.98 ? "none" : "";
+          siteHeader.style.removeProperty("opacity");
+          siteHeader.style.removeProperty("visibility");
+          siteHeader.style.removeProperty("pointer-events");
         }
-        if (sitePrimaryNav && header < 0.98) {
-          sitePrimaryNav.style.pointerEvents = "none";
+        if (sitePrimaryNav) {
+          sitePrimaryNav.style.removeProperty("pointer-events");
         }
-        if (markEl) {
-          markEl.style.setProperty("opacity", String(0.94 * header), "important");
+        if (markEl && markEl.style.opacity === "") {
+          markEl.style.opacity = "0.94";
         }
         paintScrollCue();
       }
 
       function applyCopy(progress) {
         const mobile = state.isMobile;
-        // Sequential worlds: setup-out completes, then gem yields, then headline enters.
-        const setupOutStart = MOTION.setupOutStart;
-        const setupOutEnd = MOTION.setupOutEnd;
-        const headInStart = MOTION.headlineInStart;
-        const headInEnd = mobile ? 0.48 : MOTION.headlineInEnd;
-        const headOutStart = mobile ? 0.62 : MOTION.headlineOutStart;
-        const headOutEnd = mobile ? 0.74 : MOTION.headlineOutEnd;
-
-        const setupT = windowProgress(progress, setupOutStart, setupOutEnd);
-        const setupY = lerp(0, -5, setupT);
-        const setupOpacity = 1 - setupT;
-
-        if (mobile) {
-          setupLine.style.transform = "translate3d(0, " + setupY + "svh, 0)";
-        } else {
-          setupLine.style.transform = "translate3d(-50%, " + setupY + "svh, 0)";
-        }
-        setupLine.style.opacity = String(setupOpacity);
-        setupLine.style.visibility = setupOpacity < 0.02 ? "hidden" : "visible";
-
-        const headIn = windowProgress(progress, headInStart, headInEnd);
+        const headOutStart = mobile ? MOTION.headlineOutStartMobile : MOTION.headlineOutStart;
+        const headOutEnd = mobile ? MOTION.headlineOutEndMobile : MOTION.headlineOutEnd;
         const headOut = windowProgress(progress, headOutStart, headOutEnd);
-        let headY;
-        let headOpacity;
-        if (headOut > 0) {
-          headY = lerp(0, -4, headOut);
-          headOpacity = 1 - headOut;
-        } else {
-          headY = lerp(6, 0, headIn);
-          headOpacity = headIn;
-        }
+        const headY = headOut > 0 ? lerp(0, -4, headOut) : 0;
+        const headOpacity = headOut > 0 ? 1 - headOut : 1;
 
         if (mobile) {
           headline.style.transform = "none";
         } else {
-          headline.style.transform =
-            "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
+          headline.style.transform = "translate3d(-50%, calc(-50% + " + headY + "svh), 0)";
         }
         headline.style.opacity = String(headOpacity);
         headline.style.visibility = headOpacity < 0.02 ? "hidden" : "visible";
 
-        const prismT = windowProgress(progress, headInStart, headOutEnd);
+        const prismT = windowProgress(progress, 0, headOutEnd);
         const prismX = lerp(18, 82, prismT);
-        heads.style.backgroundPosition = prismX + "% 50%";
+        if (heads) heads.style.backgroundPosition = prismX + "% 50%";
 
         if (sceneEl) {
           sceneEl.style.setProperty("--opening-copy-dock-t", "0");
@@ -2042,24 +1147,13 @@ void main(){
         }
       }
 
-      function applyGem(progress) {
-        const gemOutStart = MOTION.gemOutStart;
-        const gemOutEnd = MOTION.gemOutEnd;
-        const gemT = 1 - windowProgress(progress, gemOutStart, gemOutEnd);
-        // Studio is the under-layer: gem cover yields it forward and restores it reverse.
+      function applyStudioWorld() {
         if (worldStudio) {
           worldStudio.style.opacity = "1";
           worldStudio.style.visibility = "visible";
         }
-        if (worldGem) {
-          worldGem.style.opacity = String(gemT);
-          worldGem.style.visibility = gemT < 0.02 ? "hidden" : "visible";
-        }
         if (sceneGrain) {
-          sceneGrain.style.opacity = String(0.045 * (1 - gemT));
-        }
-        if (gemEngine) {
-          gemEngine.setCover(gemT);
+          sceneGrain.style.opacity = "0.045";
         }
       }
 
@@ -2093,7 +1187,7 @@ void main(){
       }
 
       function applyPointerWash(px, py) {
-        if (quietModeActive() || !state.finePointer || (gemEngine && gemEngine.cover > 0.2)) {
+        if (quietModeActive() || !state.finePointer) {
           lightWash.classList.remove("is-active");
           return;
         }
@@ -2196,7 +1290,7 @@ void main(){
       function render(progress, px, py) {
         applyMark(progress);
         applyCopy(progress);
-        applyGem(progress);
+        applyStudioWorld();
         applyObjectPositions(progress);
         applyMediaTransforms(progress, px, py);
         applyPointerWash(px, py);
@@ -2234,10 +1328,9 @@ void main(){
           state.visualProgress = state.targetProgress;
         }
         // Physical progress is measured/smoothed; render consumes remapped timeline.
-        syncOpeningIntro(performance.now(), openingTimeline(state.visualProgress));
+        syncOpeningIntro();
         render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
         applyOpeningIntro();
-        if (gemEngine) gemEngine.resize();
       }
 
       function tick(now) {
@@ -2270,20 +1363,15 @@ void main(){
         }
 
         // All MOTION cues run on the remapped choreography timeline.
-        syncOpeningIntro(now, openingTimeline(state.visualProgress));
+        syncOpeningIntro();
         render(openingTimeline(state.visualProgress), state.pointerX, state.pointerY);
-        if (gemEngine) gemEngine.frame(now);
 
         // Whole-site single-clock hook (M2–M5). No second rAF loop.
         if (typeof window.__ranaSiteTick === "function") {
           window.__ranaSiteTick(dt);
         }
 
-        // After persistent-mark paint, so the intro can still hide the official plate.
         applyOpeningIntro();
-
-        // After siteTick may retire Opening, re-evaluate opening decoder authority
-        // so is-live cannot lag a sticky handoff by waiting for the next scroll.
         manageOpeningVideoActivity();
 
         requestAnimationFrame(tick);
@@ -2426,7 +1514,7 @@ void main(){
         // The original first-beat montage is the only opening film.
         // Studio film is already ordered cluster-first (product run, then bench +
         // engraving reveal); do not seek (loop must return to the cluster start).
-        // Cover has no studio authority: do not hydrate or play under the live gem.
+        // Rings-first: Opening owns the studio film immediately.
         const want = openingDecoderAuthority();
         state.openingDecoderAuthority = want;
         if (want !== "studio") {
@@ -2438,12 +1526,10 @@ void main(){
         tryPlay(studioVideo);
       }
 
-      // Exclusive cover|studio authority from the authored timeline.
-      // Pause the studio film under the live gem; own it only after gem-out
-      // completes (headline rest). Desktop and mobile share this cue.
+      // Exclusive studio authority while Opening owns the viewport.
       function openingDecoderAuthority() {
-        const timeline = openingTimeline(state.visualProgress);
-        return timeline >= MOTION.gemOutEnd ? "studio" : "cover";
+        openingTimeline(state.visualProgress);
+        return "studio";
       }
 
       // Opening decoder life-cycle follows section authority, not a broad near range.
@@ -2467,11 +1553,14 @@ void main(){
           owns = rect.bottom > vh * 0.2 && rect.top < vh * 0.8;
         }
 
+        document.documentElement.classList.toggle("is-later-world", !owns);
+
         if (!owns) {
           // Retire authority: pause AND drop is-live (not pause-only).
           // Bump token so any in-flight play() cannot re-add is-live after leave.
           openingDecoderToken += 1;
           state.openingDecoderAuthority = null;
+          state.openingAtStart = false;
           openingVideos.forEach(function (video) {
             if (!video) return;
             if (!video.paused) {
@@ -2497,9 +1586,11 @@ void main(){
           if (studioStack) studioStack.style.willChange = "auto";
           return;
         }
-        if (previous === "cover") {
+        const atStart = openingTimeline(state.visualProgress) <= 0.02;
+        if (atStart && !state.openingAtStart) {
           resetOpeningDecoderToStart(studioVideo);
         }
+        state.openingAtStart = atStart;
 
         // Hydrate once if needed; never unload/refetch on small scroll movement.
         openingVideos.forEach(function (video) {
@@ -2545,11 +1636,9 @@ void main(){
       // Initial zero-delta frame before first rAF.
       state.targetProgress = measureScrollProgress();
       state.visualProgress = state.targetProgress;
-      gemEngine = createTurningColorsGem(gemCanvas, gemFallback, quietModeActive());
-      syncOpeningIntro(performance.now(), openingTimeline(state.visualProgress), false);
+      syncOpeningIntro();
       render(openingTimeline(state.visualProgress), 0, 0);
       applyOpeningIntro();
-      if (gemEngine) gemEngine.frame(performance.now());
 
       loadMark();
       armVideos();
@@ -2610,7 +1699,6 @@ void main(){
       // OPENING_SPAN + openingTimeline are the shared physical→choreography remap
       // consumed by the inline renderer and site.js persistent-mark state.
       window.MOTION = MOTION;
-      window.INTRO = INTRO;
       window.OPENING_SPAN = OPENING_SPAN;
       window.openingTimeline = openingTimeline;
 

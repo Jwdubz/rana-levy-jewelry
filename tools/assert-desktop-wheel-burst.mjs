@@ -140,7 +140,6 @@ if (!/quietModeActive\(\)/.test(attachFn)) {
 
 const rests = [
   { id: "opening-start", start: 0, end: 0 },
-  { id: "opening-headline", start: 700, end: 700 },
   { id: "hand-0", start: 1800, end: 2200 },
   { id: "work-0", start: 3600, end: 4200 }
 ];
@@ -164,8 +163,8 @@ function runBurst(deltas, originIndex) {
   if (last.action !== "commit" || last.destIndex !== 1) {
     fail("one huge forward delta must commit exactly one adjacent rest (got " + JSON.stringify(last) + ")");
   }
-  if (last.destY !== 700) {
-    fail("huge forward burst must land on opening-headline center (got " + last.destY + ")");
+  if (last.destY !== 2000) {
+    fail("huge forward burst must land on hand-0 center (got " + last.destY + ")");
   }
 }
 
@@ -200,9 +199,9 @@ function runBurst(deltas, originIndex) {
 {
   const tiny = [];
   for (let i = 0; i < 80; i++) tiny.push(-2);
-  const burst = runBurst(tiny, 3);
+  const burst = runBurst(tiny, 2);
   const commits = burst.steps.filter((step) => step.action === "commit");
-  if (commits.length !== 1 || commits[0].destIndex !== 2) {
+  if (commits.length !== 1 || commits[0].destIndex !== 1) {
     fail("tiny reverse burst must commit exactly one rest backward onto hand-0");
   }
 }
@@ -362,8 +361,7 @@ function installDesktopWheelHarness() {
     OPENING_SPAN: {
       choreographySvh: 180,
       terminalHoldSvh: 0,
-      choreographyEnd: 1,
-      headlineChoreography: 0.55
+      choreographyEnd: 1
     }
   };
   global.document = {
@@ -425,8 +423,8 @@ function restIndexAt(y, liveRests) {
   const harness = installDesktopWheelHarness();
   settle.attach();
   const liveRests = settle.collectRests();
-  if (!liveRests || liveRests.length !== 4) {
-    fail("desktop wheel lifecycle harness must expose four authored rests (got " + JSON.stringify((liveRests || []).map((r) => r.id)) + ")");
+  if (!liveRests || liveRests.length !== 3) {
+    fail("desktop wheel lifecycle harness must expose three authored rests (got " + JSON.stringify((liveRests || []).map((r) => r.id)) + ")");
   }
   window.scrollTo(0, liveRests[0].start);
   harness.setNow(0);
@@ -436,12 +434,12 @@ function restIndexAt(y, liveRests) {
   }
   harness.flushSettle(250);
   if (restIndexAt(window.scrollY, liveRests) > 1) {
-    fail("250ms into the first settle must not already be past opening-headline");
+    fail("250ms into the first settle must not already be past hand-0");
   }
   emitVerticalWheel(harness.emit, 2400);
   if (restIndexAt(window.scrollY, liveRests) >= 2) {
     fail(
-      "a 250ms delayed tail during settle must not open a second burst onto hand-0 (y=" +
+      "a 250ms delayed tail during settle must not open a second burst onto work-0 (y=" +
         window.scrollY +
         ")"
     );
@@ -451,7 +449,7 @@ function restIndexAt(y, liveRests) {
   }
   if (restIndexAt(window.scrollY, liveRests) !== 1) {
     fail(
-      "the first committed settle must finish on opening-headline (got index " +
+      "the first committed settle must finish on hand-0 (got index " +
         restIndexAt(window.scrollY, liveRests) +
         ", y=" +
         window.scrollY +
@@ -475,7 +473,7 @@ function restIndexAt(y, liveRests) {
   }
   if (restIndexAt(window.scrollY, liveRests) !== 2) {
     fail(
-      "after settle and a genuine quiet interval the next wheel may advance exactly one rest to hand-0 (got index " +
+      "after settle and a genuine quiet interval the next wheel may advance exactly one rest to work-0 (got index " +
         restIndexAt(window.scrollY, liveRests) +
         ")"
     );

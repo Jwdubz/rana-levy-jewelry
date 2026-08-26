@@ -309,7 +309,18 @@ const forbidden = [
 ];
 const dockCss = indexMobile + "\n" + stylesMobile;
 if (!/copy-dock-opening/.test(indexMobile) || !/--opening-copy-dock-h/.test(indexMobile)) {
-  fail("mobile opening must author a black copy dock below the ring");
+  fail("mobile opening must keep the copy-dock measure so the lower blush band stays authored");
+}
+if (!/--opening-copy-dock-h:\s*29\.230769%/.test(indexMobile)) {
+  fail("mobile opening copy-dock height must match the measured 456/1560 blush band");
+}
+const openingDock = (indexMobile.match(/\.copy-dock-opening\s*\{[\s\S]*?\}/) || [""])[0];
+if (!openingDock) fail("mobile .copy-dock-opening must remain extractable");
+if (!/display:\s*none/.test(openingDock) || !/background:\s*transparent/.test(openingDock)) {
+  fail("mobile opening copy dock must be hidden and transparent; blush lives in the film pixels");
+}
+if (/background:\s*#000|background:\s*#020005|background:\s*black/.test(openingDock)) {
+  fail("mobile opening copy dock must not remain a visible black surround");
 }
 if (!/work-copy-dock/.test(stylesMobile) || !/--work-copy-dock-h/.test(stylesMobile)) {
   fail("mobile terminal must author a black copy region below the pink ring");
@@ -326,13 +337,22 @@ if (!/white-space:\s*nowrap/.test(mobileHeadline)) {
   fail("mobile .headline dock must keep the line nowrap");
 }
 if (!/text-align:\s*center/.test(mobileHeadline) || !/justify-content:\s*center/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must be centered in the black dock");
+  fail("mobile Custom Gems must be centered in the lower blush band");
 }
 if (!/display:\s*flex/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must stay a flex-centered dock line");
+  fail("mobile Custom Gems must stay a flex-centered band line");
 }
-if (!/translate:\s*0\s+-8\.25dvh/.test(mobileHeadline)) {
-  fail("mobile Custom Gems must be optically centered across the complete visible black field");
+if (!/bottom:\s*0/.test(mobileHeadline) || !/height:\s*29\.230769%/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must sit in the measured lower blush band (456/1560)");
+}
+if (/translate:\s*0\s+-8\.25dvh/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must not keep the retired black-dock optical shift");
+}
+if (/color:\s*#2A171F/.test(mobileHeadline)) {
+  fail("mobile Custom Gems must not retain the unrequested plum recolor");
+}
+if (!/\.type\s*\{[\s\S]{0,220}color:\s*#fffaf5/.test(index)) {
+  fail("mobile Custom Gems must inherit the original cream ink #fffaf5");
 }
 if (!/padding:\s*0\s+0\.85rem/.test(mobileHeadline)) {
   fail("mobile Custom Gems must keep safe horizontal dock padding");
@@ -570,5 +590,5 @@ if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline; four rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; one-line display headline in the lower blush band; three rests; no blur/vignette filler)"
 );

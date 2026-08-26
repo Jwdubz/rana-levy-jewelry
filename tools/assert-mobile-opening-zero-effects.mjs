@@ -187,6 +187,8 @@ const requiredAssets = [
   "assets/studio-opening-cluster-bench-engraving-portrait.jpg",
   "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4",
   "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg",
+  "assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.mp4",
+  "assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg",
   "assets/ring-alexandrite-portrait.mp4",
   "assets/studio-poster-portrait.jpg",
   "assets/ring-poster-portrait.jpg",
@@ -199,13 +201,13 @@ for (const rel of requiredAssets) {
 // --- Markup: deterministic desktop/mobile selection attributes ---
 const requiredMarkupTokens = [
   'data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"',
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"',
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.mp4"',
   'data-desktop-src="assets/ring-alexandrite.mp4"',
   'data-mobile-src="assets/ring-alexandrite-portrait.mp4"',
-  'data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"',
+  'data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"',
   'data-mobile-poster="assets/studio-poster-portrait.jpg"',
   'data-mobile-poster="assets/ring-poster-portrait.jpg"',
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"',
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"',
   'data-mobile-src="assets/ring-poster-portrait.jpg"',
   'data-desktop-src="assets/studio-hand-work-cycle.mp4"',
   'data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"',
@@ -224,13 +226,13 @@ if (
   !/data-desktop-src="assets\/studio-opening-cluster-bench-engraving\.mp4"/.test(
     studioVideoBlock[0]
   ) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.mp4"/.test(
+  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide-blush\.mp4"/.test(
     studioVideoBlock[0]
   ) ||
   !/data-desktop-poster="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(
     studioVideoBlock[0]
   ) ||
-  !/data-mobile-poster="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.jpg"/.test(
+  !/data-mobile-poster="assets\/studio-opening-cluster-bench-engraving-mobile-wide-blush\.jpg"/.test(
     studioVideoBlock[0]
   )
 ) {
@@ -248,14 +250,14 @@ if (
   );
 }
 const studioStackBlock = index.match(
-  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="world world-gem"/
+  /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="caustic-light"/
 );
 if (!studioStackBlock) fail("could not extract worldStudio media stack");
 if (
   !/data-desktop-src="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(
     studioStackBlock[0]
   ) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.jpg"/.test(
+  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide-blush\.jpg"/.test(
     studioStackBlock[0]
   )
 ) {
@@ -415,7 +417,7 @@ if (veilMobile && !/display:\s*none/i.test(veilMobile)) {
   fail("mobile .veil must be disabled (display:none) — full-frame wash is a substitute surround");
 }
 
-// --- One live opening decoder; the gem is a canvas world, not a second film ---
+// --- One live opening decoder; the gem world is retired ---
 const openingSection = index.slice(
   index.indexOf('id="opening"'),
   index.indexOf('id="hand"')
@@ -426,8 +428,8 @@ if (openingVideos.length !== 1) {
     `opening must keep exactly one live decoder (studio first-beat); found ${openingVideos.length} <video>`
   );
 }
-if (!/id="worldGem"/.test(openingSection) || !/id="gemCanvas"/.test(openingSection)) {
-  fail("opening must host the live gem as a canvas world, not a second decoder");
+if (/id="worldGem"|id="gemCanvas"|id="gemHost"|id="gemFallback"|id="gemReveal"/.test(openingSection)) {
+  fail("opening must not host a spinning-gem world, canvas, fallback, or reveal");
 }
 if (/id="ringVideo"/.test(openingSection)) {
   fail("opening must not keep the retired ringVideo decoder");
@@ -669,5 +671,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + deterministic selection; live gem canvas world; no opening ringVideo; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; cluster→bench→engraving opening film/stills + blush-band mobile derivative; no gem world; no opening ringVideo; no contain/vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
 );

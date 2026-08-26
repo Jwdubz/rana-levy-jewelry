@@ -877,8 +877,8 @@ assertIncludes(
 );
 assertIncludes(
   index,
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"',
-  "mobile studio wider-frame portrait"
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.mp4"',
+  "mobile studio blush-band portrait"
 );
 assertIncludes(
   index,
@@ -892,8 +892,8 @@ assertIncludes(
 );
 assertIncludes(
   index,
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"',
-  "mobile studio wider-frame still"
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"',
+  "mobile studio blush-band still"
 );
 // Opening must not retain superseded montage rotations as film authority.
 const openingWorldSlice = index.slice(
@@ -917,10 +917,10 @@ if (/studio-opening-bench-engraving(?:-portrait)?\.(?:mp4|jpg)/.test(openingWorl
 }
 if (
   !/studio-opening-cluster-bench-engraving\.mp4/.test(openingWorldSlice) ||
-  !/studio-opening-cluster-bench-engraving-mobile-wide\.mp4/.test(openingWorldSlice)
+  !/studio-opening-cluster-bench-engraving-mobile-wide-blush\.mp4/.test(openingWorldSlice)
 ) {
   fail(
-    "opening world must pin desktop cluster-bench-engraving film and the wider-frame mobile portrait"
+    "opening world must pin desktop cluster-bench-engraving film and the blush-band mobile portrait"
   );
 }
 

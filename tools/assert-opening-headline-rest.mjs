@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 /**
- * Fail-before / pass-after: the fully composed opening headline must be
- * an authored adjacent rest. Exact parent 63e095c collects
- * opening-start → opening-final and therefore skips “Custom Gems Turn
- * Heads” on a long swipe. The candidate must insert opening-headline
- * between those rests. This correction then retires opening-final as a
- * swipe destination so the next rest is the workbench. Headline invert
- * stays 0.55 inside 0.48–0.62.
+ * Fail-before / pass-after: the opening is one composed rest.
+ * Exact parent 63e095c collects opening-start → opening-final and
+ * skips the headline. The later two-rest map stopped twice on the
+ * same opening. This rings-first draft collapses opening-start and
+ * opening-headline so the next gesture reaches Hand.
  *
  * Usage: node tools/assert-opening-headline-rest.mjs
  *
@@ -30,7 +28,6 @@ const PARENT = "63e095c6c976288874769056e2c95b46e1b04b72";
 
 const EXPECTED_IDS = [
   "opening-start",
-  "opening-headline",
   "hand-0",
   "work-0"
 ];
@@ -44,9 +41,6 @@ const PARENT_IDS = [
   "work-2",
   "work-terminal"
 ];
-const HEADLINE_COMPOSED_START = 0.48;
-const HEADLINE_COMPOSED_END = 0.62;
-const HEADLINE_ANCHOR = 0.55;
 const GEOMETRIES = [
   { width: 320, height: 700 },
   { width: 360, height: 700 },
@@ -280,27 +274,17 @@ const parentHelperSrc = gitShow(PARENT, "mobile-beat-settle.js");
 if (!/id="headline"/.test(candidateIndex) || !/Custom Gems/.test(candidateIndex)) {
   fail("index.html must still render the opening headline at #headline");
 }
-if (!/headInEnd\s*=\s*mobile\s*\?\s*0\.48/.test(candidateIndex) || !/headOutStart\s*=\s*mobile\s*\?\s*0\.62/.test(candidateIndex)) {
-  fail("mobile headline composed interval must stay 0.48–0.62; do not retime the opening");
+if (/headlineChoreography/.test(candidateIndex)) {
+  fail("OPENING_SPAN must not keep a second opening-headline invert; the headline is composed at progress zero");
 }
 if (!/window\.OPENING_SPAN\s*=\s*OPENING_SPAN/.test(candidateIndex)) {
-  fail("headline choreography must be exposed through the existing OPENING_SPAN contract");
+  fail("OPENING_SPAN must remain exposed");
 }
 
 const candidateSpan = parseOpeningSpan(candidateIndex);
 const parentSpan = parseOpeningSpan(parentIndex);
-if (candidateSpan.headlineChoreography !== HEADLINE_ANCHOR) {
-  fail(
-    "OPENING_SPAN.headlineChoreography must be the fully composed mobile center 0.55 (got " +
-      candidateSpan.headlineChoreography +
-      ")"
-  );
-}
-if (
-  !(candidateSpan.headlineChoreography > HEADLINE_COMPOSED_START) ||
-  !(candidateSpan.headlineChoreography < HEADLINE_COMPOSED_END)
-) {
-  fail("headlineChoreography must lie strictly inside the fully composed 0.48–0.62 interval");
+if (candidateSpan.headlineChoreography != null) {
+  fail("candidate OPENING_SPAN must not expose headlineChoreography");
 }
 if (parentSpan.headlineChoreography != null) {
   fail("exact parent 63e095c OPENING_SPAN must not already expose headlineChoreography");
@@ -360,90 +344,40 @@ GEOMETRIES.forEach((geo) => {
       geo.width +
         "x" +
         geo.height +
-        " must collect the four ordered rests (got " +
+        " must collect the three ordered rests (got " +
         JSON.stringify(ids) +
         ")"
     );
   }
-  if (ids.indexOf("opening-final") >= 0) {
-    fail("opening-final must not remain a mobile swipe destination");
+  if (ids.indexOf("opening-final") >= 0 || ids.indexOf("opening-headline") >= 0) {
+    fail("opening-headline and opening-final must not remain swipe destinations");
   }
   const start = rests[0];
-  const headline = rests[1];
-  const next = rests[2];
-  if (start.id !== "opening-start" || headline.id !== "opening-headline" || next.id !== "hand-0") {
-    fail("candidate order must start opening-start, opening-headline, hand-0");
+  const next = rests[1];
+  if (start.id !== "opening-start" || next.id !== "hand-0") {
+    fail("candidate order must start opening-start, hand-0");
   }
-  if (!(headline.start === headline.end)) {
-    fail("opening-headline must be a stable composed point rest, not a re-timed plateau");
+  if (!(start.start === start.end)) {
+    fail("opening-start must remain a stable composed point rest at the first frame");
   }
-  if (!(headline.start > start.end) || !(headline.end < next.start)) {
+  if (!(next.start > start.end)) {
     fail(
-      "opening-headline must lie strictly between opening-start and hand-0 at " +
+      "hand-0 must lie after opening-start at " +
         geo.width +
         "x" +
         geo.height +
         " (got " +
-        headline.start +
-        " in " +
-        start.end +
-        ".." +
         next.start +
-        ")"
-    );
-  }
-  const openingTravel = geo.height * 2.8 - geo.height;
-  const physical = headline.start / openingTravel;
-  const choreo = physical / candidateSpan.choreographyEnd;
-  if (choreo < HEADLINE_COMPOSED_START || choreo > HEADLINE_COMPOSED_END) {
-    fail(
-      "opening-headline choreography " +
-        choreo.toFixed(4) +
-        " is outside the fully composed 0.48–0.62 interval at " +
-        geo.width +
-        "x" +
-        geo.height
-    );
-  }
-  if (Math.abs(choreo - HEADLINE_ANCHOR) > 0.01) {
-    fail(
-      "opening-headline must invert OPENING_SPAN.headlineChoreography 0.55 (got choreo=" +
-        choreo.toFixed(4) +
-        " at " +
-        geo.width +
-        "x" +
-        geo.height +
-        ")"
-    );
-  }
-  const wantPhysical = HEADLINE_ANCHOR * candidateSpan.choreographyEnd;
-  const wantY = candidateHelper.operationalRest({
-    id: "opening-headline",
-    start: wantPhysical * openingTravel,
-    end: wantPhysical * openingTravel
-  });
-  if (headline.start !== wantY.start || headline.end !== wantY.end) {
-    fail(
-      "opening-headline y must be the reachable invert of 0.55 (got " +
-        headline.start +
-        ".." +
-        headline.end +
-        ", want " +
-        wantY.start +
-        ".." +
-        wantY.end +
-        " at " +
-        geo.width +
-        "x" +
-        geo.height +
+        " after " +
+        start.end +
         ")"
     );
   }
 
   const forward1 = candidateHelper.chooseAdjacentDestination(0, -580, rests);
-  if (!forward1 || forward1.index !== 1 || rests[forward1.index].id !== "opening-headline") {
+  if (!forward1 || forward1.index !== 1 || rests[forward1.index].id !== "hand-0") {
     fail(
-      "long forward swipe from opening-start must land at opening-headline at " +
+      "long forward swipe from opening-start must land at hand-0 at " +
         geo.width +
         "x" +
         geo.height +
@@ -453,9 +387,9 @@ GEOMETRIES.forEach((geo) => {
     );
   }
   const forward2 = candidateHelper.chooseAdjacentDestination(1, -580, rests);
-  if (!forward2 || forward2.index !== 2 || rests[forward2.index].id !== "hand-0") {
+  if (!forward2 || forward2.index !== 2 || rests[forward2.index].id !== "work-0") {
     fail(
-      "next forward swipe from opening-headline must land at hand-0 at " +
+      "next forward swipe from hand-0 must land at work-0 at " +
         geo.width +
         "x" +
         geo.height +
@@ -464,27 +398,15 @@ GEOMETRIES.forEach((geo) => {
         ")"
     );
   }
-  const reverse1 = candidateHelper.chooseAdjacentDestination(2, 580, rests);
-  if (!reverse1 || reverse1.index !== 1 || rests[reverse1.index].id !== "opening-headline") {
+  const reverse1 = candidateHelper.chooseAdjacentDestination(1, 580, rests);
+  if (!reverse1 || reverse1.index !== 0 || rests[reverse1.index].id !== "opening-start") {
     fail(
-      "reverse from hand-0 must return through opening-headline at " +
+      "reverse from hand-0 must return to opening-start at " +
         geo.width +
         "x" +
         geo.height +
         " (got " +
         JSON.stringify(reverse1) +
-        ")"
-    );
-  }
-  const reverse2 = candidateHelper.chooseAdjacentDestination(1, 580, rests);
-  if (!reverse2 || reverse2.index !== 0 || rests[reverse2.index].id !== "opening-start") {
-    fail(
-      "reverse from opening-headline must return to opening-start at " +
-        geo.width +
-        "x" +
-        geo.height +
-        " (got " +
-        JSON.stringify(reverse2) +
         ")"
     );
   }
@@ -515,7 +437,7 @@ GEOMETRIES.forEach((geo) => {
   emitSwipe(harness.emit, 620, 40);
   if (window.scrollY !== forward1.y) {
     fail(
-      "simulated long swipe from opening-start must settle on opening-headline y=" +
+      "simulated long swipe from opening-start must settle on hand-0 y=" +
         forward1.y +
         " (got " +
         window.scrollY +
@@ -529,7 +451,7 @@ GEOMETRIES.forEach((geo) => {
   emitSwipe(harness.emit, 620, 40);
   if (window.scrollY !== forward2.y) {
     fail(
-      "simulated next swipe must settle on hand-0 y=" +
+      "simulated next swipe must settle on work-0 y=" +
         forward2.y +
         " (got " +
         window.scrollY +
@@ -541,10 +463,11 @@ GEOMETRIES.forEach((geo) => {
     );
   }
   emitSwipe(harness.emit, 40, 620);
-  if (window.scrollY !== reverse1.y) {
+  const reverseFromWork = candidateHelper.chooseAdjacentDestination(2, 580, rests);
+  if (!reverseFromWork || reverseFromWork.index !== 1 || window.scrollY !== reverseFromWork.y) {
     fail(
-      "simulated reverse swipe must return through opening-headline y=" +
-        reverse1.y +
+      "simulated reverse swipe must return to hand-0 y=" +
+        (reverseFromWork && reverseFromWork.y) +
         " (got " +
         window.scrollY +
         " at " +
@@ -558,7 +481,7 @@ GEOMETRIES.forEach((geo) => {
   reported.push({
     geometry: geo.width + "x" + geo.height,
     ids: ids,
-    headline: { start: headline.start, end: headline.end, choreo: Number(choreo.toFixed(4)) },
+    opening: { start: start.start, end: start.end },
     hand0: { start: next.start, end: next.end }
   });
   uninstall(candidateHelper);
@@ -577,28 +500,28 @@ GEOMETRIES.forEach((geo) => {
   }
   const rests = candidateHelper.collectRests();
   if (!sameIds(idsOf(rests), EXPECTED_IDS)) {
-    fail("reduced-motion must retain the same four ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
+    fail("reduced-motion must retain the same three ordered rests (got " + JSON.stringify(idsOf(rests)) + ")");
   }
   window.scrollTo(0, rests[0].start);
   emitSwipe(harness.emit, 620, 40);
-  const wantHeadline = candidateHelper.chooseAdjacentDestination(0, -580, rests);
-  if (!wantHeadline || rests[wantHeadline.index].id !== "opening-headline" || window.scrollY !== wantHeadline.y) {
+  const wantHand = candidateHelper.chooseAdjacentDestination(0, -580, rests);
+  if (!wantHand || rests[wantHand.index].id !== "hand-0" || window.scrollY !== wantHand.y) {
     fail(
-      "reduced-motion long swipe from opening-start must land at opening-headline (got y=" +
+      "reduced-motion long swipe from opening-start must land at hand-0 (got y=" +
         window.scrollY +
         ", dest=" +
-        JSON.stringify(wantHeadline) +
+        JSON.stringify(wantHand) +
         ")"
     );
   }
   emitSwipe(harness.emit, 620, 40);
-  const wantFinal = candidateHelper.chooseAdjacentDestination(1, -580, rests);
-  if (!wantFinal || rests[wantFinal.index].id !== "hand-0" || window.scrollY !== wantFinal.y) {
-    fail("reduced-motion next swipe must land at hand-0");
+  const wantWork = candidateHelper.chooseAdjacentDestination(1, -580, rests);
+  if (!wantWork || rests[wantWork.index].id !== "work-0" || window.scrollY !== wantWork.y) {
+    fail("reduced-motion next swipe must land at work-0");
   }
   emitSwipe(harness.emit, 40, 620);
-  if (window.scrollY !== wantHeadline.y) {
-    fail("reduced-motion reverse must return through opening-headline");
+  if (window.scrollY !== wantHand.y) {
+    fail("reduced-motion reverse must return to hand-0");
   }
   uninstall(candidateHelper);
 }
@@ -637,7 +560,7 @@ GEOMETRIES.forEach((geo) => {
   const desktopRests = candidateHelper.collectRests();
   if (!sameIds(idsOf(desktopRests), EXPECTED_IDS)) {
     fail(
-      "desktop normal motion must expose the four ordered rests (got " +
+      "desktop normal motion must expose the three ordered rests (got " +
         JSON.stringify(idsOf(desktopRests)) +
         ")"
     );
@@ -645,18 +568,14 @@ GEOMETRIES.forEach((geo) => {
   uninstall(candidateHelper);
 }
 
-if (typeof candidateHelper.deriveOpeningHeadlinePhysical !== "function") {
-  fail("helper must export deriveOpeningHeadlinePhysical so the headline invert is executable");
-}
-const inverted = candidateHelper.deriveOpeningHeadlinePhysical(candidateSpan);
-if (!inverted || inverted.startP !== inverted.endP) {
-  fail("headline invert must be a point at the composed frame");
-}
-if (Math.abs(inverted.startP - HEADLINE_ANCHOR * candidateSpan.choreographyEnd) > 1e-12) {
-  fail("headline invert must be headlineChoreography * choreographyEnd");
+if (typeof candidateHelper.deriveOpeningHeadlinePhysical === "function") {
+  const inverted = candidateHelper.deriveOpeningHeadlinePhysical(candidateSpan);
+  if (inverted) {
+    fail("deriveOpeningHeadlinePhysical must not invent a second opening rest from the collapsed span");
+  }
 }
 
 console.log(
-  "PASS: opening-headline authored rest (parent 63e095c skips headline; candidate four rests start opening-start, opening-headline, hand-0; 0.55 invert inside 0.48–0.62; opening-final retired; forward/reverse adjacency; reduce keeps ownership; quiet native; desktop attached)"
+  "PASS: one composed opening rest (parent 63e095c skips headline; candidate three rests start opening-start, hand-0; opening-headline retired; forward/reverse adjacency; reduce keeps ownership; quiet native; desktop attached)"
 );
 console.log(JSON.stringify(reported));

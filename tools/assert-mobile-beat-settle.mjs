@@ -332,19 +332,10 @@ if (!/window\.BEAT_DWELL/.test(helper)) {
   fail("collectRests must read live BEAT_DWELL anchors");
 }
 if (!/window\.OPENING_SPAN/.test(helper)) {
-  fail("collectRests must read live OPENING_SPAN for the opening headline rest");
+  fail("collectRests must read live OPENING_SPAN for the opening rest");
 }
-if (!/deriveOpeningHeadlinePhysical/.test(helper)) {
-  fail("opening headline rest must be derived from OPENING_SPAN");
-}
-if (!/headlineChoreography/.test(helper)) {
-  fail("collectRests must read live OPENING_SPAN.headlineChoreography");
-}
-if (!/id:\s*"opening-headline"/.test(helper) && !/"opening-headline"/.test(helper)) {
-  fail("opening headline rest must be a named destination");
-}
-if (!/headlineChoreography:\s*0\.55/.test(index)) {
-  fail("OPENING_SPAN must expose the mobile headline choreography anchor 0.55");
+if (/headlineChoreography:\s*0\.55/.test(index)) {
+  fail("OPENING_SPAN must not keep a second opening-headline invert");
 }
 if (/id:\s*"opening-final"/.test(helper) && /collectRests[\s\S]*opening-final/.test(helper)) {
   const collectOnly = helper.slice(helper.indexOf("function collectRests"));
@@ -454,8 +445,11 @@ if (/Math\.abs\(\s*target\s*-\s*y\s*\)\s*<=\s*NEAR_PX/.test(maybeFn)) {
 
 const collectFn = extractFn(helper, "collectRests");
 if (!collectFn) fail("could not isolate collectRests");
-if (!/opening-start[\s\S]*opening-headline[\s\S]*hand-/.test(collectFn)) {
-  fail("collectRests must insert opening-headline between opening-start and the first Hand rest");
+if (/id:\s*"opening-headline"/.test(collectFn)) {
+  fail("collectRests must not insert opening-headline as a second opening destination");
+}
+if (!/opening-start[\s\S]*hand-/.test(collectFn)) {
+  fail("collectRests must go from opening-start to the first Hand rest");
 }
 if (/id:\s*"opening-final"/.test(collectFn) || /"opening-final"/.test(collectFn)) {
   fail("collectRests must not collect opening-final");
@@ -1830,7 +1824,6 @@ function expectOverflowRestore(root, body, prior, msg) {
   const rests = settle.collectRests();
   const authoredIds = [
     "opening-start",
-    "opening-headline",
     "hand-0",
     "work-0"
   ];
@@ -1840,7 +1833,7 @@ function expectOverflowRestore(root, body, prior, msg) {
     geometryIds.length !== authoredIds.length ||
     geometryIds.some((id, i) => id !== authoredIds[i])
   ) {
-    fail("geometry homepage must expose the four ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
+    fail("geometry homepage must expose the three ordered authored rests (got " + JSON.stringify(geometryIds) + ")");
   }
   const origin = rests[0];
   const next = rests[1];
@@ -2147,7 +2140,6 @@ function emitVerticalSwipe(emit, startY, endY) {
   const reduceIds = (rests || []).map((rest) => rest.id);
   const reduceWant = [
     "opening-start",
-    "opening-headline",
     "hand-0",
     "work-0"
   ];
@@ -2156,7 +2148,7 @@ function emitVerticalSwipe(emit, startY, endY) {
     reduceIds.length !== reduceWant.length ||
     reduceIds.some((id, i) => id !== reduceWant[i])
   ) {
-    fail("cold boot at <=700 with reduce=true must expose the four ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
+    fail("cold boot at <=700 with reduce=true must expose the three ordered authored rests (got " + JSON.stringify(reduceIds) + ")");
   }
   const last = rests[rests.length - 1];
   window.scrollTo(0, rests[0].start);
@@ -2287,5 +2279,5 @@ function emitVerticalSwipe(emit, startY, endY) {
 }
 
 console.log(
-  "PASS: passage one-adjacent-beat lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; reduce keeps adjacency ownership; desktop normal-motion attaches; quiet restore; four rests; ±1 rest helper; reachable invert; no CSS scroll-snap)"
+  "PASS: passage one-adjacent-beat lock (body-only standing overflow-y lock; root overflow unmutated for sticky; programmatic scrollTo preserved; document pan-x pinch-zoom; completed-net lift; second-contact retains origin; reduce keeps adjacency ownership; desktop normal-motion attaches; quiet restore; three rests; ±1 rest helper; reachable invert; no CSS scroll-snap)"
 );
