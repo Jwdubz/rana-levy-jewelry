@@ -75,11 +75,11 @@ if (/const INTRO\s*=/.test(index) || /window\.INTRO/.test(index)) {
 if (/gemOutStart|gemOutEnd|setupOutStart|headlineInStart|headlineChoreography/.test(index)) {
   fail("retired gem/setup/headline-in/second-rest cues must not remain authored");
 }
-if (/background:\s*#000|#020005/.test(index.slice(0, index.indexOf("</style>")))) {
-  fail("opening stylesheet must not keep the black void as the opening paper");
+if (/background:\s*#F4E3E8|mobile-wide-blush/.test(index.slice(0, index.indexOf("</style>")))) {
+  fail("opening must not retain the unrequested blush redesign");
 }
-if (!/background:\s*#F4E3E8/.test(index)) {
-  fail("opening paper must be the porcelain-blush #F4E3E8");
+if (!/html\s*\{[\s\S]{0,120}background:\s*#020005/.test(index) || !/body\s*\{[\s\S]{0,240}background:\s*#020005/.test(index)) {
+  fail("opening must preserve the approved dark #020005 visual system");
 }
 if (!/\.type\s*\{[\s\S]{0,220}color:\s*#fffaf5/.test(index)) {
   fail("opening headline must preserve the original cream ink #fffaf5");
@@ -123,9 +123,9 @@ if (!studioVideoBlock) fail("opening video must be studioVideo");
 if (
   !/studio-opening-cluster-bench-engraving\.mp4/.test(studioVideoBlock[0]) ||
   !/data-desktop-src="assets\/studio-opening-cluster-bench-engraving\.mp4"/.test(studioVideoBlock[0]) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide-blush\.mp4"/.test(studioVideoBlock[0])
+  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.mp4"/.test(studioVideoBlock[0])
 ) {
-  fail("opening video must keep the desktop montage and the blush-band mobile derivative");
+  fail("opening video must keep the desktop montage and approved mobile-wide derivative");
 }
 
 if (/id="worldRing"|id="ringStack"|id="ringVideo"/.test(opening)) {
@@ -194,8 +194,8 @@ if (!manageOpening) fail("manageOpeningVideoActivity must exist");
 if (!/openingDecoderAuthority\s*\(\s*\)/.test(manageOpening)) {
   fail("manageOpeningVideoActivity must consult openingDecoderAuthority");
 }
-if (!/is-later-world/.test(manageOpening)) {
-  fail("leaving Opening must yield chrome to the later dark movements");
+if (/is-later-world/.test(index + styles)) {
+  fail("the repaired dark visual system must not retain a light-to-dark palette switch");
 }
 if (!/openingAtStart/.test(manageOpening) || !/resetOpeningDecoderToStart\s*\(\s*studioVideo/.test(manageOpening)) {
   fail("reverse to the opening rest must restore the first studio frame");
@@ -244,5 +244,5 @@ if (!/rebuildLogo/.test(index) || !/data\[i\] = 255/.test(index) || !/data\[i \+
 }
 
 console.log(
-  "PASS: rings-first opening (cold-load studio film + Custom Gems Turn Heads at progress zero; blush paper #F4E3E8; original cream headline/chrome preserved; no gem/setup/black void/INTRO/second rest; studio decoder immediate; reverse restores first frame; SCROLL preserved)"
+  "PASS: rings-first opening (cold-load studio film + Custom Gems Turn Heads at progress zero; approved dark visual system and original cream headline/chrome preserved; no gem/setup/INTRO/second rest; studio decoder immediate; reverse restores first frame; SCROLL preserved)"
 );

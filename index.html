@@ -46,7 +46,7 @@
     }
 
     html {
-      background: #F4E3E8;
+      background: #020005;
       color: #fffaf5;
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
@@ -56,7 +56,7 @@
       min-height: 100%;
       overflow-x: hidden;
       font-family: Garamond, "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-      background: #F4E3E8;
+      background: #020005;
       color: #fffaf5;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -89,7 +89,7 @@
 
     .world-studio,
     .world-ring {
-      background: #F4E3E8;
+      background: #020005;
     }
 
     .world-studio {
@@ -124,7 +124,7 @@
       transform-origin: center center;
       will-change: transform;
       overflow: hidden;
-      background: #F4E3E8;
+      background: #020005;
     }
 
     .media-stack img,
@@ -329,15 +329,15 @@
       /*
         True full-screen mobile opening oracle:
         The complete visible viewport is the carrier. The mobile opening
-        blush-band derivative fills .media-stack edge-to-edge (inset:0; width/height 100%)
-        with square unmasked edges and object-fit:cover. The approved 517-frame
-        center edit stays uncropped; only the baked black letterbox is blush paper.
-        CSS must not add contain-as-strip, vignette, blur atmosphere, duplicate/echo
-        filler, gradient filler, card chrome, or a media filter. JS keeps mobile scale at 1.
+        approved mobile-wide derivative fills .media-stack edge-to-edge (inset:0;
+        width/height 100%) with square unmasked edges and object-fit:cover. Its
+        authored black negative space preserves the uncropped jewelry frame.
+        CSS must not add vignette, blur atmosphere, duplicate/echo filler,
+        gradient filler, card chrome, or a media filter. JS keeps mobile scale at 1.
       */
       .world-studio,
       .world-ring {
-        background: #F4E3E8;
+        background: #020005;
       }
 
       .world-studio .media-stack,
@@ -379,18 +379,18 @@
       }
 
       .scene {
-        --opening-copy-dock-h: 29.230769%;
+        --opening-copy-dock-h: 18dvh;
       }
 
       .copy-dock-opening {
-        display: none;
+        display: block;
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 7;
         height: 0;
-        background: transparent;
+        background: #020005;
         pointer-events: none;
       }
 
@@ -405,12 +405,12 @@
         right: 0;
         top: auto;
         bottom: 0;
-        height: 29.230769%;
+        height: var(--opening-copy-dock-h, 18dvh);
         display: flex;
         align-items: center;
         justify-content: center;
         transform: none;
-        translate: none;
+        translate: 0 -8.25dvh;
         font-size: clamp(1.45rem, 7.4vw, 2.25rem);
         line-height: 1.05;
         text-align: center;
@@ -533,7 +533,7 @@
             <img
               src="assets/studio-opening-cluster-bench-engraving.jpg"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.jpg"
-              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"
               alt=""
               width="2160"
               height="1080"
@@ -546,10 +546,10 @@
               height="1080"
               data-src="assets/studio-opening-cluster-bench-engraving.mp4"
               data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"
-              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.mp4"
+              data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"
               poster="assets/studio-opening-cluster-bench-engraving.jpg"
               data-desktop-poster="assets/studio-opening-cluster-bench-engraving.jpg"
-              data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide-blush.jpg"
+              data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"
               muted
               loop
               playsinline
@@ -1552,8 +1552,6 @@
         } else {
           owns = rect.bottom > vh * 0.2 && rect.top < vh * 0.8;
         }
-
-        document.documentElement.classList.toggle("is-later-world", !owns);
 
         if (!owns) {
           // Retire authority: pause AND drop is-live (not pause-only).
