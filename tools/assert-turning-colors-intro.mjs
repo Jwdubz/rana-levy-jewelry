@@ -123,7 +123,7 @@ if (!studioVideoBlock) fail("opening video must be studioVideo");
 if (
   !/studio-opening-cluster-bench-engraving\.mp4/.test(studioVideoBlock[0]) ||
   !/data-desktop-src="assets\/studio-opening-cluster-bench-engraving\.mp4"/.test(studioVideoBlock[0]) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.mp4"/.test(studioVideoBlock[0])
+  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide-spectral\.mp4"/.test(studioVideoBlock[0])
 ) {
   fail("opening video must keep the desktop montage and approved mobile-wide derivative");
 }
@@ -244,5 +244,5 @@ if (!/rebuildLogo/.test(index) || !/data\[i\] = 255/.test(index) || !/data\[i \+
 }
 
 console.log(
-  "PASS: rings-first opening (cold-load studio film + Custom Gems Turn Heads at progress zero; approved dark visual system and original cream headline/chrome preserved; no gem/setup/INTRO/second rest; studio decoder immediate; reverse restores first frame; SCROLL preserved)"
+  "PASS: rings-first opening (cold-load studio film + Custom Gems Turn Heads at progress zero; approved dark source contract remains beneath the isolated spectral ground; original cream headline/chrome preserved; no gem/setup/INTRO/second rest; studio decoder immediate; reverse restores first frame; SCROLL preserved)"
 );

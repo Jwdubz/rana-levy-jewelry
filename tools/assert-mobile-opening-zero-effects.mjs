@@ -187,6 +187,8 @@ const requiredAssets = [
   "assets/studio-opening-cluster-bench-engraving-portrait.jpg",
   "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4",
   "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg",
+  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4",
+  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg",
   "assets/ring-alexandrite-portrait.mp4",
   "assets/studio-poster-portrait.jpg",
   "assets/ring-poster-portrait.jpg",
@@ -199,13 +201,13 @@ for (const rel of requiredAssets) {
 // --- Markup: deterministic desktop/mobile selection attributes ---
 const requiredMarkupTokens = [
   'data-desktop-src="assets/studio-opening-cluster-bench-engraving.mp4"',
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"',
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4"',
   'data-desktop-src="assets/ring-alexandrite.mp4"',
   'data-mobile-src="assets/ring-alexandrite-portrait.mp4"',
-  'data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"',
+  'data-mobile-poster="assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg"',
   'data-mobile-poster="assets/studio-poster-portrait.jpg"',
   'data-mobile-poster="assets/ring-poster-portrait.jpg"',
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"',
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg"',
   'data-mobile-src="assets/ring-poster-portrait.jpg"',
   'data-desktop-src="assets/studio-hand-work-cycle.mp4"',
   'data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"',
@@ -224,13 +226,13 @@ if (
   !/data-desktop-src="assets\/studio-opening-cluster-bench-engraving\.mp4"/.test(
     studioVideoBlock[0]
   ) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.mp4"/.test(
+  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide-spectral\.mp4"/.test(
     studioVideoBlock[0]
   ) ||
   !/data-desktop-poster="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(
     studioVideoBlock[0]
   ) ||
-  !/data-mobile-poster="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.jpg"/.test(
+  !/data-mobile-poster="assets\/studio-opening-cluster-bench-engraving-mobile-wide-spectral\.jpg"/.test(
     studioVideoBlock[0]
   )
 ) {
@@ -255,7 +257,7 @@ if (
   !/data-desktop-src="assets\/studio-opening-cluster-bench-engraving\.jpg"/.test(
     studioStackBlock[0]
   ) ||
-  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide\.jpg"/.test(
+  !/data-mobile-src="assets\/studio-opening-cluster-bench-engraving-mobile-wide-spectral\.jpg"/.test(
     studioStackBlock[0]
   )
 ) {
@@ -669,5 +671,5 @@ if (
 }
 
 console.log(
-  "PASS: true full-screen mobile opening oracle (full-inset media parents; approved cluster→bench→engraving opening film/stills; authored black negative space preserved; no gem world; no opening ringVideo; no vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
+  "PASS: true full-screen mobile opening oracle (full-inset media parents; approved cluster→bench→engraving picture band with spectral negative space; no gem world; no opening ringVideo; no vignette/blur/ratio-strip/filter; one video/source; quiet skips src; desktop edge-to-edge cover + same assets)"
 );

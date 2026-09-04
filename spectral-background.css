@@ -1,0 +1,73 @@
+/* Draft-only alternate ground. Typography, media geometry, and motion stay inherited. */
+:root {
+  --spectral-palette: linear-gradient(
+    105deg,
+    #d7b9ff 0%,
+    #a98cff 28%,
+    #ff9cc9 58%,
+    #f4ddb0 100%
+  );
+  --spectral-ground: linear-gradient(
+      rgba(2, 0, 5, 0.67),
+      rgba(2, 0, 5, 0.67)
+    ),
+    var(--spectral-palette);
+}
+
+/* Shared page canvas and the homepage's true negative-space surfaces. */
+html,
+body,
+body.shell-body,
+.site-main,
+.world-studio,
+.media-stack,
+.hand-bench,
+.hand-bench .layer-media,
+.work-world-0,
+.work-copy-dock {
+  background-image: var(--spectral-ground);
+}
+
+@media (min-width: 701px) {
+  .hand-bridge,
+  .hand-bridge .layer-media {
+    background-image: var(--spectral-ground);
+  }
+}
+
+/* Preserve the existing Ready/Made atmospheric fields; replace only their ink base. */
+body.shell-body.page-ready .shell-ground,
+body.shell-body.page-made .shell-ground {
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 58% 36%,
+      rgba(92, 48, 78, 0.38) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 28% 70%,
+      rgba(48, 28, 62, 0.32) 0%,
+      transparent 58%
+    ),
+    var(--spectral-ground);
+}
+
+/* These routes intentionally use an unpictured reading ground. */
+body.shell-body.page-faq .shell-ground,
+body.shell-body.page-gallery .shell-ground,
+body.shell-body.page-privacy .shell-ground,
+body.shell-body.page-terms .shell-ground,
+body.shell-body.page-services .shell-ground,
+body.shell-body.page-journal .shell-ground {
+  background-image: var(--spectral-ground);
+}
+
+/* Consultation keeps its approved paper opening; only its mobile ink continuation changes. */
+@media (max-width: 700px) {
+  body.shell-body.page-ready .shell-ground,
+  body.shell-body.page-made .shell-ground,
+  body.shell-body.page-consultation,
+  body.shell-body.page-consultation .shell-ground {
+    background-image: var(--spectral-ground);
+  }
+}

@@ -587,5 +587,5 @@ if (!/workSpans:\s*\[\s*1(?:\.00)?\s*\]/.test(siteJs)) {
 }
 
 console.log(
-  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; approved dark opening field preserved; three rests; no blur/vignette filler)"
+  "PASS: mobile passage correction (rejected copy/rests/heirloom/workBridge absent; two-part terminal display hierarchy; desktop sequential dock; exact Custom Gems Turn Heads spacing; approved opening geometry preserved beneath the spectral ground; three rests; no blur/vignette filler)"
 );

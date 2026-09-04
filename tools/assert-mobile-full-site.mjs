@@ -877,7 +877,7 @@ assertIncludes(
 );
 assertIncludes(
   index,
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4"',
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4"',
   "mobile studio approved wide portrait"
 );
 assertIncludes(
@@ -892,7 +892,7 @@ assertIncludes(
 );
 assertIncludes(
   index,
-  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg"',
+  'data-mobile-src="assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg"',
   "mobile studio approved wide still"
 );
 // Opening must not retain superseded montage rotations as film authority.
@@ -917,7 +917,7 @@ if (/studio-opening-bench-engraving(?:-portrait)?\.(?:mp4|jpg)/.test(openingWorl
 }
 if (
   !/studio-opening-cluster-bench-engraving\.mp4/.test(openingWorldSlice) ||
-  !/studio-opening-cluster-bench-engraving-mobile-wide\.mp4/.test(openingWorldSlice)
+  !/studio-opening-cluster-bench-engraving-mobile-wide-spectral\.mp4/.test(openingWorldSlice)
 ) {
   fail(
     "opening world must pin desktop cluster-bench-engraving film and the approved mobile-wide portrait"
@@ -947,5 +947,5 @@ if (fs.existsSync(path.join(root, "package.json"))) {
 }
 
 console.log(
-  "PASS: mobile full-site from oracle (opening preserved; direct bench Hand passage; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); consultation opening-sketch→ink ground (no fixed pale paper / Frame-Filler); no mobile work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
+  "PASS: mobile full-site from oracle (opening preserved; direct bench Hand passage; 2-col catalog; sharp product/held/gallery frames; nowrap shell nav; mobile chrome scrolls with composition (no transparent-fixed overlap); consultation opening-sketch→spectral continuation (no fixed pale paper / Frame-Filler); no mobile work-echo/rest-wash; route grounds; desktop 3-col + assets intact)"
 );

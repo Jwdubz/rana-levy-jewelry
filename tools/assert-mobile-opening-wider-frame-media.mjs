@@ -45,6 +45,10 @@ const BASE = "8a8832c26eb55fec664c6cd884ce8eccd23c82cd";
 
 const NEW_VIDEO = "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4";
 const NEW_POSTER = "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg";
+const ACTIVE_VIDEO =
+  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4";
+const ACTIVE_POSTER =
+  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg";
 const OLD_VIDEO = "assets/studio-opening-cluster-bench-engraving-portrait.mp4";
 const OLD_POSTER = "assets/studio-opening-cluster-bench-engraving-portrait.jpg";
 const DESKTOP_VIDEO = "assets/studio-opening-cluster-bench-engraving.mp4";
@@ -412,11 +416,11 @@ if (!openingWorld) fail("could not isolate opening studio world");
 const studioVideoBlock = index.match(/id="studioVideo"[\s\S]*?<\/video>/);
 if (!studioVideoBlock) fail("studioVideo element must be present");
 const studioMarkup = studioVideoBlock[0];
-if (!studioMarkup.includes(`data-mobile-src="${NEW_VIDEO}"`)) {
-  fail(`studioVideo data-mobile-src must be ${NEW_VIDEO}`);
+if (!studioMarkup.includes(`data-mobile-src="${ACTIVE_VIDEO}"`)) {
+  fail(`studioVideo data-mobile-src must be ${ACTIVE_VIDEO}`);
 }
-if (!studioMarkup.includes(`data-mobile-poster="${NEW_POSTER}"`)) {
-  fail(`studioVideo data-mobile-poster must be ${NEW_POSTER}`);
+if (!studioMarkup.includes(`data-mobile-poster="${ACTIVE_POSTER}"`)) {
+  fail(`studioVideo data-mobile-poster must be ${ACTIVE_POSTER}`);
 }
 if (studioMarkup.includes(OLD_VIDEO) || studioMarkup.includes(`data-mobile-poster="${OLD_POSTER}"`)) {
   fail("studioVideo must not keep the prior tight portrait as mobile film/poster");
@@ -441,8 +445,8 @@ const studioStackBlock = index.match(
   /id="studioStack"[\s\S]*?<\/div>\s*<\/div>\s*<div class="caustic-light"/
 );
 if (!studioStackBlock) fail("could not extract worldStudio media stack");
-if (!studioStackBlock[0].includes(`data-mobile-src="${NEW_POSTER}"`)) {
-  fail(`studio fallback image data-mobile-src must be ${NEW_POSTER}`);
+if (!studioStackBlock[0].includes(`data-mobile-src="${ACTIVE_POSTER}"`)) {
+  fail(`studio fallback image data-mobile-src must be ${ACTIVE_POSTER}`);
 }
 if (!studioStackBlock[0].includes(`data-desktop-src="${DESKTOP_POSTER}"`)) {
   fail("studio fallback image desktop still must remain unchanged");
