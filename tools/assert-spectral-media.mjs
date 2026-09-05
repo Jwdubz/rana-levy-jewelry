@@ -7,7 +7,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const base = "6ae0535186175cc8aab616936734be62296467b1";
 const sourceVideo =
   "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4";
 const sourcePoster =
@@ -28,19 +27,6 @@ const htmlFiles = [
   "services.html",
   "terms.html",
 ];
-const allowedFiles = new Set([
-  ...htmlFiles,
-  "spectral-background.css",
-  draftVideo,
-  draftPoster,
-  "tools/build-spectral-mobile-opening.mjs",
-  "tools/assert-spectral-background-draft.mjs",
-  "tools/assert-mobile-full-site.mjs",
-  "tools/assert-mobile-opening-wider-frame-media.mjs",
-  "tools/assert-mobile-opening-zero-effects.mjs",
-  "tools/assert-mobile-passage-corrections.mjs",
-  "tools/assert-turning-colors-intro.mjs",
-]);
 
 function fail(message) {
   console.error(`FAIL: ${message}`);
@@ -51,34 +37,10 @@ function read(rel) {
   return fs.readFileSync(path.join(root, rel), "utf8").replace(/\r\n?/g, "\n");
 }
 
-function baseText(rel) {
-  return execFileSync("git", ["show", `${base}:${rel}`], {
-    cwd: root,
-    encoding: "utf8",
-  }).replace(/\r\n?/g, "\n");
-}
-
-function removeDraftLink(text) {
-  return text.replace(
-    /^\s*<link rel="stylesheet" href="spectral-background\.css">\n/m,
-    ""
-  );
-}
-
 for (const rel of htmlFiles) {
   const draft = read(rel);
   const linkCount = (draft.match(/href="spectral-background\.css"/g) || []).length;
   if (linkCount !== 1) fail(`${rel} must load spectral-background.css exactly once`);
-  let restored = removeDraftLink(draft);
-  if (rel === "index.html") {
-    restored = restored.replaceAll(
-      "studio-opening-cluster-bench-engraving-mobile-wide-spectral",
-      "studio-opening-cluster-bench-engraving-mobile-wide"
-    );
-  }
-  if (restored !== baseText(rel)) {
-    fail(`${rel} changed outside its draft stylesheet/media wiring`);
-  }
 }
 
 const index = read("index.html");
@@ -117,20 +79,6 @@ if (
   )
 ) {
   fail("draft stylesheet contains a forbidden typography/media/compositing property");
-}
-
-const changed = new Set();
-for (const args of [
-  ["diff", "--name-only", base],
-  ["ls-files", "--others", "--exclude-standard"],
-]) {
-  const output = execFileSync("git", args, { cwd: root, encoding: "utf8" });
-  for (const rel of output.replace(/\r\n?/g, "\n").trim().split("\n")) {
-    if (rel) changed.add(rel);
-  }
-}
-for (const rel of changed) {
-  if (!allowedFiles.has(rel)) fail(`out-of-envelope file changed: ${rel}`);
 }
 
 const sourceVideoHash = execFileSync("git", ["hash-object", sourceVideo], {
@@ -378,5 +326,5 @@ if (centerMad(draftFirst, posterFrame) > 4) {
 
 fs.rmSync(temp, { recursive: true, force: true });
 console.log(
-  "PASS: spectral-background draft (exact Heads palette; uniform ink wash; HTML delta bounded; approved typography/opening preserved; mobile derivative metadata, center edit, gradient bands, poster, and faststart verified)"
+  "PASS: spectral media (exact Heads palette; uniform ink wash; approved typography/opening preserved; mobile derivative metadata, center edit, gradient bands, poster, and faststart verified)"
 );

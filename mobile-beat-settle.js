@@ -772,6 +772,25 @@
     return false;
   }
 
+  function isInteractiveKeyTarget(node, key) {
+    var el = node;
+    while (el && el !== document.body && el !== document.documentElement) {
+      if (el.nodeType === 1) {
+        if (/^(BUTTON|SUMMARY)$/.test(el.tagName) && (key === " " || key === "Spacebar")) return true;
+        if (/^(VIDEO|AUDIO)$/.test(el.tagName) && el.hasAttribute("controls")) return true;
+        var role = el.getAttribute && el.getAttribute("role");
+        if (role === "button" && (key === " " || key === "Spacebar")) return true;
+        if (/^(checkbox|radio|switch|slider|spinbutton|tab|menuitem|listbox|combobox|treeitem)$/.test(role || "")) return true;
+      }
+      el = el.parentNode;
+    }
+    return false;
+  }
+
+  function motionPausedActive() {
+    return !!(window.RANA_MOTION && window.RANA_MOTION.isPaused());
+  }
+
   function isOwnedScrollKey(key) {
     return (
       key === "ArrowUp" ||
@@ -878,7 +897,7 @@
       stopNativeMomentum(targetY);
       return;
     }
-    if (dist <= NEAR_PX) {
+    if (dist <= NEAR_PX || motionPausedActive()) {
       window.scrollTo(0, targetY);
       finishSettle();
       return;
@@ -1123,9 +1142,12 @@
 
   function onKeyDown(event) {
     if (!live() || !event) return;
+    if (event.defaultPrevented) return;
     if (!SCROLL_KEYS[event.key]) return;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (isEditableTarget(event.target)) return;
+    if (isInteractiveKeyTarget(event.target, event.key)) return;
+    if (isNestedVerticalScrollConsumer(event.target)) return;
 
     var owns = isOwnedScrollKey(event.key);
     if (owns && event.cancelable) event.preventDefault();

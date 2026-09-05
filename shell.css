@@ -5,8 +5,8 @@
   --ink: #020005;
   --cream: #fffaf5;
   --cream-soft: rgba(255, 250, 245, 0.78);
-  --cream-faint: rgba(255, 250, 245, 0.52);
-  --cream-mute: rgba(255, 250, 245, 0.38);
+  --cream-faint: rgba(255, 250, 245, 0.68);
+  --cream-mute: rgba(255, 250, 245, 0.68);
   --link-line: rgba(255, 250, 245, 0.55);
   --hairline: rgba(255, 250, 245, 0.18);
   --hairline-strong: rgba(255, 250, 245, 0.32);
@@ -371,7 +371,7 @@ body.shell-body.is-locked {
   line-height: 1.3;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--hairline-strong);
+  border-bottom: 1px solid var(--cream-faint);
   border-radius: 0;
   outline: none;
   appearance: none;
@@ -596,7 +596,7 @@ body.shell-body.is-locked {
 }
 
 .piece.is-sold .piece__cue {
-  color: rgba(255, 250, 245, 0.42);
+  color: var(--cream-faint);
 }
 
 .tray-empty,

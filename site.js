@@ -81,6 +81,10 @@
     return quietModeActive();
   }
 
+  function motionPausedActive() {
+    return !!(window.RANA_MOTION && window.RANA_MOTION.isPaused());
+  }
+
   // Opening media still uses the direct streaming helper on window.
   // Deferred M2–M4 media never call it — they need seekable Blob URLs.
   function ensureVideoSource(video, preloadValue) {
@@ -294,6 +298,10 @@
     if (video._deferGen !== generation) {
       return Promise.resolve(false);
     }
+    if (motionPausedActive()) {
+      video.pause();
+      return Promise.resolve(false);
+    }
     if (mediaQuietActive()) {
       try {
         video.pause();
@@ -317,6 +325,10 @@
       return playResult
         .then(function () {
           if (video._deferGen !== generation) {
+            return false;
+          }
+          if (motionPausedActive()) {
+            video.pause();
             return false;
           }
           if (mediaQuietActive() || video.seeking || video.paused) {
@@ -384,7 +396,7 @@
   }
 
   function armDeferredPlayback(video, startAt) {
-    if (!video || mediaQuietActive()) return;
+    if (!video || mediaQuietActive() || motionPausedActive()) return;
     if (video._deferArming) return;
     // Hard failure (fetch/metadata/seek): stay poster-only; do not spin-refetch.
     // Quiet toggle clears this so reduce→normal can retry the cached registry.
@@ -448,6 +460,7 @@
           return false;
         }
         return playAndMarkLive(video, generation).then(function (played) {
+          if (played) video._resumeAfterPause = false;
           if (!played && video._deferGen === generation && !mediaQuietActive()) {
             // Autoplay block is not a hard media failure — allow later retry
             // when the same beat is still active (user gesture / browser policy).
@@ -865,7 +878,7 @@
     video.playsInline = true;
 
     video.addEventListener("timeupdate", function () {
-      if (mediaQuietActive()) return;
+      if (mediaQuietActive() || motionPausedActive()) return;
       if (video._deferArming) return;
       try {
         if (video.currentTime >= end - 0.03) {
@@ -877,7 +890,7 @@
     });
 
     video.addEventListener("ended", function () {
-      if (mediaQuietActive()) return;
+      if (mediaQuietActive() || motionPausedActive()) return;
       if (video._deferArming) return;
       try {
         video.currentTime = start;
@@ -889,6 +902,10 @@
     // is-live is owned by the deferred arm pipeline (seeked → play → then live).
     // playing only reaffirms after a real, non-seeking playback state.
     video.addEventListener("playing", function () {
+      if (motionPausedActive()) {
+        video.pause();
+        return;
+      }
       if (mediaQuietActive()) {
         try {
           video.pause();
@@ -919,12 +936,23 @@
       if (armedFlag) state[armedFlag] = false;
       return;
     }
+    if (active && motionPausedActive()) {
+      if (!video.paused) video.pause();
+      return;
+    }
     if (active) {
       if (!state[armedFlag]) {
         state[armedFlag] = true;
       }
       const key = benchKeyFor(video);
-      const startAt = key && BENCH_WINDOWS[key] ? BENCH_WINDOWS[key][0] : 0;
+      const windowStart = key && BENCH_WINDOWS[key] ? BENCH_WINDOWS[key][0] : 0;
+      const windowEnd = key && BENCH_WINDOWS[key]
+        ? windowStart + BENCH_WINDOWS[key][1]
+        : video.duration;
+      const startAt = video._resumeAfterPause &&
+        video.currentTime >= windowStart && video.currentTime < windowEnd
+        ? video.currentTime
+        : windowStart;
 
       // Already live and advancing inside the window — keep it, no re-arm.
       if (
@@ -948,6 +976,7 @@
       // Hydrate via shared Blob registry, seek to window, then play → is-live.
       armDeferredPlayback(video, startAt);
     } else {
+      video._resumeAfterPause = false;
       // Leaving the beat: always establish a coherent inactive state so reverse
       // re-entry can re-arm. Keep resolved Blob URLs in the shared registry.
       // Prior bug: successful live leave only paused and left is-live / generation
@@ -1421,7 +1450,7 @@
   function armHandBridgePlayback() {
     // Desktop angled Turn only — mobile must never enter this path.
     if (state.isMobile) return;
-    if (!handBridgeVideo || mediaQuietActive()) return;
+    if (!handBridgeVideo || mediaQuietActive() || motionPausedActive()) return;
     if (
       !handBridgeVideo.paused &&
       handBridgeVideo.classList.contains("is-live") &&
@@ -1509,7 +1538,7 @@
     state.handTarget = handProx.progress;
     state.workTarget = workProx.progress;
 
-    if (quietModeActive()) {
+    if (quietModeActive() || motionPausedActive()) {
       state.openingVisual = state.openingTarget;
       state.handVisual = state.handTarget;
       state.workVisual = state.workTarget;
@@ -1612,6 +1641,16 @@
 
   loadPersistentMark();
   initialRender();
+
+  window.addEventListener("rana:motionchange", function (event) {
+    if (!event.detail || !event.detail.paused) return;
+    [handVideo, handBridgeVideo].forEach(function (video) {
+      if (!video) return;
+      video._resumeAfterPause = video.classList.contains("is-live");
+      invalidateDeferredArm(video);
+      video.pause();
+    });
+  });
 
   // Register the single whole-site tick hook for the opening rAF loop.
   window.__ranaSiteTick = function (dt) {

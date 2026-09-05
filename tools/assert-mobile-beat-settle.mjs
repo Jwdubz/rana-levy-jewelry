@@ -86,8 +86,8 @@ function extractFn(src, name) {
 }
 
 // ——— Homepage wires the helper after the motion clock, never as a snap CSS ———
-if (!/script src="site\.js"/.test(index)) fail("index.html must still load site.js");
-if (!/script src="site\.js"><\/script>\s*<script src="mobile-beat-settle\.js"><\/script>/.test(index)) {
+if (!/script src="site\.js(?:\?[^" ]+)?"/.test(index)) fail("index.html must still load site.js");
+if (!/script src="site\.js(?:\?[^" ]+)?"><\/script>\s*<script src="mobile-beat-settle\.js(?:\?[^" ]+)?"><\/script>/.test(index)) {
   fail("index.html must load mobile-beat-settle.js immediately after site.js");
 }
 
@@ -2275,6 +2275,36 @@ function emitVerticalSwipe(emit, startY, endY) {
   );
   expectRootOverflowUnchanged(root, prior, "toggling reduce -> normal must leave root overflow untouched");
   expectVerticalOverflowLock(root, body, true, "toggling reduce -> normal must remain locked");
+  uninstallHomepageHarness();
+}
+
+// Native activation must survive scene-key ownership, while navigation keys
+// still work when focus rests on the persistent pause control or a plain link.
+{
+  const { body, emit } = installHomepageHarness({ width: 375, geometry: true });
+  window.RANA_MOTION = { isPaused: () => true };
+  settle.attach();
+  const button = { nodeType: 1, tagName: "BUTTON", parentNode: body, getAttribute: () => null };
+  const anchor = { nodeType: 1, tagName: "A", parentNode: body, getAttribute: () => null };
+  function key(target, value, consumed = false) {
+    const event = {
+      target, key: value, cancelable: true, defaultPrevented: consumed,
+      preventDefault() { this.defaultPrevented = true; }
+    };
+    emit("window", "keydown", event);
+    return event;
+  }
+  if (key(button, " ").defaultPrevented || window.scrollY !== 0) {
+    fail("Space on a native button must keep native activation and not change scenes");
+  }
+  if (!key(button, "PageDown").defaultPrevented || !(window.scrollY > 0)) {
+    fail("PageDown on a focused button must still reach the next scene");
+  }
+  if (!key(anchor, "Home").defaultPrevented || window.scrollY !== 0) {
+    fail("Home on a plain link must still return to the first scene");
+  }
+  key(button, "PageDown", true);
+  if (window.scrollY !== 0) fail("a previously consumed key must not move the scene");
   uninstallHomepageHarness();
 }
 

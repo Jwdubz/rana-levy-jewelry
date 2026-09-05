@@ -1,0 +1,62 @@
+.motion-control {
+  position: fixed;
+  z-index: 60;
+  left: max(0.75rem, env(safe-area-inset-left, 0px));
+  bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(255, 250, 245, 0.68);
+  border-radius: 2px;
+  background: #020005;
+  color: #fffaf5;
+  font: 400 0.875rem / 1.3 Garamond, "Palatino Linotype", Palatino, Georgia, serif;
+  cursor: pointer;
+}
+
+.motion-control:hover {
+  border-color: #fffaf5;
+}
+
+:where(a, button, input, select, summary):focus-visible {
+  outline: 2px solid #fffaf5;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px #020005;
+}
+
+html.is-motion-paused *,
+html.is-motion-paused *::before,
+html.is-motion-paused *::after {
+  animation-play-state: paused !important;
+}
+:root {
+  /* A tight dark edge keeps lettering distinct on the moving light frames. */
+  --photo-text-edge:
+    -1px -1px 0 #020005, 0 -1px 0 #020005, 1px -1px 0 #020005,
+    -1px 0 0 #020005, 1px 0 0 #020005,
+    -1px 1px 0 #020005, 0 1px 0 #020005, 1px 1px 0 #020005;
+}
+
+@media (min-width: 701px) {
+  #headline,
+  .hand-thought-a,
+  .site-primary-nav a {
+    text-shadow: var(--photo-text-edge), 0 2px 28px rgba(0, 0, 0, 0.32);
+  }
+
+  #headline .heads {
+    filter:
+      drop-shadow(1px 0 0 #020005) drop-shadow(-1px 0 0 #020005)
+      drop-shadow(0 1px 0 #020005) drop-shadow(0 -1px 0 #020005);
+  }
+}
+
+.page-services .prose,
+.page-journal .prose,
+.page-consultation .prose,
+.page-services .shell-primary-nav a,
+.page-journal .shell-primary-nav a,
+.page-consultation .shell-primary-nav a,
+.page-services .shell-index-open,
+.page-journal .shell-index-open,
+.page-consultation .shell-index-open {
+  text-shadow: var(--photo-text-edge);
+}

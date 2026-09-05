@@ -23,6 +23,7 @@
   <meta name="twitter:description" content="Custom gems, cut by hand.">
   <meta name="twitter:image" content="https://rana.jarrettwroten.com/assets/studio-opening-cluster.jpg">
   <meta name="twitter:image:alt" content="Rings worn across the fingers.">
+  <script src="motion-control.js?v=access-20260905"></script>
   <script>
     // Explicit quiet-mode gate before any script may assign video sources.
     // Markup keeps media URLs in data-src only; real src is assigned later in JS.
@@ -472,6 +473,7 @@
   </style>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="spectral-background.css">
+  <link rel="stylesheet" href="motion-control.css?v=access-20260905">
 </head>
 <body>
   <a class="skip-link" href="#opening">Skip to opening</a>
@@ -529,8 +531,9 @@
 
   <main class="site-main" id="siteMain">
     <!-- M1 — Opening (approved first passage) -->
-    <section class="passage movement movement-opening" id="opening" aria-label="Opening">
+    <section class="passage movement movement-opening" id="opening" tabindex="-1" aria-label="Opening" aria-describedby="opening-description">
       <div class="scene" id="scene">
+        <p class="visually-hidden" id="opening-description">Rings worn across the fingers, close views of faceted gemstones and engraved settings, followed by gemstone cutting and hand engraving at the bench.</p>
         <div class="world world-studio" id="worldStudio">
           <div class="media-stack" id="studioStack">
             <img
@@ -545,6 +548,7 @@
             >
             <video
               id="studioVideo"
+              aria-hidden="true"
               width="2160"
               height="1080"
               data-src="assets/studio-opening-cluster-bench-engraving.mp4"
@@ -579,9 +583,10 @@
     </section>
 
     <!-- M2 — The hand and the cut -->
-    <section class="movement movement-hand" id="hand" aria-labelledby="hand-heading">
+    <section class="movement movement-hand" id="hand" tabindex="-1" aria-labelledby="hand-heading" aria-describedby="hand-description">
       <div class="movement-sticky" id="handScene">
         <h2 id="hand-heading" class="visually-hidden">The hand and the cut</h2>
+        <p class="visually-hidden" id="hand-description">A gemstone is worked on a cutting wheel, a metal setting is engraved by hand, and finished signet and ornate rings are shown close up.</p>
 
         <div class="layer hand-bench" id="handBench">
           <div class="layer-media" id="handBenchStack">
@@ -596,6 +601,7 @@
             >
             <video
               id="handVideo"
+              aria-hidden="true"
               width="2160"
               height="1080"
               data-src="assets/studio-hand-work-cycle.mp4"
@@ -657,14 +663,14 @@
     </section>
 
     <!-- M3 — The work (terminal) -->
-    <section class="movement movement-work" id="work" aria-labelledby="work-heading">
+    <section class="movement movement-work" id="work" tabindex="-1" aria-labelledby="work-heading">
       <div class="movement-sticky" id="workScene">
         <h2 id="work-heading" class="visually-hidden">Selected work</h2>
 
         <div class="layer work-world work-world-0 is-base" id="workWorld0">
           <picture class="layer-media" id="workStack0">
             <source media="(min-width: 701px)" srcset="assets/ring-pink-star-wide-composite-preview-v4.png" type="image/png">
-            <img src="assets/ring-pink-star.webp" alt="" width="1500" height="1500" decoding="async">
+            <img src="assets/ring-pink-star.webp" alt="Pink faceted gemstone in an engraved gold ring, resting on a dark surface with gold starburst lines." width="1500" height="1500" decoding="async">
           </picture>
         </div>
 
@@ -745,6 +751,10 @@
       // Media quiet matches full quiet: no video body fetch; posters stay.
       function mediaQuietActive() {
         return quietModeActive();
+      }
+
+      function motionPausedActive() {
+        return !!(window.RANA_MOTION && window.RANA_MOTION.isPaused());
       }
 
       function withMotionQuery(href) {
@@ -1301,7 +1311,7 @@
       }
 
       function onPointerMove(event) {
-        if (quietModeActive() || !state.finePointer) return;
+        if (quietModeActive() || motionPausedActive() || !state.finePointer) return;
         const cx = window.innerWidth * 0.5;
         const cy = window.innerHeight * 0.5;
         const halfW = Math.max(1, cx);
@@ -1343,7 +1353,7 @@
         // Measure and damp in raw physical section progress (0–1 over full travel).
         state.targetProgress = measureScrollProgress();
 
-        if (quietModeActive()) {
+        if (quietModeActive() || motionPausedActive()) {
           // Direct scroll-linked states; no temporal smoothing.
           state.visualProgress = state.targetProgress;
           state.pointerX = 0;
@@ -1402,7 +1412,12 @@
       // Causal play gate: only the token that still owns authority may mark is-live.
       function playOpeningDecoder(video, token, startAt) {
         if (!video) return;
-        if (mediaQuietActive() || token !== openingDecoderToken) {
+        if (token !== openingDecoderToken) return;
+        if (motionPausedActive()) {
+          video.pause();
+          return;
+        }
+        if (mediaQuietActive()) {
           pauseOpeningDecoder(video);
           return;
         }
@@ -1431,7 +1446,12 @@
           playPromise
             .then(function () {
               // Stale promise after authority moved: do not resurrect is-live.
-              if (token !== openingDecoderToken || mediaQuietActive()) {
+              if (token !== openingDecoderToken) return;
+              if (motionPausedActive()) {
+                video.pause();
+                return;
+              }
+              if (mediaQuietActive()) {
                 pauseOpeningDecoder(video);
                 return;
               }
@@ -1470,12 +1490,18 @@
         }
 
         document.documentElement.classList.remove("is-media-quiet");
+        if (motionPausedActive()) return;
 
         function tryPlay(video, startAt) {
           if (!video) return;
           const token = openingDecoderToken;
           const begin = function () {
-            if (mediaQuietActive() || token !== openingDecoderToken) {
+            if (token !== openingDecoderToken) return;
+            if (motionPausedActive()) {
+              video.pause();
+              return;
+            }
+            if (mediaQuietActive()) {
               try {
                 video.pause();
               } catch (e) {}
@@ -1500,7 +1526,12 @@
           video.addEventListener(
             "playing",
             function () {
-              if (mediaQuietActive() || token !== openingDecoderToken) {
+              if (token !== openingDecoderToken) return;
+              if (motionPausedActive()) {
+                video.pause();
+                return;
+              }
+              if (mediaQuietActive()) {
                 try {
                   video.pause();
                 } catch (e) {}
@@ -1575,6 +1606,12 @@
           return;
         }
 
+        // Keep the current frame while paused; section retirement still runs above.
+        if (motionPausedActive()) {
+          if (studioVideo && !studioVideo.paused) studioVideo.pause();
+          return;
+        }
+
         const want = openingDecoderAuthority();
         const previous = state.openingDecoderAuthority;
         if (state.openingDecoderAuthority !== want) {
@@ -1609,7 +1646,12 @@
             if (playPromise && typeof playPromise.then === "function") {
               playPromise
                 .then(function () {
-                  if (token !== openingDecoderToken || mediaQuietActive() || video.paused) {
+                  if (token !== openingDecoderToken) return;
+                  if (motionPausedActive()) {
+                    video.pause();
+                    return;
+                  }
+                  if (mediaQuietActive() || video.paused) {
                     try {
                       video.pause();
                     } catch (e) {}
@@ -1643,6 +1685,13 @@
 
       loadMark();
       armVideos();
+
+      window.addEventListener("rana:motionchange", function (event) {
+        if (!event.detail || !event.detail.paused) return;
+        openingDecoderToken += 1;
+        openingVideos.forEach(function (video) { video.pause(); });
+        onPointerLeave();
+      });
 
       if (siteIndexToggle) {
         siteIndexToggle.addEventListener("click", function () {
@@ -1709,7 +1758,7 @@
       });
     })();
   </script>
-  <script src="site.js"></script>
-  <script src="mobile-beat-settle.js"></script>
+  <script src="site.js?v=access-20260905"></script>
+  <script src="mobile-beat-settle.js?v=access-20260905"></script>
 </body>
 </html>
