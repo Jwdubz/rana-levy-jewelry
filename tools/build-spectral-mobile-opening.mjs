@@ -6,11 +6,23 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const source = "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4";
-const output =
-  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4";
-const poster =
-  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg";
+const args = process.argv.slice(2);
+if (args.length > 1 || (args.length === 1 && args[0] !== "--hand")) {
+  throw new Error("Usage: node tools/build-spectral-mobile-opening.mjs [--hand]");
+}
+const { source, output, poster, frames } = args[0] === "--hand"
+  ? {
+      source: "assets/studio-hand-work-cycle-portrait.mp4",
+      output: "assets/studio-hand-work-cycle-portrait-spectral.mp4",
+      poster: "assets/studio-poster-portrait-spectral.jpg",
+      frames: 134,
+    }
+  : {
+      source: "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4",
+      output: "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4",
+      poster: "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg",
+      frames: 517,
+    };
 
 for (const rel of [source]) {
   if (!fs.existsSync(path.join(root, rel))) {
@@ -56,7 +68,7 @@ const graph = [
     "format=yuv420p,loop=loop=-1:size=1:start=0," +
     "setpts=N/(30*TB),split=2[gradientTop][gradientBottom]",
   "[gradientTop]crop=w=720:h=456:x=0:y=0[top]",
-  "[0:v:0]trim=end_frame=517,setpts=PTS-STARTPTS," +
+  `[0:v:0]trim=end_frame=${frames},setpts=PTS-STARTPTS,` +
     "crop=w=720:h=648:x=0:y=456,setsar=1[picture]",
   "[gradientBottom]crop=w=720:h=456:x=0:y=1104[bottom]",
   "[top][picture][bottom]vstack=inputs=3:shortest=1," +
@@ -84,7 +96,7 @@ run(
     "-map",
     "[out]",
     "-frames:v",
-    "517",
+    String(frames),
     "-r",
     "30",
     "-fps_mode",

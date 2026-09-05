@@ -83,7 +83,7 @@ const handBenchStack = index.match(/id="handBenchStack"[\s\S]*?<\/div>/);
 if (!handBenchStack) fail("handBenchStack must remain");
 if (
   !/data-desktop-src="assets\/studio-poster\.jpg"/.test(handBenchStack[0]) ||
-  !/data-mobile-src="assets\/studio-poster-portrait\.jpg"/.test(handBenchStack[0])
+  !/data-mobile-src="assets\/studio-poster-portrait-spectral\.jpg"/.test(handBenchStack[0])
 ) {
   fail("studio-poster fallback images must remain on the Hand stack");
 }

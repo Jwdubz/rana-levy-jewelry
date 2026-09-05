@@ -630,10 +630,10 @@ function assertResponsiveWiringIntact() {
     fail('handVideo must declare data-desktop-src="assets/studio-hand-work-cycle.mp4"');
   }
   if (
-    !/data-mobile-src="assets\/studio-hand-work-cycle-portrait\.mp4"/.test(markup)
+    !/data-mobile-src="assets\/studio-hand-work-cycle-portrait-spectral\.mp4"/.test(markup)
   ) {
     fail(
-      'handVideo must declare data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"'
+      'handVideo must declare data-mobile-src="assets/studio-hand-work-cycle-portrait-spectral.mp4"'
     );
   }
   if ((index.match(/id="handVideo"/g) || []).length !== 1) {

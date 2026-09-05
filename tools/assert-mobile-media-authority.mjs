@@ -85,7 +85,7 @@ if (!/data-src="assets\/studio-hand-work-cycle\.mp4"/.test(handVideoBlock[0])) {
 }
 if (
   !/data-desktop-src="assets\/studio-hand-work-cycle\.mp4"/.test(handVideoBlock[0]) ||
-  !/data-mobile-src="assets\/studio-hand-work-cycle-portrait\.mp4"/.test(handVideoBlock[0])
+  !/data-mobile-src="assets\/studio-hand-work-cycle-portrait-spectral\.mp4"/.test(handVideoBlock[0])
 ) {
   fail("handVideo desktop/mobile cycle sources must remain unchanged");
 }

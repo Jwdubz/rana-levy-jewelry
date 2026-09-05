@@ -7,14 +7,35 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const sourceVideo =
-  "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4";
-const sourcePoster =
-  "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg";
-const draftVideo =
-  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4";
-const draftPoster =
-  "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg";
+const args = process.argv.slice(2);
+if (args.length > 1 || (args.length === 1 && args[0] !== "--hand")) {
+  throw new Error("Usage: node tools/assert-spectral-media.mjs [--hand]");
+}
+const hand = args[0] === "--hand";
+const {
+  sourceVideo, sourcePoster, draftVideo, draftPoster,
+  expectedVideoHash, expectedPosterHash, frames, samples,
+} = hand
+  ? {
+      sourceVideo: "assets/studio-hand-work-cycle-portrait.mp4",
+      sourcePoster: "assets/studio-poster-portrait.jpg",
+      draftVideo: "assets/studio-hand-work-cycle-portrait-spectral.mp4",
+      draftPoster: "assets/studio-poster-portrait-spectral.jpg",
+      expectedVideoHash: "d5ad9accc6cf2573e4b26955262c8f5f97c6f40b",
+      expectedPosterHash: "46c780c2b5e877abc290bfaf306ea9ef05123422",
+      frames: 134,
+      samples: [0, 33, 34, 67, 68, 100, 101, 133],
+    }
+  : {
+      sourceVideo: "assets/studio-opening-cluster-bench-engraving-mobile-wide.mp4",
+      sourcePoster: "assets/studio-opening-cluster-bench-engraving-mobile-wide.jpg",
+      draftVideo: "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.mp4",
+      draftPoster: "assets/studio-opening-cluster-bench-engraving-mobile-wide-spectral.jpg",
+      expectedVideoHash: "009889b69f7a2b2c4e424159dc35e6e2e7c10255",
+      expectedPosterHash: "ed0f8a1929223a7a77aaefbbdcf04e6e1d25fe2f",
+      frames: 517,
+      samples: [0, 112, 247, 447, 481, 516],
+    };
 const htmlFiles = [
   "index.html",
   "consultation.html",
@@ -89,11 +110,11 @@ const sourcePosterHash = execFileSync("git", ["hash-object", sourcePoster], {
   cwd: root,
   encoding: "utf8",
 }).trim();
-if (sourceVideoHash !== "009889b69f7a2b2c4e424159dc35e6e2e7c10255") {
-  fail("approved source mobile opening video changed");
+if (sourceVideoHash !== expectedVideoHash) {
+  fail(`approved source video changed: ${sourceVideo}`);
 }
-if (sourcePosterHash !== "ed0f8a1929223a7a77aaefbbdcf04e6e1d25fe2f") {
-  fail("approved source mobile opening poster changed");
+if (sourcePosterHash !== expectedPosterHash) {
+  fail(`approved source poster changed: ${sourcePoster}`);
 }
 
 function probe(rel, countFrames = false) {
@@ -128,11 +149,11 @@ if (
   video.height !== 1560 ||
   video.r_frame_rate !== "30/1" ||
   video.avg_frame_rate !== "30/1" ||
-  Number(video.nb_read_frames || video.nb_frames) !== 517
+  Number(video.nb_read_frames || video.nb_frames) !== frames
 ) {
   fail(`unexpected spectral video metadata: ${JSON.stringify(video)}`);
 }
-if (Math.abs(Number(info.format.duration) - 17.233333) > 0.02) {
+if (Math.abs(Number(info.format.duration) - frames / 30) > 0.02) {
   fail(`unexpected spectral video duration: ${info.format.duration}`);
 }
 for (const key of ["color_space", "color_transfer", "color_primaries"]) {
@@ -158,6 +179,13 @@ function moovBeforeMdat(rel) {
   return moov >= 0 && mdat >= 0 && moov < mdat;
 }
 if (!moovBeforeMdat(draftVideo)) fail("spectral derivative is not faststart");
+
+const decode = spawnSync(
+  "ffmpeg",
+  ["-v", "error", "-xerror", "-i", draftVideo, "-map", "0:v:0", "-f", "null", "-"],
+  { cwd: root, encoding: "utf8" }
+);
+if (decode.status !== 0) fail(`spectral derivative full decode failed: ${decode.stderr}`);
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "rana-spectral-check-"));
 const frameBytes = 720 * 1560 * 3;
@@ -201,13 +229,14 @@ function centerMad(a, b) {
   return sum / count;
 }
 
-const samples = [0, 112, 247, 447, 481, 516];
 let draftFirst;
+let maxCenterMad = 0;
 for (const frame of samples) {
   const source = extract(sourceVideo, frame, "source");
   const draft = extract(draftVideo, frame, "draft");
   if (frame === 0) draftFirst = draft;
   const mad = centerMad(source, draft);
+  maxCenterMad = Math.max(maxCenterMad, mad);
   if (mad > 3) fail(`center picture MAD ${mad.toFixed(3)} at frame ${frame}`);
 }
 
@@ -287,14 +316,15 @@ function patchMean(frame, cx, cy, radius = 8) {
   return sum.map((value) => value / count);
 }
 
-for (const [x, y] of [
+const gradientPatches = [
   [72, 72],
   [360, 228],
   [648, 384],
   [72, 1176],
   [360, 1332],
   [648, 1488],
-]) {
+];
+for (const [x, y] of gradientPatches) {
   const observed = patchMean(draftFirst, x, y);
   const expected = expectedRgb(x, y);
   const distance = Math.hypot(...observed.map((value, i) => value - expected[i]));
@@ -306,7 +336,7 @@ for (const [x, y] of [
   }
 }
 
-const draftLast = extract(draftVideo, 516, "draft-last");
+const draftLast = extract(draftVideo, frames - 1, "draft-last");
 let bandDelta = 0;
 let bandCount = 0;
 for (let y = 0; y < 1560; y += 1) {
@@ -320,11 +350,19 @@ for (let y = 0; y < 1560; y += 1) {
 if (bandDelta / bandCount > 1) fail("spectral bands are not temporally stable");
 
 const posterFrame = extract(draftPoster, 0, "poster");
-if (centerMad(draftFirst, posterFrame) > 4) {
+const posterMad = centerMad(draftFirst, posterFrame);
+if (posterMad > 4) {
   fail("spectral poster no longer matches video frame zero in the picture band");
+}
+for (const [x, y] of gradientPatches) {
+  const observed = patchMean(posterFrame, x, y);
+  const expected = expectedRgb(x, y);
+  if (Math.hypot(...observed.map((value, i) => value - expected[i])) > 8) {
+    fail(`spectral poster gradient patch (${x},${y}) differs from the approved ground`);
+  }
 }
 
 fs.rmSync(temp, { recursive: true, force: true });
 console.log(
-  "PASS: spectral media (exact Heads palette; uniform ink wash; approved typography/opening preserved; mobile derivative metadata, center edit, gradient bands, poster, and faststart verified)"
+  `PASS: spectral ${hand ? "Hand" : "opening"} media (${frames} frames; exact Heads palette; uniform ink wash; approved typography/opening preserved; source hashes, full decode, metadata, center edit, gradient bands, poster, and faststart verified; max center MAD ${maxCenterMad.toFixed(3)}, poster MAD ${posterMad.toFixed(3)})`
 );

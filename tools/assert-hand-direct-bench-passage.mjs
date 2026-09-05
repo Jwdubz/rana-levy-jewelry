@@ -111,7 +111,7 @@ const handBenchStack = handMarkup.match(/id="handBenchStack"[\s\S]*?<\/div>/);
 if (!handBenchStack) fail("handBenchStack must be present");
 if (
   !/data-desktop-src="assets\/studio-poster\.jpg"/.test(handBenchStack[0]) ||
-  !/data-mobile-src="assets\/studio-poster-portrait\.jpg"/.test(handBenchStack[0])
+  !/data-mobile-src="assets\/studio-poster-portrait-spectral\.jpg"/.test(handBenchStack[0])
 ) {
   fail("handBenchStack must keep desktop/mobile studio-poster sources");
 }

@@ -665,17 +665,17 @@ if (
   );
 }
 if (
-  !/data-mobile-src="assets\/studio-hand-work-cycle-portrait\.mp4"/.test(
+  !/data-mobile-src="assets\/studio-hand-work-cycle-portrait-spectral\.mp4"/.test(
     handVideoMarkup
   )
 ) {
   fail(
-    'handVideo must declare data-mobile-src="assets/studio-hand-work-cycle-portrait.mp4"'
+    'handVideo must declare data-mobile-src="assets/studio-hand-work-cycle-portrait-spectral.mp4"'
   );
 }
 if (
   !/data-desktop-poster="assets\/studio-poster\.jpg"/.test(handVideoMarkup) ||
-  !/data-mobile-poster="assets\/studio-poster-portrait\.jpg"/.test(handVideoMarkup)
+  !/data-mobile-poster="assets\/studio-poster-portrait-spectral\.jpg"/.test(handVideoMarkup)
 ) {
   fail("handVideo must declare desktop and mobile studio posters");
 }
@@ -689,7 +689,7 @@ const handBenchStack = index.match(
 if (!handBenchStack) fail("handBenchStack must be present");
 if (
   !/data-desktop-src="assets\/studio-poster\.jpg"/.test(handBenchStack[0]) ||
-  !/data-mobile-src="assets\/studio-poster-portrait\.jpg"/.test(handBenchStack[0])
+  !/data-mobile-src="assets\/studio-poster-portrait-spectral\.jpg"/.test(handBenchStack[0])
 ) {
   fail(
     "hand bench poster img must declare desktop/mobile studio poster sources"
